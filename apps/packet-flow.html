@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ネットワーク・アニメーション</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/flow.css">
+</head>
+<body class="wide">
+  <header>
+    <p class="back"><a href="index.html">← メニューへ</a></p>
+    <nav id="scenarios" class="scenarios"></nav>
+    <h1 id="scn-title"></h1>
+    <p class="sub"><span id="scn-sub"></span>　（← → キーでもステップを移動できます）</p>
+  </header>
+
+  <nav id="timeline" class="timeline"></nav>
+
+  <div class="card topo-card">
+    <svg id="topo" viewBox="0 0 810 260" role="img"></svg>
+    <div class="controls">
+      <button id="prev">◀ 前へ</button>
+      <button id="play" class="primary">▶ 自動再生</button>
+      <button id="next">次へ ▶</button>
+      <button id="replay">↻ もう一度</button>
+      <label>速度
+        <select id="speed">
+          <option value="0.5">0.5x</option>
+          <option value="1" selected>1x</option>
+          <option value="2">2x</option>
+        </select>
+      </label>
+      <label class="predict"><input type="checkbox" id="predict"> 予想モード</label>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="step-head">
+        <h3 id="step-title"></h3>
+        <span id="step-count" class="muted"></span>
+      </div>
+      <div id="desc"></div>
+      <div id="side"></div>
+    </div>
+    <div class="card">
+      <div class="step-head">
+        <h3>フレームの中身</h3>
+        <button id="reveal-all" class="small">すべて表示</button>
+      </div>
+      <div id="frame"></div>
+    </div>
+  </div>
+
+  <script src="js/flow-engine.js"></script>
+  <script src="js/scenarios/basic.js"></script>
+  <script src="js/scenarios/napt.js"></script>
+  <script src="js/scenarios/ospf.js"></script>
+  <script src="js/scenarios/vrrp.js"></script>
+  <script src="js/scenarios/ipsec.js"></script>
+  <script src="js/scenarios/stateful-fw.js"></script>
+  <script>FlowApp.start();</script>
+</body>
+</html>

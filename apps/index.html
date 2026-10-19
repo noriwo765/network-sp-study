@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ネスペ計算ドリル</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>ネスペ計算ドリル</h1>
+    <p class="sub">問題は毎回ランダムに生成されます。Enter で判定 → もう一度 Enter で次の問題。</p>
+    <a class="menu-link" href="packet-flow.html">▶ アニメーション教材（パケットの旅／NAPT／OSPF／VRRP／IPsec VPN／ステートフルFW）</a>
+  </header>
+  <nav id="tabs"></nav>
+  <main id="panels"></main>
+
+  <script src="js/common.js"></script>
+  <script src="js/drills.js"></script>
+  <script>
+    const tabs = document.getElementById('tabs');
+    const panels = document.getElementById('panels');
+
+    function show(id) {
+      tabs.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.id === id));
+      panels.querySelectorAll('section').forEach(p => { p.hidden = p.dataset.id !== id; });
+      try { localStorage.setItem('nespe-tab', id); } catch (e) {}
+    }
+
+    DRILLS.forEach(d => {
+      const btn = document.createElement('button');
+      btn.textContent = d.title;
+      btn.dataset.id = d.id;
+      btn.addEventListener('click', () => show(d.id));
+      tabs.appendChild(btn);
+
+      const sec = document.createElement('section');
+      sec.dataset.id = d.id;
+      panels.appendChild(sec);
+      mountDrill(d, sec);
+    });
+
+    let last = null;
+    try { last = localStorage.getItem('nespe-tab'); } catch (e) {}
+    show(DRILLS.some(d => d.id === last) ? last : DRILLS[0].id);
+  </script>
+</body>
+</html>
