@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>ポート番号</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ネスペ学習">
+  <meta name="theme-color" content="#14171c">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/study.css">
+</head>
+<body>
+  <header>
+    <p class="back"><a href="index.html">← メニュー</a></p>
+    <h1>ポート番号</h1>
+    <p class="sub">0〜1023 がウェルノウンポート、1024〜49151 が登録済みポート。試験によく出るものを中心に収録。</p>
+  </header>
+
+  <div class="toolbar">
+    <div class="seg" role="tablist">
+      <button data-tab="list" class="active">一覧</button>
+      <button data-tab="numbers">その他の番号</button>
+      <button data-tab="quiz">暗記テスト</button>
+    </div>
+  </div>
+
+  <section id="tab-list">
+    <nav id="cats" class="chips" aria-label="分類"></nav>
+    <input type="search" id="search" placeholder="番号・サービス名で検索（例：587、SNMP）">
+    <label class="muted"><input type="checkbox" id="hide"> 番号を隠す（タップで表示）</label>
+    <div class="cmp-scroll">
+      <table class="tbl port-tbl" id="ports"></table>
+    </div>
+  </section>
+
+  <section id="tab-numbers" hidden>
+    <p class="muted">ポート番号と混同しやすい番号。特に<b>IPプロトコル番号</b>（ESP=50 など）とポート番号の取り違えに注意。</p>
+    <div id="numbers"></div>
+  </section>
+
+  <section id="tab-quiz" hidden>
+    <div class="toolbar">
+      <label><input type="checkbox" id="q-proto"> IPプロトコル番号も出題</label>
+      <span class="muted" id="q-score"></span>
+    </div>
+    <div class="q-card">
+      <p class="q-text" id="q-text"></p>
+      <div class="choices" id="q-choices"></div>
+      <div class="explain-box" id="q-explain" hidden></div>
+      <div class="next-row"><button class="btn primary" id="q-next" hidden>次の問題</button></div>
+    </div>
+  </section>
+
+  <script src="js/book.js"></script>
+  <script src="../flashcards/ports.js"></script>
+  <script src="js/study.js"></script>
+  <script src="js/ports-app.js"></script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>紛らわしい用語の比較</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ネスペ学習">
+  <meta name="theme-color" content="#14171c">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/study.css">
+</head>
+<body>
+  <header>
+    <p class="back"><a href="index.html">← メニュー</a></p>
+    <h1>紛らわしい用語の比較</h1>
+    <p class="sub">似ている用語を表で比べる。「隠す」にすると表の中身が「？」になり、タップで答え合わせできる。</p>
+  </header>
+
+  <nav id="chapters" class="chips" aria-label="本の章"></nav>
+
+  <div class="toolbar">
+    <input type="search" id="search" placeholder="用語で検索（例：IPS、POP3）">
+    <label><input type="checkbox" id="hide"> 隠す</label>
+    <span class="muted" id="count"></span>
+  </div>
+
+  <div id="list" class="cmp-list"></div>
+
+  <script src="js/book.js"></script>
+  <script src="../flashcards/compare.js"></script>
+  <script src="js/study.js"></script>
+  <script src="js/compare-app.js"></script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>

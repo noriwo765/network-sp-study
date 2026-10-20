@@ -67,7 +67,7 @@ console.log(`シナリオ ${SCENARIOS.length} 本 / シナリオのない章: ${
 
 // ---- 単語集・理解度チェック --------------------------------------------
 
-const DATA_FILES = ['../flashcards/terms.js', '../quizzes/check.js'];
+const DATA_FILES = ['../flashcards/terms.js', '../quizzes/check.js', '../flashcards/compare.js', '../flashcards/ports.js'];
 const loadData = (file, name) => {
   const box = {};
   vm.runInNewContext(`${fs.readFileSync(path.join(APP, file), 'utf8')}\n;globalThis.__out = ${name};`, box);
@@ -95,6 +95,30 @@ for (const q of CHECKS) {
   else if (new Set(q.choices).size !== 4) bad(`問題 ${q.id} の選択肢が重複している`);
   if (!(q.answer >= 0 && q.answer < 4)) bad(`問題 ${q.id} の answer が範囲外: ${q.answer}`);
 }
+const COMPARES = loadData(DATA_FILES[2], 'COMPARES');
+for (const c of COMPARES) {
+  if (!validCh(c.ch)) bad(`比較「${c.title}」の章番号が不正: ${c.ch}`);
+  if (!c.title || !c.point) bad(`比較の title / point がない: ${c.title}`);
+  for (const r of c.rows) if (r.length !== c.head.length) bad(`比較「${c.title}」の行の列数 ${r.length}/${c.head.length}: ${r[0]}`);
+}
+const PORTS = loadData(DATA_FILES[3], 'PORTS');
+const NUMBERS = loadData(DATA_FILES[3], 'NUMBERS');
+const portSeen = new Set();
+for (const p of PORTS) {
+  if (portSeen.has(p.port)) bad(`ポート番号の重複: ${p.port}`);
+  portSeen.add(p.port);
+  if (!(Number.isInteger(p.port) && p.port >= 0 && p.port <= 65535)) bad(`ポート番号が不正: ${p.port}`);
+  if (!['TCP', 'UDP', 'TCP/UDP'].includes(p.proto)) bad(`ポート ${p.port} の proto が不正: ${p.proto}`);
+  if (!validCh(p.ch)) bad(`ポート ${p.port} の章番号が不正: ${p.ch}`);
+  if (!p.name || !p.desc || !p.cat) bad(`ポート ${p.port} の name / desc / cat がない`);
+}
+if (new Set(PORTS.map(p => p.name)).size !== PORTS.length) bad('ポートのサービス名が重複している（暗記テストの正解が曖昧になる）');
+for (const g of NUMBERS) for (const it of g.items) {
+  if (it.length !== 4 || !validCh(it[3])) bad(`「${g.group}」の行が不正: ${it.join(' / ')}`);
+}
+if (!NUMBERS.some(g => g.group === 'IPプロトコル番号')) bad('NUMBERS に「IPプロトコル番号」がない（暗記テストで使う）');
+console.log(`比較 ${COMPARES.length} 件 / ポート ${PORTS.length} 件 / その他の番号 ${NUMBERS.reduce((a, g) => a + g.items.length, 0)} 件`);
+
 const noData = BOOK.chapters.filter(c => !TERMS.some(t => t.ch === c.no) || !CHECKS.some(q => q.ch === c.no));
 console.log(`単語 ${TERMS.length} 語 / 問題 ${CHECKS.length} 問 / データのない章: ${noData.map(c => c.no).join(', ') || 'なし'}`);
 

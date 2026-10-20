@@ -5,6 +5,8 @@
 | ページ | 内容 |
 |-------|------|
 | terms.html | 単語カード（データ：[flashcards/terms.js](../flashcards/terms.js)）。覚えた／まだの仕分け、一覧・検索 |
+| compare.html | 紛らわしい用語の比較（データ：[flashcards/compare.js](../flashcards/compare.js)）。比較表と見分けるポイント、隠して自己テスト |
+| ports.html | ポート番号（データ：[flashcards/ports.js](../flashcards/ports.js)）。一覧・検索、その他の番号、4択の暗記テスト |
 | check.html | 理解度チェック（データ：[quizzes/check.js](../quizzes/check.js)）。章ごとの4択、正答率の記録、間違えた問題の復習 |
 | packet-flow.html | アニメーション |
 | drills.html | 計算ドリル |
@@ -62,6 +64,8 @@ apps/
 ├── drills.html         … 計算ドリル（タブ切替）
 ├── terms.html          … 単語カード
 ├── check.html          … 理解度チェック
+├── compare.html        … 紛らわしい用語の比較
+├── ports.html          … ポート番号
 ├── packet-flow.html    … アニメーション
 ├── manifest.webmanifest … ホーム画面に追加したときのアプリ情報
 ├── sw.js               … オフライン対応（Service Worker）
@@ -76,6 +80,8 @@ apps/
     ├── study.js        … 学習記録の保存・章ボタン（単語カード・理解度チェック共通）
     ├── terms-app.js    … 単語カード
     ├── check-app.js    … 理解度チェック
+    ├── compare-app.js  … 紛らわしい用語の比較
+    ├── ports-app.js    … ポート番号
     ├── common.js       … IP計算などの共通処理と、ドリル画面の組み立て
     ├── drills.js       … 各ドリルの問題生成・正解・解説
     ├── flow-engine.js  … アニメーションの描画・再生エンジン

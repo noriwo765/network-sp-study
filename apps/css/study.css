@@ -152,3 +152,35 @@ input[type="search"] {
 .menu h2 { margin: 0 0 4px; font-size: 1.1rem; }
 .menu p { margin: 0; color: var(--muted); font-size: 0.85rem; }
 .menu .stat { margin-top: 6px; color: var(--accent); font-size: 0.85rem; font-weight: 600; }
+
+/* ---- 紛らわしい用語の比較・ポート番号 ---- */
+.toolbar input[type="search"] { flex: 1 1 14rem; width: auto; margin: 0; }
+.cmp-list { display: grid; gap: 12px; }
+.cmp { padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.cmp h3 { margin: 0 0 6px; font-size: 1.05rem; }
+.cmp h3 .muted { font-weight: 400; font-size: 0.75rem; margin-left: 6px; }
+.cmp-point { margin: 0 0 8px; font-size: 0.9rem; }
+.cmp-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.cmp-tbl { width: 100%; font-size: 0.85rem; }
+.cmp-tbl tbody th { background: var(--code-bg); white-space: nowrap; font-weight: 600; }
+.cmp-tbl td { min-width: 7em; }
+.reveal-cell {
+  min-width: 3em;
+  padding: 2px 8px;
+  border: 1px dashed var(--accent);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+.port-tbl { width: 100%; font-size: 0.85rem; margin-top: 8px; }
+.port-no { font-family: ui-monospace, Consolas, monospace; font-weight: 700; font-size: 1rem; white-space: nowrap; }
+.port-no small { display: block; font-family: system-ui, sans-serif; font-weight: 400; font-size: 0.65rem; color: var(--muted); }
+#tab-list label { display: inline-flex; align-items: center; gap: 4px; margin: 4px 0; }
+#tab-list input[type="search"] { margin-bottom: 4px; }
+.cmp, .cmp-list > *, #tab-list, #tab-numbers { min-width: 0; }
+@media (max-width: 560px) {
+  .port-tbl th:nth-child(5), .port-tbl td:nth-child(5) { display: none; }
+  .port-tbl th, .port-tbl td { padding: 4px 6px; }
+}
