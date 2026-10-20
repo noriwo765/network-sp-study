@@ -2,14 +2,19 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>ネスペ計算ドリル</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ネスペ学習">
+  <meta name="theme-color" content="#14171c">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <header>
     <h1>ネスペ計算ドリル</h1>
-    <p class="sub">問題は毎回ランダムに生成されます。Enter で判定 → もう一度 Enter で次の問題。</p>
+    <p class="sub">問題は毎回ランダムに生成されます。Enter（スマホは改行キー）で判定 → もう一度押すと次の問題。</p>
     <a class="menu-link" href="packet-flow.html">▶ アニメーション教材（本書の章別・全26本）</a>
   </header>
   <nav id="tabs"></nav>
@@ -44,5 +49,6 @@
     try { last = localStorage.getItem('nespe-tab'); } catch (e) {}
     show(DRILLS.some(d => d.id === last) ? last : DRILLS[0].id);
   </script>
+  <script src="js/pwa.js"></script>
 </body>
 </html>

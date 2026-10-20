@@ -148,6 +148,24 @@ const FlowApp = (() => {
       g.setAttribute('class', `node ${scn.nodes[id].kind} ${focus.includes(id) ? 'active' : ''} ${(step.nodes || {})[id] || ''}`);
       g.querySelector('.badge').textContent = (step.badges || {})[id] || '';
     });
+    scrollToFocus(focus);
+  }
+
+  // スマホで図が横スクロールになっているとき、注目ノードを画面中央に寄せる
+  function scrollToFocus(focus) {
+    const box = $('topo-scroll');
+    if (box.scrollWidth <= box.clientWidth) return;
+    const xs = focus.map(id => scn.nodes[id].x);
+    const vbWidth = svg.viewBox.baseVal.width;
+    const x = xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : vbWidth / 2;
+    box.scrollTo({ left: (x / vbWidth) * box.scrollWidth - box.clientWidth / 2, behavior: 'smooth' });
+  }
+
+  // 横一列に並べたボタン列で、選択中のボタンを見える位置に寄せる（縦方向には動かさない）
+  function centerActive(container) {
+    const btn = container.querySelector('button.active');
+    if (!btn || container.scrollWidth <= container.clientWidth) return;
+    container.scrollTo({ left: btn.offsetLeft - container.clientWidth / 2 + btn.offsetWidth / 2, behavior: 'smooth' });
   }
 
   // ---- アニメーション --------------------------------------------------
@@ -268,6 +286,7 @@ const FlowApp = (() => {
     renderFrame(current);
     applyVisuals(step);
     document.querySelectorAll('#timeline button').forEach((b, j) => b.classList.toggle('active', j === current));
+    centerActive($('timeline'));
     $('prev').disabled = current === 0;
     $('next').disabled = current === steps.length - 1;
 
@@ -331,6 +350,7 @@ const FlowApp = (() => {
       b.addEventListener('click', () => loadScenario(s.id));
       box.appendChild(b);
     });
+    centerActive($('chapters'));
   }
 
   function start() {
@@ -358,6 +378,22 @@ const FlowApp = (() => {
     $('reveal-all').addEventListener('click', () => {
       document.querySelectorAll('#frame .reveal').forEach(b => { b.outerHTML = decodeURIComponent(b.dataset.html); });
     });
+    // 説明・フレーム欄を左右にスワイプしてステップ移動（縦スクロールとは区別する）
+    let touch = null;
+    const swipeArea = document.querySelector('.grid');
+    swipeArea.addEventListener('touchstart', e => {
+      touch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }, { passive: true });
+    swipeArea.addEventListener('touchend', e => {
+      if (!touch) return;
+      const dx = e.changedTouches[0].clientX - touch.x;
+      const dy = e.changedTouches[0].clientY - touch.y;
+      touch = null;
+      if (Math.abs(dx) < 60 || Math.abs(dy) > 40) return;
+      setPlaying(false);
+      go(current + (dx < 0 ? 1 : -1));
+    }, { passive: true });
+
     document.addEventListener('keydown', e => {
       if (['SELECT', 'INPUT'].includes(e.target.tagName)) return;
       if (e.key === 'ArrowRight') { setPlaying(false); go(current + 1); }

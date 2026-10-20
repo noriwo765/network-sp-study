@@ -3,7 +3,8 @@
 ブラウザで問題を解いて練習するためのアプリ。
 
 ## 使い方
-`index.html` をダブルクリックしてブラウザで開く（サーバ・インストール不要、オフラインで動作）。
+- **パソコン**：`index.html` をダブルクリックしてブラウザで開く（サーバ・インストール不要）
+- **iPhone / iPad**：GitHub Pages で公開した URL を Safari で開き、「共有 → ホーム画面に追加」。一度開けば以降は**電波がなくても動く**（Service Worker が全ファイルを端末に保存する）
 
 ## 収録ドリル
 問題は毎回ランダムに生成される。【 】は [ジャンル一覧](../docs/ジャンル一覧.md) のサブトピック番号。
@@ -50,6 +51,10 @@ URL末尾に `#bgp/4` のように付けると、そのシナリオ・ステッ�
 apps/
 ├── index.html          … 計算ドリル（タブ切替）
 ├── packet-flow.html    … アニメーション
+├── manifest.webmanifest … ホーム画面に追加したときのアプリ情報
+├── sw.js               … オフライン対応（Service Worker）
+├── icons/              … アプリのアイコン
+├── tools/check.js      … データ整合性チェック
 ├── css/
 │   ├── style.css       … 共通の見た目（ライト/ダーク対応）
 │   └── flow.css        … アニメーション用
@@ -57,6 +62,7 @@ apps/
     ├── common.js       … IP計算などの共通処理と、ドリル画面の組み立て
     ├── drills.js       … 各ドリルの問題生成・正解・解説
     ├── flow-engine.js  … アニメーションの描画・再生エンジン
+    ├── pwa.js          … Service Worker の登録
     └── scenarios/      … アニメーションのシナリオ（1ファイル1シナリオ）
 ```
 
@@ -68,3 +74,9 @@ apps/
 `js/drills.js` に `DRILLS.push({ id, title, desc, newProblem() })` を追記する。
 `newProblem()` は `{ question, fields: [{ label, answer, type }], explain }` を返す（`type` は `num` / `ip` / `text`）。
 外部ライブラリは使わない（`file://` で開いても動くようにするため）。
+
+## 変更したら
+```
+node apps/tools/check.js
+```
+シナリオの参照ミスと、`sw.js` のキャッシュ対象の漏れを検出する。ファイルを追加・変更して公開するときは `sw.js` の `VERSION` を上げる（上げないと、端末に保存済みの古い版が使われ続けることがある）。

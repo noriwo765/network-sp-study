@@ -2,8 +2,13 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>ネットワーク・アニメーション</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ネスペ学習">
+  <meta name="theme-color" content="#14171c">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/flow.css">
 </head>
@@ -14,14 +19,17 @@
     <nav id="scenarios" class="scenarios" aria-label="この章のシナリオ"></nav>
     <h1 id="scn-title"></h1>
     <p class="syl" id="scn-syl"></p>
-    <p class="sub"><span id="scn-sub"></span>　（← → キーでもステップを移動できます）</p>
+    <p class="sub"><span id="scn-sub"></span>　<span class="hint">（← → キー、または説明欄を左右にスワイプでもステップを移動できます）</span></p>
   </header>
 
   <nav id="timeline" class="timeline"></nav>
 
   <div class="card topo-card">
-    <svg id="topo" viewBox="0 0 810 260" role="img"></svg>
-    <div class="controls">
+    <div class="topo-scroll" id="topo-scroll">
+      <svg id="topo" viewBox="0 0 810 260" role="img"></svg>
+    </div>
+  </div>
+  <div class="controls" id="controls">
       <button id="prev">◀ 前へ</button>
       <button id="play" class="primary">▶ 自動再生</button>
       <button id="next">次へ ▶</button>
@@ -34,7 +42,6 @@
         </select>
       </label>
       <label class="predict"><input type="checkbox" id="predict"> 予想モード</label>
-    </div>
   </div>
 
   <div class="grid">
@@ -83,5 +90,6 @@
   <script src="js/scenarios/proxy.js"></script>
   <script src="js/scenarios/snmp.js"></script>
   <script>FlowApp.start();</script>
+  <script src="js/pwa.js"></script>
 </body>
 </html>

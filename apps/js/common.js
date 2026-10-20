@@ -78,6 +78,13 @@ function randomPrivatePrefix() {
  *   }
  * }
  */
+// スマホで出すキーボードの種類。iOS の数字キーボードには「/」がないので、/ を含む答えは通常キーボード
+function inputMode(field) {
+  if (field.type === 'num') return 'numeric';
+  if (field.type === 'ip' && !String(field.answer).includes('/')) return 'decimal';
+  return 'text';
+}
+
 function mountDrill(drill, panel) {
   const score = { ok: 0, total: 0 };
   let problem = null;
@@ -112,7 +119,7 @@ function mountDrill(drill, panel) {
     form.innerHTML = problem.fields.map((f, i) => `
       <label class="field">
         <span>${f.label}</span>
-        <input name="f${i}" inputmode="${f.type === 'text' ? 'text' : 'decimal'}" placeholder="${f.placeholder || ''}">
+        <input name="f${i}" inputmode="${inputMode(f)}" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="${f.placeholder || ''}">
         <span class="mark"></span>
       </label>`).join('');
     $('.result').hidden = true;
