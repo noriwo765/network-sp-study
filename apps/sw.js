@@ -5,7 +5,7 @@
 //   （更新内容は「次に開いたとき」に反映される）
 // - ファイルを追加・削除したら FILES を直し、VERSION を上げる（tools/check.js が漏れを検出する）
 
-const VERSION = 'nespe-v2';
+const VERSION = 'nespe-v3';
 
 const FILES = [
   './',
@@ -36,7 +36,10 @@ const FILES = [
   './js/scenarios/dns.js',
   './js/scenarios/dos.js',
   './js/scenarios/dot1x.js',
+  './js/scenarios/fragment.js',
   './js/scenarios/gre.js',
+  './js/scenarios/handshake.js',
+  './js/scenarios/header-rewrite.js',
   './js/scenarios/ipsec.js',
   './js/scenarios/lb.js',
   './js/scenarios/mail.js',

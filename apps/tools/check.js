@@ -16,10 +16,10 @@ const bad = msg => { errors++; console.log('NG', msg); };
 const html = fs.readFileSync(path.join(APP, 'packet-flow.html'), 'utf8');
 const scripts = [...html.matchAll(/<script src="(js\/[^"]+)"/g)].map(m => m[1]).filter(s => !s.endsWith('pwa.js'));
 const code = scripts.map(s => fs.readFileSync(path.join(APP, s), 'utf8')).join('\n')
-  + '\n;globalThis.__out = { SCENARIOS, BOOK };';
+  + '\n;globalThis.__out = { SCENARIOS, BOOK, HEADER_LAYOUTS };';
 const ctx = {};
 vm.runInNewContext(code, ctx);
-const { SCENARIOS, BOOK } = ctx.__out;
+const { SCENARIOS, BOOK, HEADER_LAYOUTS } = ctx.__out;
 
 const onDisk = fs.readdirSync(path.join(APP, 'js/scenarios')).map(f => `js/scenarios/${f}`);
 for (const f of onDisk) if (!scripts.includes(f)) bad(`packet-flow.html に読み込まれていない: ${f}`);
@@ -49,6 +49,13 @@ for (const s of SCENARIOS) {
     }
     for (const t of [].concat(st.side || [])) for (const r of t.rows) {
       if (r.length !== t.head.length) bad(`${tag}: 表「${t.title}」の列数 ${r.length}/${t.head.length}`);
+    }
+    for (const d of st.diagram || []) {
+      const layout = HEADER_LAYOUTS[d.kind];
+      if (!layout) { bad(`${tag}: ヘッダ図の種類が不正 ${d.kind}`); continue; }
+      const keys = layout.rows.flat().map(f => f.k);
+      for (const k of Object.keys(d.values)) if (!keys.includes(k)) bad(`${tag}: ヘッダ図「${d.title}」に不明な項目 ${k}`);
+      for (const f of layout.rows.flat()) if (d.values[f.k] === undefined && f.def === undefined) bad(`${tag}: ヘッダ図「${d.title}」の ${f.k} が未設定`);
     }
     for (const sec of st.frame || []) for (const f of sec[1]) {
       if (f.length < 2 || f[1] === undefined) bad(`${tag}: フレームの項目が不正 ${f}`);

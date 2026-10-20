@@ -11,6 +11,7 @@
 //     pkt?: 'ip'|'arp'|'ctl'|'esp', label?,          … パケットの色と表示名
 //     phases?: [[ [from, to, { label, kind, drop }?] ]], … フェーズ内の区間は同時に動く
 //     frame?: [[セクション名, [[項目, 値, 補足?]], cls?]],
+//     diagram?: [{ title, kind: 'ipv4'|'tcp'|'udp', values, note? }],  … ヘッダ図（HEADER_LAYOUTS）
 //     frameGroup?, noCompare?,                       … 「変化」判定の比較対象
 //     side?: 表 | [表],  表 = { title, head, rows, hit?: n | [n], foot? }
 //     links?: { 'a-b': 'down'|'blocked'|'hit'|'path'|'tunnel' },
@@ -23,6 +24,37 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const SCENARIOS = [];
 
 // シナリオ一覧の並び（縦軸）は js/book.js の BOOK（本の章立て）
+
+// ヘッダ図のレイアウト（1行 = 32ビット）。step.diagram = [{ title, kind, values: { k: 値 }, note? }]
+// def は values で省略したときの既定値
+const HEADER_LAYOUTS = {
+  ipv4: {
+    rows: [
+      [{ k: 'ver', label: 'Ver', bits: 4, def: '4' }, { k: 'ihl', label: 'IHL', bits: 4, def: '5' }, { k: 'dscp', label: 'DSCP', bits: 6, def: '0' }, { k: 'ecn', label: 'ECN', bits: 2, def: '0' }, { k: 'len', label: '全長', bits: 16 }],
+      [{ k: 'id', label: '識別子', bits: 16 }, { k: 'flags', label: 'フラグ', bits: 3 }, { k: 'off', label: 'フラグメントオフセット', bits: 13, def: '0' }],
+      [{ k: 'ttl', label: 'TTL', bits: 8 }, { k: 'proto', label: 'プロトコル', bits: 8 }, { k: 'sum', label: 'ヘッダチェックサム', bits: 16 }],
+      [{ k: 'src', label: '送信元IPアドレス', bits: 32 }],
+      [{ k: 'dst', label: '宛先IPアドレス', bits: 32 }],
+    ],
+  },
+  tcp: {
+    flags: ['CWR', 'ECE', 'URG', 'ACK', 'PSH', 'RST', 'SYN', 'FIN'],
+    rows: [
+      [{ k: 'sport', label: '送信元ポート', bits: 16 }, { k: 'dport', label: '宛先ポート', bits: 16 }],
+      [{ k: 'seq', label: 'シーケンス番号', bits: 32 }],
+      [{ k: 'ack', label: '確認応答番号', bits: 32 }],
+      [{ k: 'off', label: 'Off', bits: 4, def: '5' }, { k: 'rsv', label: '予約', bits: 4, def: '0' }, { k: 'flags', label: 'フラグ', bits: 8, type: 'flags' }, { k: 'win', label: 'ウィンドウ', bits: 16 }],
+      [{ k: 'sum', label: 'チェックサム', bits: 16 }, { k: 'urg', label: '緊急ポインタ', bits: 16, def: '0' }],
+      [{ k: 'opts', label: 'オプション', bits: 32, def: '（なし）' }],
+    ],
+  },
+  udp: {
+    rows: [
+      [{ k: 'sport', label: '送信元ポート', bits: 16 }, { k: 'dport', label: '宛先ポート', bits: 16 }],
+      [{ k: 'len', label: '長さ', bits: 16 }, { k: 'sum', label: 'チェックサム', bits: 16 }],
+    ],
+  },
+};
 
 // 実際の IPv4 ヘッダチェックサムを計算する
 function ipChecksum({ src, dst, ttl, proto = 6, len = 60, id = 0x1c46, flags = 0x4000 }) {
@@ -196,29 +228,70 @@ const FlowApp = (() => {
 
   // ---- パネル ----------------------------------------------------------
 
-  function prevFrameOf(i) {
+  // 比較対象：同じ frameGroup（なければ pkt）で、key（'frame' / 'diagram'）を持つ直前のステップ
+  function prevOf(i, key) {
     const step = scn.steps[i];
     if (step.noCompare) return null;
     const group = step.frameGroup || step.pkt;
     for (let j = i - 1; j >= 0; j--) {
       const s = scn.steps[j];
-      if (s.frame && (s.frameGroup || s.pkt) === group) return s.frame;
+      if (s[key] && (s.frameGroup || s.pkt) === group) return s[key];
     }
     return null;
+  }
+
+  // ---- ヘッダ図（RFC 風の 32 ビット幅レイアウト） -------------------------
+
+  function flagsHtml(layout, value) {
+    const on = String(value || '').split(/[,\s]+/).filter(Boolean);
+    const strip = layout.flags.map(f => `<i class="${on.includes(f) ? 'on' : ''}">${f[0]}</i>`).join('');
+    return `<span class="hdr-flags">${strip}</span><span class="hdr-val">${on.join(' ') || '0'}</span>`;
+  }
+
+  function renderDiagram(d, prevDiagrams, predict, flashOrder) {
+    const layout = HEADER_LAYOUTS[d.kind];
+    const prevD = (prevDiagrams || []).find(p => p.title === d.title);
+    const cells = layout.rows.flat().map(f => {
+      const v = d.values[f.k] ?? f.def ?? '';
+      const old = prevD ? (prevD.values[f.k] ?? f.def ?? '') : undefined;
+      const changed = old !== undefined && String(old) !== String(v);
+      const inner = f.type === 'flags'
+        ? flagsHtml(layout, v)
+        : `<span class="hdr-val">${v === '' ? '-' : v}</span>`;
+      const oldHtml = changed ? `<span class="hdr-old">← ${f.type === 'flags' ? (String(old).split(/[,\s]+/).filter(Boolean).join(' ') || '0') : old}</span>` : '';
+      const body = `${inner}${oldHtml}`;
+      const delay = changed ? `animation-delay:${(flashOrder.n++ * 0.18).toFixed(2)}s;` : '';
+      const cls = `hdr-cell${changed && !predict ? ' changed flash' : ''}`;
+      return `<div class="${cls}" style="grid-column:span ${f.bits};${delay}"${changed ? ' data-changed="1"' : ''}>
+        <span class="hdr-label">${f.label}</span>
+        ${predict ? `<button class="reveal" data-html="${encodeURIComponent(body)}">？</button>` : body}
+      </div>`;
+    }).join('');
+    return `<div class="hdr">
+      <h4>${d.title}${d.note ? ` <span class="muted">${d.note}</span>` : ''}</h4>
+      <div class="hdr-ruler"><span>0</span><span>8</span><span>16</span><span>24</span><span>31</span></div>
+      <div class="hdr-grid">${cells}</div>
+    </div>`;
   }
 
   function renderFrame(i) {
     const step = scn.steps[i];
     const box = $('frame');
-    if (!step.frame) {
+    if (!step.frame && !step.diagram) {
       box.innerHTML = '<p class="muted">このステップではフレームは流れない。</p>';
       return;
     }
-    const prev = new Map();
-    (prevFrameOf(i) || []).forEach(([sec, fields]) => fields.forEach(([k, v]) => prev.set(`${sec}.${k}`, v)));
     const predict = $('predict').checked;
+    const flashOrder = { n: 0 };
+    const diagrams = (step.diagram || []).map(d => renderDiagram(d, prevOf(i, 'diagram'), predict, flashOrder)).join('');
+    if (!step.frame) {
+      box.innerHTML = diagrams;
+      return;
+    }
+    const prev = new Map();
+    (prevOf(i, 'frame') || []).forEach(([sec, fields]) => fields.forEach(([k, v]) => prev.set(`${sec}.${k}`, v)));
 
-    box.innerHTML = step.frame.map(([sec, fields, cls = '']) => `
+    box.innerHTML = diagrams + step.frame.map(([sec, fields, cls = '']) => `
       <h4 class="${cls}">${sec}${SECTION_TAG[cls] ? ` <span class="sec-tag">${SECTION_TAG[cls]}</span>` : ''}</h4>
       <table class="tbl frame-tbl ${cls}"><tbody>
         ${fields.map(([k, v, note]) => {
@@ -347,12 +420,18 @@ const FlowApp = (() => {
     $('play').addEventListener('click', () => setPlaying(!playing));
     $('speed').addEventListener('change', e => { speed = Number(e.target.value); });
     $('predict').addEventListener('change', () => renderFrame(current));
+    // 予想モードの答え合わせ。ヘッダ図では、変化したセルを開いたときに強調する
+    const reveal = btn => {
+      const cell = btn.closest('.hdr-cell');
+      btn.outerHTML = decodeURIComponent(btn.dataset.html);
+      if (cell && cell.dataset.changed) cell.classList.add('changed', 'flash');
+    };
     $('frame').addEventListener('click', e => {
       const btn = e.target.closest('.reveal');
-      if (btn) btn.outerHTML = decodeURIComponent(btn.dataset.html);
+      if (btn) reveal(btn);
     });
     $('reveal-all').addEventListener('click', () => {
-      document.querySelectorAll('#frame .reveal').forEach(b => { b.outerHTML = decodeURIComponent(b.dataset.html); });
+      document.querySelectorAll('#frame .reveal').forEach(reveal);
     });
     // 説明・フレーム欄を左右にスワイプしてステップ移動（縦スクロールとは区別する）
     let touch = null;
