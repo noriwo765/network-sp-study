@@ -6,7 +6,7 @@ const DRILLS = [];
 DRILLS.push({
   id: 'subnet',
   title: 'サブネット計算',
-  desc: 'IPアドレス/プレフィックス長から、マスク・ネットワークアドレス・ブロードキャストアドレス・ホスト数を求める。【2-6】',
+  desc: 'IPアドレス/プレフィックス長から、マスク・ネットワークアドレス・ブロードキャストアドレス・ホスト数を求める。【本書 Ch.1】【2-6】',
   newProblem() {
     const prefix = rand(17, 30);
     const [a, b] = randomPrivatePrefix();
@@ -46,7 +46,7 @@ DRILLS.push({
 DRILLS.push({
   id: 'longest-match',
   title: 'ロンゲストマッチ',
-  desc: 'ルーティングテーブルから、宛先IPアドレスの転送先（ネクストホップ）を選ぶ。【4-1】',
+  desc: 'ルーティングテーブルから、宛先IPアドレスの転送先（ネクストホップ）を選ぶ。【本書 Ch.11】【4-1】',
   newProblem() {
     const a = rand(1, 254);
     const b = rand(0, 254);
@@ -100,7 +100,7 @@ DRILLS.push({
 DRILLS.push({
   id: 'summarize',
   title: '経路集約',
-  desc: '連続する /24 ネットワークを1つの経路に集約する。【4-3】',
+  desc: '連続する /24 ネットワークを1つの経路に集約する。【本書 Ch.11】【4-3】',
   newProblem() {
     const k = rand(1, 3);
     const n = 2 ** k;
@@ -126,7 +126,7 @@ DRILLS.push({
 DRILLS.push({
   id: 'fragment',
   title: 'フラグメント計算',
-  desc: 'MTU を超える IPv4 パケットの分割結果（データ長・オフセット値）を求める。【2-4】',
+  desc: 'MTU を超える IPv4 パケットの分割結果（データ長・オフセット値）を求める。【本書 Ch.6】【2-4】',
   newProblem() {
     const mtu = pick([1500, 1492, 1454, 1400, 1280, 1006, 576]);
     const max = Math.floor((mtu - 20) / 8) * 8;

@@ -110,6 +110,7 @@
 
   SCENARIOS.push({
     id: 'ospf',
+    chapter: 11,
     title: 'OSPF',
     subtitle: 'LSA のフラッディングと、ダイクストラ法（SPF）で最短経路が決まるまで',
     nodes,

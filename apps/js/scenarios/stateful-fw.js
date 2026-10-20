@@ -28,6 +28,7 @@
 
   SCENARIOS.push({
     id: 'stateful-fw',
+    chapter: 8,
     title: 'ステートフルFW',
     subtitle: '行きと帰りで経路が違う（非対称ルーティング）と、なぜ通信できないのか',
     viewBox: '0 0 810 275',

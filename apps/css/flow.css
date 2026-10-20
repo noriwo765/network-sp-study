@@ -160,3 +160,37 @@ button.small { padding: 2px 10px; font-size: 0.8rem; }
 #frame h4.auth .sec-tag { color: var(--accent); border-color: var(--accent); }
 .frame-tbl.enc td, .frame-tbl.enc th { background: var(--enc-bg); }
 .frame-tbl.auth { outline: 2px dashed var(--accent); outline-offset: -1px; }
+
+/* ---- 本の章ごとのシナリオ一覧 ---- */
+.chapters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+  gap: 4px;
+  margin: 10px 0 6px;
+}
+.chapters button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+}
+.chapters button:disabled { opacity: 0.4; cursor: default; }
+.chapters button.active { border-color: var(--accent); background: var(--accent); color: var(--accent-text); }
+.chapters .ch-no {
+  min-width: 1.6em;
+  font-weight: 700;
+  font-family: ui-monospace, Consolas, monospace;
+  text-align: right;
+}
+.scenarios { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.scenarios button { padding: 3px 12px; font-size: 0.85rem; }
+.syl { margin: 0; font-size: 0.8rem; color: var(--accent); font-weight: 600; }
+#topo .link.blocked { stroke: var(--pkt-arp); stroke-dasharray: 3 5; stroke-width: 3; }

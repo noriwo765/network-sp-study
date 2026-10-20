@@ -68,6 +68,7 @@
 
   SCENARIOS.push({
     id: 'vrrp',
+    chapter: 12,
     title: 'VRRP',
     subtitle: 'デフォルトゲートウェイの冗長化。障害時に何が起き、端末から何が見えるか',
     viewBox: '0 0 810 275',

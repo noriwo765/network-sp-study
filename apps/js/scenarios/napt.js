@@ -26,6 +26,7 @@
 
   SCENARIOS.push({
     id: 'napt',
+    chapter: 8,
     title: 'NAPT',
     subtitle: '1つのグローバルIPを複数端末で共有する仕組み。何がどう書き換わる？',
     nodes: {

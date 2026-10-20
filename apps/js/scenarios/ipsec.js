@@ -58,6 +58,7 @@
 
   SCENARIOS.push({
     id: 'ipsec',
+    chapter: 15,
     title: 'IPsec VPN',
     subtitle: 'ESP トンネルモードで、元のパケットがどう包まれ、どこが暗号化されるか',
     nodes: {

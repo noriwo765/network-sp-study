@@ -2,7 +2,7 @@
 //
 // シナリオ定義（js/scenarios/*.js で SCENARIOS.push する）:
 // {
-//   id, title, subtitle, viewBox?,
+//   id, title, subtitle, chapter（BOOK.chapters の no）, viewBox?,
 //   nodes: { id: { x, y, name, kind: 'pc'|'sw'|'rt'|'sv'|'fw'|'cloud', lines: [], linesAbove?, badgeBelow? } },
 //   links: [{ a, b, pa?, pb?, net?, ldx?, ldy?, cost? }],
 //   steps: [{
@@ -13,7 +13,7 @@
 //     frame?: [[セクション名, [[項目, 値, 補足?]], cls?]],
 //     frameGroup?, noCompare?,                       … 「変化」判定の比較対象
 //     side?: 表 | [表],  表 = { title, head, rows, hit?: n | [n], foot? }
-//     links?: { 'a-b': 'down'|'hit'|'path'|'tunnel' },
+//     links?: { 'a-b': 'down'|'blocked'|'hit'|'path'|'tunnel' },
 //     nodes?: { id: 'down'|'done' },
 //     badges?: { id: 文字列 },
 //   }]
@@ -21,6 +21,32 @@
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const SCENARIOS = [];
+
+// シナリオ一覧の並び（縦軸）＝ 学習に使う本の章立て
+const BOOK = {
+  title: '［左門式ネスペ塾］手を動かして理解する ネスペ「ワークブック」',
+  chapters: [
+    { no: 1, title: 'LANとIPアドレス' },
+    { no: 2, title: 'LANの冗長化' },
+    { no: 3, title: 'MACアドレスとARP' },
+    { no: 4, title: 'DHCP' },
+    { no: 5, title: 'DNS' },
+    { no: 6, title: 'TCPとHTTP、DoS攻撃' },
+    { no: 7, title: 'メール' },
+    { no: 8, title: 'ファイアウォール、IPS、WAF' },
+    { no: 9, title: '無線LAN' },
+    { no: 10, title: '音声とVoIP' },
+    { no: 11, title: 'ルーティング' },
+    { no: 12, title: 'VRRP' },
+    { no: 13, title: 'WAN' },
+    { no: 14, title: '負荷分散装置' },
+    { no: 15, title: 'IPsecとGRE' },
+    { no: 16, title: 'SDN' },
+    { no: 17, title: 'セキュリティ' },
+    { no: 18, title: 'プロキシサーバ' },
+    { no: 19, title: 'ネットワーク管理' },
+  ],
+};
 
 // 実際の IPv4 ヘッダチェックサムを計算する
 function ipChecksum({ src, dst, ttl, proto = 6, len = 60, id = 0x1c46, flags = 0x4000 }) {
@@ -114,7 +140,7 @@ const FlowApp = (() => {
       line.setAttribute('class', `link ${linkState(step, line.dataset.a, line.dataset.b)}`);
     });
     svg.querySelectorAll('.xmark').forEach(x => {
-      x.classList.toggle('show', linkState(step, x.dataset.a, x.dataset.b) === 'down');
+      x.classList.toggle('show', ['down', 'blocked'].includes(linkState(step, x.dataset.a, x.dataset.b)));
     });
     const focus = [].concat(step.focus || []);
     svg.querySelectorAll('.node').forEach(g => {
@@ -130,7 +156,8 @@ const FlowApp = (() => {
     const pkts = phase.map(([, , opts = {}]) => {
       const kind = opts.kind || step.pkt || 'ip';
       const label = opts.label || step.label || PKT_LABEL[kind];
-      const w = Math.max(40, [...label].length * 9 + 14);
+      // 全角文字は半角の約1.6倍の幅で見積もる
+      const w = Math.max(40, [...label].reduce((sum, c) => sum + (c.charCodeAt(0) > 0xff ? 13 : 8), 0) + 14);
       const g = el('g', { class: `pkt ${kind}` });
       g.appendChild(el('rect', { x: -w / 2, y: -11, width: w, height: 22, rx: 4 }));
       g.appendChild(el('text', { x: 0, y: 4 }, label));
@@ -267,8 +294,10 @@ const FlowApp = (() => {
     $('play').textContent = '▶ 自動再生';
     $('scn-title').textContent = scn.title;
     $('scn-sub').textContent = scn.subtitle;
+    const ch = BOOK.chapters.find(c => c.no === scn.chapter);
+    $('scn-syl').textContent = ch ? `本書 Chapter ${ch.no}　${ch.title}` : '';
     document.title = `${scn.title} | ネットワーク・アニメーション`;
-    document.querySelectorAll('#scenarios button').forEach(b => b.classList.toggle('active', b.dataset.id === scn.id));
+    renderChapter(scn.chapter);
 
     const tl = $('timeline');
     tl.replaceChildren();
@@ -290,15 +319,31 @@ const FlowApp = (() => {
     return [id, parseInt(step, 10) || 0];
   }
 
-  function start() {
-    svg = $('topo');
-    SCENARIOS.forEach(s => {
+  // 章ボタンの強調と、その章のシナリオボタンを表示する
+  function renderChapter(no) {
+    document.querySelectorAll('#chapters button').forEach(b => b.classList.toggle('active', +b.dataset.no === no));
+    const box = $('scenarios');
+    box.replaceChildren();
+    SCENARIOS.filter(s => s.chapter === no).forEach(s => {
       const b = document.createElement('button');
       b.textContent = s.title;
-      b.dataset.id = s.id;
+      b.classList.toggle('active', s === scn);
       b.addEventListener('click', () => loadScenario(s.id));
-      $('scenarios').appendChild(b);
+      box.appendChild(b);
     });
+  }
+
+  function start() {
+    svg = $('topo');
+    for (const ch of BOOK.chapters) {
+      const first = SCENARIOS.find(s => s.chapter === ch.no);
+      const b = document.createElement('button');
+      b.dataset.no = ch.no;
+      b.innerHTML = `<span class="ch-no">${ch.no}</span>${ch.title}`;
+      b.disabled = !first;
+      if (first) b.addEventListener('click', () => loadScenario(first.id));
+      $('chapters').appendChild(b);
+    }
 
     $('prev').addEventListener('click', () => { setPlaying(false); go(current - 1); });
     $('next').addEventListener('click', () => { setPlaying(false); go(current + 1); });

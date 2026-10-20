@@ -63,6 +63,7 @@
 
   SCENARIOS.push({
     id: 'basic',
+    chapter: 3,
     title: 'パケットの旅',
     subtitle: 'フレームはホップごとにどう書き換わる？【2-5】ルータ転送時のヘッダ変化',
     nodes: {
