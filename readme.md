@@ -12,7 +12,9 @@
 | [apps/](apps/) | 教材（Webアプリ） |
 
 ## スマホで使う
-GitHub Pages で公開し、iPhone / iPad の Safari で開いて「ホーム画面に追加」する。一度開けばオフラインでも動く。
+公開URL：**https://noriwo765.github.io/network-sp-study/**
+
+iPhone / iPad の Safari で開いて「共有 → ホーム画面に追加」する。一度開けばオフラインでも動く。
 
 ## 進め方
 本（［左門式ネスペ塾］ネスペ「ワークブック」）の章に沿って学習し、章ごとにアプリで動作を確認する。詳しくは [学習計画](docs/学習計画.md)。
