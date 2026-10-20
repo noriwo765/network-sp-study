@@ -1,6 +1,7 @@
 // アプリのデータ整合性チェック（node apps/tools/check.js）
 //
 // - アニメーションの全シナリオ：存在しないノード・リンクの参照、表の列数、図からのはみ出し、章番号
+// - 単語集（flashcards/terms.js）・理解度チェック（quizzes/check.js）のデータ
 // - sw.js の FILES：実在しないファイル、キャッシュ漏れ
 const fs = require('fs');
 const path = require('path');
@@ -57,15 +58,48 @@ for (const s of SCENARIOS) {
 const empty = BOOK.chapters.filter(c => !SCENARIOS.some(s => s.chapter === c.no));
 console.log(`シナリオ ${SCENARIOS.length} 本 / シナリオのない章: ${empty.map(c => c.no).join(', ') || 'なし'}`);
 
+// ---- 単語集・理解度チェック --------------------------------------------
+
+const DATA_FILES = ['../flashcards/terms.js', '../quizzes/check.js'];
+const loadData = (file, name) => {
+  const box = {};
+  vm.runInNewContext(`${fs.readFileSync(path.join(APP, file), 'utf8')}\n;globalThis.__out = ${name};`, box);
+  return box.__out;
+};
+const TERMS = loadData(DATA_FILES[0], 'TERMS');
+const CHECKS = loadData(DATA_FILES[1], 'CHECKS');
+const validCh = ch => BOOK.chapters.some(c => c.no === ch);
+
+const termIds = new Set();
+for (const t of TERMS) {
+  const id = `${t.ch}:${t.term}`;
+  if (termIds.has(id)) bad(`単語の重複: ${id}`);
+  termIds.add(id);
+  if (!validCh(t.ch)) bad(`単語「${t.term}」の章番号が不正: ${t.ch}`);
+  if (!t.term || !t.desc) bad(`単語の term / desc がない: ${JSON.stringify(t)}`);
+}
+const checkIds = new Set();
+for (const q of CHECKS) {
+  if (checkIds.has(q.id)) bad(`問題 id の重複: ${q.id}`);
+  checkIds.add(q.id);
+  if (!validCh(q.ch)) bad(`問題 ${q.id} の章番号が不正: ${q.ch}`);
+  if (!q.q || !q.explain) bad(`問題 ${q.id} の問題文 / 解説がない`);
+  if (!Array.isArray(q.choices) || q.choices.length !== 4) bad(`問題 ${q.id} の選択肢が4つでない`);
+  else if (new Set(q.choices).size !== 4) bad(`問題 ${q.id} の選択肢が重複している`);
+  if (!(q.answer >= 0 && q.answer < 4)) bad(`問題 ${q.id} の answer が範囲外: ${q.answer}`);
+}
+const noData = BOOK.chapters.filter(c => !TERMS.some(t => t.ch === c.no) || !CHECKS.some(q => q.ch === c.no));
+console.log(`単語 ${TERMS.length} 語 / 問題 ${CHECKS.length} 問 / データのない章: ${noData.map(c => c.no).join(', ') || 'なし'}`);
+
 // ---- Service Worker のキャッシュ対象 ------------------------------------
 
 const sw = fs.readFileSync(path.join(APP, 'sw.js'), 'utf8');
-const listed = [...sw.matchAll(/^\s*'\.\/([^']*)',$/gm)].map(m => m[1]).filter(Boolean);
+const listed = [...sw.matchAll(/^\s*'(\.\.?\/[^']*)',$/gm)].map(m => m[1].replace(/^\.\//, '')).filter(Boolean);
 const walk = dir => fs.readdirSync(path.join(APP, dir), { withFileTypes: true }).flatMap(e => {
   const rel = dir ? `${dir}/${e.name}` : e.name;
   return e.isDirectory() ? walk(rel) : [rel];
 });
-const served = walk('').filter(f => !/^(tools\/|README\.md$|sw\.js$)/.test(f));
+const served = walk('').filter(f => !/^(tools\/|README\.md$|sw\.js$)/.test(f)).concat(DATA_FILES);
 for (const f of listed) if (!fs.existsSync(path.join(APP, f))) bad(`sw.js にあるが実在しない: ${f}`);
 for (const f of served) if (!listed.includes(f)) bad(`sw.js のキャッシュ対象に漏れ: ${f}`);
 console.log(`キャッシュ対象 ${listed.length} ファイル`);

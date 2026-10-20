@@ -1,12 +1,21 @@
 # apps — 教材（Webアプリ）
 
-ブラウザで問題を解いて練習するためのアプリ。
+ブラウザで問題を解いて練習するためのアプリ。`index.html` がメニュー。
+
+| ページ | 内容 |
+|-------|------|
+| terms.html | 単語カード（データ：[flashcards/terms.js](../flashcards/terms.js)）。覚えた／まだの仕分け、一覧・検索 |
+| check.html | 理解度チェック（データ：[quizzes/check.js](../quizzes/check.js)）。章ごとの4択、正答率の記録、間違えた問題の復習 |
+| packet-flow.html | アニメーション |
+| drills.html | 計算ドリル |
+
+学習記録（覚えた単語・正誤）はその端末のブラウザ（localStorage）に保存される。
 
 ## 使い方
 - **パソコン**：`index.html` をダブルクリックしてブラウザで開く（サーバ・インストール不要）
 - **iPhone / iPad**：GitHub Pages で公開した URL を Safari で開き、「共有 → ホーム画面に追加」。一度開けば以降は**電波がなくても動く**（Service Worker が全ファイルを端末に保存する）
 
-## 収録ドリル
+## 計算ドリル（drills.html）
 問題は毎回ランダムに生成される。【 】は [ジャンル一覧](../docs/ジャンル一覧.md) のサブトピック番号。
 
 | ドリル | 内容 |
@@ -49,7 +58,10 @@ URL末尾に `#bgp/4` のように付けると、そのシナリオ・ステッ�
 ## 構成
 ```
 apps/
-├── index.html          … 計算ドリル（タブ切替）
+├── index.html          … メニュー
+├── drills.html         … 計算ドリル（タブ切替）
+├── terms.html          … 単語カード
+├── check.html          … 理解度チェック
 ├── packet-flow.html    … アニメーション
 ├── manifest.webmanifest … ホーム画面に追加したときのアプリ情報
 ├── sw.js               … オフライン対応（Service Worker）
@@ -57,8 +69,13 @@ apps/
 ├── tools/check.js      … データ整合性チェック
 ├── css/
 │   ├── style.css       … 共通の見た目（ライト/ダーク対応）
-│   └── flow.css        … アニメーション用
+│   ├── flow.css        … アニメーション用
+│   └── study.css       … メニュー・単語カード・理解度チェック用
 └── js/
+    ├── book.js         … 本の章立て（全アプリの縦軸）
+    ├── study.js        … 学習記録の保存・章ボタン（単語カード・理解度チェック共通）
+    ├── terms-app.js    … 単語カード
+    ├── check-app.js    … 理解度チェック
     ├── common.js       … IP計算などの共通処理と、ドリル画面の組み立て
     ├── drills.js       … 各ドリルの問題生成・正解・解説
     ├── flow-engine.js  … アニメーションの描画・再生エンジン

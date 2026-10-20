@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>理解度チェック</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ネスペ学習">
+  <meta name="theme-color" content="#14171c">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/study.css">
+</head>
+<body>
+  <header>
+    <p class="back"><a href="index.html">← メニュー</a></p>
+    <h1>理解度チェック</h1>
+  </header>
+
+  <section id="start">
+    <p class="sub">章を選んで出題方法を押す。章ボタンの数字は「直近で正解した問題数 / 問題数」。</p>
+    <nav id="chapters" class="chips" aria-label="本の章"></nav>
+    <div class="mode-row">
+      <button class="btn primary" data-mode="all">全問</button>
+      <button class="btn" data-mode="random">ランダム10問</button>
+      <button class="btn" data-mode="wrong">間違えた問題</button>
+    </div>
+    <p class="muted" id="mode-info"></p>
+    <h3>章ごとの成績</h3>
+    <table class="tbl stats" id="stats"></table>
+    <p><button class="btn small" id="reset">成績をリセット</button></p>
+  </section>
+
+  <section id="quiz" hidden>
+    <div class="progress-row"><span id="q-pos"></span><button class="btn small" id="quit">やめる</button></div>
+    <div class="bar"><span id="q-bar"></span></div>
+    <div class="q-card">
+      <p class="q-ch" id="q-ch"></p>
+      <p class="q-text" id="q-text"></p>
+      <div class="choices" id="choices"></div>
+      <div class="explain-box" id="q-explain" hidden></div>
+      <div class="next-row"><button class="btn primary" id="q-next" hidden>次へ</button></div>
+    </div>
+  </section>
+
+  <section id="result" hidden>
+    <div class="q-card">
+      <p class="score" id="r-score"></p>
+      <div class="mode-row" style="justify-content:center">
+        <button class="btn primary" id="r-retry">間違えた問題をもう一度</button>
+        <button class="btn" id="r-back">戻る</button>
+      </div>
+    </div>
+    <div class="wrong-list" id="r-wrong"></div>
+  </section>
+
+  <script src="js/book.js"></script>
+  <script src="../quizzes/check.js"></script>
+  <script src="js/study.js"></script>
+  <script src="js/check-app.js"></script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>

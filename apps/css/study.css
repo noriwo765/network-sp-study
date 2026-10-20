@@ -1,0 +1,154 @@
+/* 単語カード・理解度チェック・メニュー共通 */
+
+.back { margin: 0; font-size: 0.9rem; }
+.back a { color: var(--accent); }
+.muted { color: var(--muted); font-size: 0.85rem; }
+
+/* ---- 章ボタン ---- */
+.chips {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 4px;
+  margin: 12px 0;
+}
+.chips button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+}
+.chips button small { margin-left: auto; color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
+.chips button.active { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.chips button.active small { color: var(--accent-text); }
+.chips .ch-no { min-width: 1.6em; font-weight: 700; text-align: right; font-family: ui-monospace, Consolas, monospace; }
+
+@media (max-width: 760px) {
+  .chips { display: flex; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chips button { flex: 0 0 auto; white-space: nowrap; }
+}
+
+/* ---- 共通ボタン ---- */
+.btn {
+  padding: 10px 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.btn.small { padding: 3px 10px; font-size: 0.8rem; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 0.9rem; }
+.toolbar label { display: flex; align-items: center; gap: 4px; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button { padding: 6px 14px; border: 0; background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+.seg button.active { background: var(--accent); color: var(--accent-text); }
+
+.progress-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; color: var(--muted); font-size: 0.85rem; }
+.bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 12px; }
+.bar > span { display: block; height: 100%; background: var(--ok); transition: width 0.3s; }
+
+/* ---- 単語カード ---- */
+.flash {
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.flash.known { border-color: var(--ok); }
+.flash-ch { font-size: 0.8rem; color: var(--muted); }
+.flash-term { font-size: 1.5rem; font-weight: 700; text-align: center; }
+.flash-desc { margin: 0; line-height: 1.7; }
+.flash-note { margin: 0; padding: 8px 10px; background: var(--code-bg); border-radius: 6px; font-size: 0.9rem; }
+.flash-hint { text-align: center; color: var(--muted); font-size: 0.8rem; }
+.judge-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.judge-row .btn { padding: 14px; font-size: 1rem; }
+
+.term-list { display: grid; gap: 8px; }
+.term-item { padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.term-item h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 1rem; }
+.term-item h4 .btn { margin-left: auto; }
+.term-item p { margin: 4px 0 0; font-size: 0.9rem; }
+.term-item .note { color: var(--muted); }
+.term-item.known h4 .btn { border-color: var(--ok); color: var(--ok); }
+input[type="search"] {
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+/* ---- 理解度チェック ---- */
+.mode-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
+.q-card { padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.q-ch { margin: 0 0 6px; color: var(--muted); font-size: 0.8rem; }
+.q-text { margin: 0 0 14px; font-size: 1.05rem; font-weight: 600; line-height: 1.6; }
+.choices { display: grid; gap: 8px; }
+.choice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.choice .key { font-weight: 700; color: var(--muted); font-family: ui-monospace, Consolas, monospace; }
+.choice.correct { border-color: var(--ok); background: var(--ok-bg); }
+.choice.wrong { border-color: var(--ng); background: var(--ng-bg); }
+.choice:disabled { cursor: default; }
+.explain-box { margin-top: 12px; padding: 12px; border-radius: 8px; background: var(--code-bg); line-height: 1.7; }
+.explain-box .verdict { font-weight: 700; }
+.explain-box .verdict.ok { color: var(--ok); }
+.explain-box .verdict.ng { color: var(--ng); }
+.next-row { display: flex; justify-content: flex-end; margin-top: 12px; }
+.score { font-size: 2rem; font-weight: 700; text-align: center; margin: 12px 0; }
+.wrong-list { display: grid; gap: 8px; margin: 12px 0; }
+.wrong-list .item { padding: 10px 12px; border-left: 3px solid var(--ng); background: var(--surface); border-radius: 0 8px 8px 0; font-size: 0.9rem; }
+.wrong-list .item p { margin: 4px 0; }
+.stats td:not(:first-child), .stats th:not(:first-child) { text-align: right; }
+
+/* ---- メニュー ---- */
+.menu { display: grid; gap: 12px; margin-top: 16px; }
+.menu a {
+  display: block;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  text-decoration: none;
+}
+.menu a:hover { border-color: var(--accent); }
+.menu h2 { margin: 0 0 4px; font-size: 1.1rem; }
+.menu p { margin: 0; color: var(--muted); font-size: 0.85rem; }
+.menu .stat { margin-top: 6px; color: var(--accent); font-size: 0.85rem; font-weight: 600; }

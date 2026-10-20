@@ -149,3 +149,6 @@ pre {
   color: var(--accent);
   font-weight: 600;
 }
+
+.back { margin: 0; font-size: 0.9rem; }
+.back a { color: var(--accent); }

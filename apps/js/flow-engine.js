@@ -22,31 +22,7 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const SCENARIOS = [];
 
-// シナリオ一覧の並び（縦軸）＝ 学習に使う本の章立て
-const BOOK = {
-  title: '［左門式ネスペ塾］手を動かして理解する ネスペ「ワークブック」',
-  chapters: [
-    { no: 1, title: 'LANとIPアドレス' },
-    { no: 2, title: 'LANの冗長化' },
-    { no: 3, title: 'MACアドレスとARP' },
-    { no: 4, title: 'DHCP' },
-    { no: 5, title: 'DNS' },
-    { no: 6, title: 'TCPとHTTP、DoS攻撃' },
-    { no: 7, title: 'メール' },
-    { no: 8, title: 'ファイアウォール、IPS、WAF' },
-    { no: 9, title: '無線LAN' },
-    { no: 10, title: '音声とVoIP' },
-    { no: 11, title: 'ルーティング' },
-    { no: 12, title: 'VRRP' },
-    { no: 13, title: 'WAN' },
-    { no: 14, title: '負荷分散装置' },
-    { no: 15, title: 'IPsecとGRE' },
-    { no: 16, title: 'SDN' },
-    { no: 17, title: 'セキュリティ' },
-    { no: 18, title: 'プロキシサーバ' },
-    { no: 19, title: 'ネットワーク管理' },
-  ],
-};
+// シナリオ一覧の並び（縦軸）は js/book.js の BOOK（本の章立て）
 
 // 実際の IPv4 ヘッダチェックサムを計算する
 function ipChecksum({ src, dst, ttl, proto = 6, len = 60, id = 0x1c46, flags = 0x4000 }) {

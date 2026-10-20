@@ -3,51 +3,54 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>ネスペ計算ドリル</title>
+  <title>ネスペ学習</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="ネスペ学習">
   <meta name="theme-color" content="#14171c">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/study.css">
 </head>
 <body>
   <header>
-    <h1>ネスペ計算ドリル</h1>
-    <p class="sub">問題は毎回ランダムに生成されます。Enter（スマホは改行キー）で判定 → もう一度押すと次の問題。</p>
-    <a class="menu-link" href="packet-flow.html">▶ アニメーション教材（本書の章別・全26本）</a>
+    <h1>ネスペ学習</h1>
+    <p class="sub">本の章に沿って、読む → アニメーションで確認 → 単語と理解度チェックで定着。</p>
   </header>
-  <nav id="tabs"></nav>
-  <main id="panels"></main>
 
-  <script src="js/common.js"></script>
-  <script src="js/drills.js"></script>
+  <nav class="menu">
+    <a href="terms.html">
+      <h2>単語カード</h2>
+      <p>用語をカードで覚える。タップで意味、「覚えた／まだ」で仕分け。一覧と検索も。</p>
+      <p class="stat" id="stat-terms"></p>
+    </a>
+    <a href="check.html">
+      <h2>理解度チェック</h2>
+      <p>章ごとの4択問題。解説付き。間違えた問題だけの復習も。</p>
+      <p class="stat" id="stat-checks"></p>
+    </a>
+    <a href="packet-flow.html">
+      <h2>アニメーション</h2>
+      <p>構成図の上をパケットが流れ、ホップごとのフレームの中身を確認する（全26本）。</p>
+    </a>
+    <a href="drills.html">
+      <h2>計算ドリル</h2>
+      <p>サブネット計算・ロンゲストマッチ・経路集約・フラグメント計算をランダム出題。</p>
+    </a>
+  </nav>
+
+  <p class="muted">学習記録はこの端末のブラウザに保存されます（端末間では共有されません）。</p>
+
+  <script src="js/book.js"></script>
+  <script src="../flashcards/terms.js"></script>
+  <script src="../quizzes/check.js"></script>
+  <script src="js/study.js"></script>
   <script>
-    const tabs = document.getElementById('tabs');
-    const panels = document.getElementById('panels');
-
-    function show(id) {
-      tabs.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.id === id));
-      panels.querySelectorAll('section').forEach(p => { p.hidden = p.dataset.id !== id; });
-      try { localStorage.setItem('nespe-tab', id); } catch (e) {}
-    }
-
-    DRILLS.forEach(d => {
-      const btn = document.createElement('button');
-      btn.textContent = d.title;
-      btn.dataset.id = d.id;
-      btn.addEventListener('click', () => show(d.id));
-      tabs.appendChild(btn);
-
-      const sec = document.createElement('section');
-      sec.dataset.id = d.id;
-      panels.appendChild(sec);
-      mountDrill(d, sec);
-    });
-
-    let last = null;
-    try { last = localStorage.getItem('nespe-tab'); } catch (e) {}
-    show(DRILLS.some(d => d.id === last) ? last : DRILLS[0].id);
+    const known = TERMS.filter(t => Progress.isKnown(t)).length;
+    document.getElementById('stat-terms').textContent = `覚えた ${known} / ${TERMS.length} 語`;
+    const ok = CHECKS.filter(q => Progress.check(q.id).last === true).length;
+    const done = CHECKS.filter(q => Progress.check(q.id).last !== null).length;
+    document.getElementById('stat-checks').textContent = `正解 ${ok} / ${CHECKS.length} 問（解答済 ${done} 問）`;
   </script>
   <script src="js/pwa.js"></script>
 </body>

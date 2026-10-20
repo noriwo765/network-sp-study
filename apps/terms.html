@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>単語カード</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ネスペ学習">
+  <meta name="theme-color" content="#14171c">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/study.css">
+</head>
+<body>
+  <header>
+    <p class="back"><a href="index.html">← メニュー</a></p>
+    <h1>単語カード</h1>
+    <p class="sub">タップで意味を表示 → 「覚えた」「まだ」で仕分け。カードを右スワイプで覚えた、左スワイプでまだ（キーボードは Space / → / ←）。</p>
+  </header>
+
+  <nav id="chapters" class="chips" aria-label="本の章"></nav>
+
+  <div class="toolbar">
+    <div class="seg" role="tablist">
+      <button data-view="card" class="active">カード</button>
+      <button data-view="list">一覧</button>
+    </div>
+    <label><input type="checkbox" id="only-unknown"> 未習得のみ</label>
+    <label><input type="checkbox" id="shuffle" checked> シャッフル</label>
+  </div>
+
+  <section id="card-view">
+    <div class="progress-row"><span id="pos"></span><span id="known-count"></span></div>
+    <div class="bar"><span id="bar"></span></div>
+    <div id="flash" class="flash" tabindex="0">
+      <div class="flash-ch" id="flash-ch"></div>
+      <div class="flash-term" id="flash-term"></div>
+      <div id="flash-back" hidden>
+        <p class="flash-desc" id="flash-desc"></p>
+        <p class="flash-note" id="flash-note"></p>
+      </div>
+      <div class="flash-hint" id="flash-hint">タップで意味を表示</div>
+    </div>
+    <div class="judge-row" id="judge-row">
+      <button class="btn" id="btn-unknown">まだ</button>
+      <button class="btn primary" id="btn-known">覚えた ✓</button>
+    </div>
+    <div id="done" class="q-card" hidden>
+      <p class="score" id="done-score"></p>
+      <p class="muted" style="text-align:center">この範囲を一周しました</p>
+      <div class="judge-row">
+        <button class="btn" id="again-all">もう一周</button>
+        <button class="btn primary" id="again-unknown">未習得だけ</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="list-view" hidden>
+    <input type="search" id="search" placeholder="用語・意味で検索">
+    <div class="term-list" id="list"></div>
+  </section>
+
+  <script src="js/book.js"></script>
+  <script src="../flashcards/terms.js"></script>
+  <script src="js/study.js"></script>
+  <script src="js/terms-app.js"></script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>

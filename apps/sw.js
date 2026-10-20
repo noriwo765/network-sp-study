@@ -5,22 +5,30 @@
 //   （更新内容は「次に開いたとき」に反映される）
 // - ファイルを追加・削除したら FILES を直し、VERSION を上げる（tools/check.js が漏れを検出する）
 
-const VERSION = 'nespe-v1';
+const VERSION = 'nespe-v2';
 
 const FILES = [
   './',
   './index.html',
+  './drills.html',
   './packet-flow.html',
+  './terms.html',
+  './check.html',
   './manifest.webmanifest',
   './css/style.css',
   './css/flow.css',
+  './css/study.css',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './js/book.js',
+  './js/check-app.js',
   './js/common.js',
   './js/drills.js',
   './js/flow-engine.js',
   './js/pwa.js',
+  './js/study.js',
+  './js/terms-app.js',
   './js/scenarios/arp-spoof.js',
   './js/scenarios/basic.js',
   './js/scenarios/bgp.js',
@@ -47,6 +55,9 @@ const FILES = [
   './js/scenarios/vrrp.js',
   './js/scenarios/vxlan.js',
   './js/scenarios/wan.js',
+  // apps の外にある学習データ
+  '../flashcards/terms.js',
+  '../quizzes/check.js',
 ];
 
 self.addEventListener('install', event => {
