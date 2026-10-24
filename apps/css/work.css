@@ -85,6 +85,7 @@ details.passage-wrap > summary { cursor: pointer; font-weight: 600; padding: 4px
 .timer .t-limit { font-size: .78rem; color: var(--muted); }
 
 .cbt { display: flex; gap: 12px; align-items: stretch; }
+.cbt.swap { flex-direction: row-reverse; }        /* 左右入れ替え（デスクトップ） */
 .exam-pane, .answer-pane {
   flex: 1 1 50%; min-width: 0;
   border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
@@ -103,7 +104,7 @@ details.passage-wrap > summary { cursor: pointer; font-weight: 600; padding: 4px
 
 /* デスクトップ：各ペインを独立スクロール（本番CBTのように画面を見ながら解答） */
 @media (min-width: 900px) {
-  body.solving { max-width: 1280px; }
+  body.solving { max-width: none; }   /* 演習中は横幅いっぱいに表示 */
   body.solving #site-header { display: none; }
   #solve.on { display: flex; flex-direction: column; height: calc(100vh - 20px); }
   #solve.on .cbt { flex: 1 1 auto; min-height: 0; }
@@ -112,6 +113,7 @@ details.passage-wrap > summary { cursor: pointer; font-weight: 600; padding: 4px
 /* モバイル：縦積み。実問題は高さを抑えて独立スクロール、その下に解答欄 */
 @media (max-width: 899px) {
   .cbt { flex-direction: column; }
+  .cbt.swap { flex-direction: column-reverse; } /* 入替時は解答欄を上に */
   .exam-body { max-height: 60vh; }
   .exam-topbar { font-size: .92rem; }
   .timer .t-limit { display: none; }

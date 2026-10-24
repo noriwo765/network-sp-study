@@ -135,6 +135,14 @@
     };
   })();
 
+  // ---- 左右入れ替え（端末に保存） ------------------------------------
+  let swapped = false;
+  try { swapped = localStorage.getItem('nespe-work-swap') === '1'; } catch (_) {}
+  function applySwap() {
+    const c = $('#cbt'); if (c) c.classList.toggle('swap', swapped);
+    const b = $('#swap'); if (b) b.classList.toggle('active', swapped);
+  }
+
   // ---- 演習表示 ------------------------------------------------------
   let current = null, view = 'image', zoom = 100;
 
@@ -155,6 +163,7 @@
     $('#s-questions').innerHTML = p.questions.map(q => renderQuestion(p, q)).join('');
     bindQuestions(p);
     Timer.start(p);
+    applySwap();
     $('#exam-body').scrollTop = 0; $('#answer-pane').scrollTop = 0;
     window.scrollTo(0, 0);
   }
@@ -289,6 +298,11 @@
     $('#z-val').textContent = zoom + '%';
     const pages = $('#exam-body .exam-pages'); if (pages) pages.style.setProperty('--zoom', zoom + '%');
   }
+  $('#swap').addEventListener('click', () => {
+    swapped = !swapped;
+    try { localStorage.setItem('nespe-work-swap', swapped ? '1' : '0'); } catch (_) {}
+    applySwap();
+  });
   $('#t-toggle').addEventListener('click', () => Timer.toggle());
   $('#t-reset').addEventListener('click', () => { if (confirm('時間を 0 に戻しますか？')) Timer.reset(); });
   $('#retry').addEventListener('click', () => {
