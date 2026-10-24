@@ -236,3 +236,17 @@ input[type="search"] {
 .weak-item .res.mid { color: #d19a00; }
 .weak-item .lv { color: #d19a00; font-size: .82rem; min-width: 3.2em; }
 .weak-sub { color: var(--text); }
+
+/* ===== 午後Ⅰ 一問一答（qa.html） ===== */
+.flash-q { font-size: 1.1rem; font-weight: 600; margin: 8px 0; line-height: 1.5; }
+.flash-a { font-size: 1.02rem; font-weight: 600; color: var(--ok); margin: 4px 0 10px; }
+.kaisetsu { margin: 8px 0; padding: 8px 10px; background: var(--code-bg); border-radius: 8px; font-size: .92rem; }
+.kaisetsu::before { content: "開発でいうと　"; font-weight: 700; color: var(--accent); }
+.yasashii { margin: 8px 0; padding: 8px 10px; background: var(--ok-bg); border-radius: 8px; font-size: .92rem; }
+.yasashii::before { content: "やさしく言うと　"; font-weight: 700; color: var(--ok); }
+.explain-box .yasashii { margin: 6px 0; }
+.oboe { margin: 8px 0; font-size: .92rem; color: #92400e; background: #fef3c7; padding: 6px 10px; border-radius: 8px; }
+@media (prefers-color-scheme: dark) { .oboe { color: #fbbf24; background: #3a300f; } }
+.scene-link { margin: 8px 0 0; }
+.anime-link { font-size: .9rem; color: var(--accent); text-decoration: none; font-weight: 600; }
+.anime-link:hover { text-decoration: underline; }

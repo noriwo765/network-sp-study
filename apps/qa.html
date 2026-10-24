@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>午後Ⅰ 一問一答</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ネスペ学習">
+  <meta name="theme-color" content="#14171c">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/study.css">
+</head>
+<body>
+  <header>
+    <p class="back"><a href="index.html">← メニュー</a></p>
+    <h1>午後Ⅰ 一問一答</h1>
+    <p class="sub">記述のキーになる論点を一問一答で。カードをタップ→答え＋身近な（Web開発の）たとえ＋覚え方。関連アニメにも飛べる。</p>
+  </header>
+
+  <div class="seg" role="tablist">
+    <button data-view="card" class="active">カード</button>
+    <button data-view="quiz">4択</button>
+    <button data-view="list">一覧・検索</button>
+  </div>
+
+  <nav id="chapters" class="chips" aria-label="本の章"></nav>
+
+  <div class="toolbar">
+    <label><input type="checkbox" id="only-unknown"> まだ覚えていないものだけ</label>
+    <label><input type="checkbox" id="shuffle" checked> シャッフル</label>
+  </div>
+
+  <section id="card-view">
+    <div class="progress-row"><span id="pos"></span><span id="known-count"></span></div>
+    <div class="bar"><span id="bar"></span></div>
+
+    <div class="flash" id="flash">
+      <p class="flash-ch" id="flash-ch"></p>
+      <p class="flash-q" id="flash-q"></p>
+      <div class="flash-back" id="flash-back" hidden>
+        <p class="flash-a" id="flash-a"></p>
+        <p class="kaisetsu" id="flash-kaisetsu"></p>
+        <p class="yasashii" id="flash-yasashii" hidden></p>
+        <p class="oboe" id="flash-oboe" hidden></p>
+        <p class="scene-link" id="flash-scene"></p>
+      </div>
+      <p class="flash-hint" id="flash-hint">タップで答え</p>
+    </div>
+
+    <div class="judge-row" id="judge-row">
+      <button class="btn" id="btn-unknown">まだ（←）</button>
+      <button class="btn primary" id="btn-known">覚えた（→）</button>
+    </div>
+
+    <div id="done" hidden>
+      <div class="q-card">
+        <p class="score" id="done-score"></p>
+        <div class="mode-row" style="justify-content:center">
+          <button class="btn primary" id="again-unknown">まだの分だけもう一度</button>
+          <button class="btn" id="again-all">最初から</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="quiz-view" hidden>
+    <div class="progress-row"><span id="q-pos"></span><span id="q-score"></span></div>
+    <div class="bar"><span id="q-bar"></span></div>
+    <div class="q-card" id="q-card">
+      <p class="flash-ch" id="q-ch"></p>
+      <p class="q-text" id="q-q"></p>
+      <div class="choices" id="q-choices"></div>
+      <div class="explain-box" id="q-explain" hidden></div>
+      <div class="next-row"><button class="btn primary" id="q-next" hidden>次へ</button></div>
+    </div>
+    <div id="q-done" hidden>
+      <div class="q-card">
+        <p class="score" id="q-done-score"></p>
+        <div class="mode-row" style="justify-content:center">
+          <button class="btn primary" id="q-again-wrong">間違えた分だけ</button>
+          <button class="btn" id="q-again-all">最初から</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="list-view" hidden>
+    <input type="search" id="search" placeholder="問い・答え・解説を検索">
+    <div class="term-list" id="list"></div>
+  </section>
+
+  <script src="js/book.js"></script>
+  <script src="js/study.js"></script>
+  <script src="../flashcards/qa_routing.js"></script>
+  <script src="../flashcards/qa_tcpip.js"></script>
+  <script src="../flashcards/qa_security.js"></script>
+  <script src="../flashcards/qa_apps.js"></script>
+  <script src="js/qa-app.js"></script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>
