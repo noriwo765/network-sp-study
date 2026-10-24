@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>ワーク演習（AI採点）</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ネスペ学習">
+  <meta name="theme-color" content="#14171c">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/study.css">
+  <link rel="stylesheet" href="css/work.css">
+</head>
+<body>
+  <header id="site-header">
+    <p class="back"><a href="index.html">← メニュー</a></p>
+    <h1>ワーク演習（AI採点）</h1>
+    <p class="sub">本番と同じ実問題（CBT形式）を左に表示、右の解答欄に記述。Claude が採点する。</p>
+  </header>
+
+  <div id="server-banner"></div>
+
+  <!-- 問題選択 -->
+  <section id="pick">
+    <div class="work-pick">
+      <p class="label">年度</p>
+      <nav id="year-chips" aria-label="年度"></nav>
+      <p class="label">区分</p>
+      <nav id="section-chips" aria-label="区分"></nav>
+    </div>
+    <div class="prob-list" id="prob-list"></div>
+  </section>
+
+  <!-- 演習（CBT形式） -->
+  <section id="solve" hidden>
+    <div class="exam-topbar">
+      <a href="#" id="to-list" class="back-sm">← 一覧</a>
+      <span class="exam-title" id="s-title"></span>
+      <span class="timer" id="timer">
+        <span class="t-clock" id="t-clock">00:00</span>
+        <span class="t-limit" id="t-limit"></span>
+        <button class="btn small" id="t-toggle">一時停止</button>
+        <button class="btn small" id="t-reset" title="時間を0に戻す">時間リセット</button>
+      </span>
+      <button class="btn small danger" id="retry" title="解答と採点を消してやり直す">やり直す</button>
+    </div>
+
+    <div class="cbt">
+      <div class="exam-pane" id="exam-pane">
+        <div class="exam-tools">
+          <span class="seg view-seg" id="view-seg">
+            <button data-view="image" class="active">実問題</button>
+            <button data-view="text">文字版</button>
+          </span>
+          <span class="zoom" id="zoom-ctl">
+            <button id="z-out" aria-label="縮小">－</button>
+            <span id="z-val">100%</span>
+            <button id="z-in" aria-label="拡大">＋</button>
+          </span>
+        </div>
+        <div class="exam-body" id="exam-body"></div>
+      </div>
+
+      <div class="answer-pane" id="answer-pane">
+        <p class="sub" id="s-overview"></p>
+        <div id="s-questions"></div>
+        <p class="muted" id="s-source"></p>
+      </div>
+    </div>
+  </section>
+
+  <script src="work/r7_pm1_q1.js"></script>
+  <script src="work/r7_pm1_q2.js"></script>
+  <script src="work/r7_pm1_q3.js"></script>
+  <script src="work/r7_pm2_q1.js"></script>
+  <script src="work/r7_pm2_q2.js"></script>
+  <script src="work/r6_pm1_q1.js"></script>
+  <script src="work/r6_pm1_q2.js"></script>
+  <script src="work/r6_pm1_q3.js"></script>
+  <script src="work/r6_pm2_q1.js"></script>
+  <script src="work/r6_pm2_q2.js"></script>
+  <script src="work/r5_pm1_q1.js"></script>
+  <script src="work/r5_pm1_q2.js"></script>
+  <script src="work/r5_pm1_q3.js"></script>
+  <script src="work/r5_pm2_q1.js"></script>
+  <script src="work/r5_pm2_q2.js"></script>
+  <script src="work/_pages.js"></script>
+  <script src="js/work-app.js"></script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>

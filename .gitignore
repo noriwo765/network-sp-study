@@ -1,0 +1,17 @@
+# APIキーなどの秘密情報（絶対にコミットしない）
+server/.env
+.env
+
+# OS / エディタ
+.DS_Store
+Thumbs.db
+*.code-workspace
+node_modules/
+
+# IPA過去問に由来するコンテンツは再配布しない（ローカル専用・push対象外）
+#   - 実問題ページ画像 / 図（PDFから描画した画像）
+#   - 問題データ（本文・公式解答例の文字起こし）とそのページ一覧
+apps/work/pages/
+apps/work/figs/
+apps/work/_pages.js
+apps/work/r*_pm*_q*.js
