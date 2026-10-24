@@ -5,7 +5,7 @@
 //   （更新内容は「次に開いたとき」に反映される）
 // - ファイルを追加・削除したら FILES を直し、VERSION を上げる（tools/check.js が漏れを検出する）
 
-const VERSION = 'nespe-v7';
+const VERSION = 'nespe-v8';
 
 const FILES = [
   './',
@@ -16,6 +16,7 @@ const FILES = [
   './check.html',
   './compare.html',
   './ports.html',
+  './diagnostic.html',
   './manifest.webmanifest',
   './css/style.css',
   './css/flow.css',
@@ -26,6 +27,7 @@ const FILES = [
   './js/book.js',
   './js/check-app.js',
   './js/common.js',
+  './js/diagnostic-app.js',
   './js/compare-app.js',
   './js/drills.js',
   './js/flow-engine.js',
@@ -67,6 +69,7 @@ const FILES = [
   '../flashcards/ports.js',
   '../flashcards/terms.js',
   '../quizzes/check.js',
+  '../quizzes/diagnostic.js',
 ];
 
 self.addEventListener('install', event => {

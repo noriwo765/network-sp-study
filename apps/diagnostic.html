@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>重点3ジャンル診断テスト</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ネスペ学習">
+  <meta name="theme-color" content="#14171c">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/study.css">
+</head>
+<body>
+  <header>
+    <p class="back"><a href="index.html">← メニュー</a></p>
+    <h1>重点3ジャンル診断テスト</h1>
+    <p class="sub">まず<strong>何も見ずに</strong>答えを考え、「解答・解説を見る」で確認して 〇／△／× を付ける。全30問（IPヘッダ／ルーティング／セキュリティ 各10）。苦手ジャンルの把握用。</p>
+  </header>
+
+  <section id="top">
+    <div class="diag-sum" id="summary"></div>
+    <nav id="filter" class="chips" aria-label="絞り込み"></nav>
+    <p><button class="btn small" id="reset">結果をリセット</button></p>
+  </section>
+
+  <section id="list"></section>
+
+  <section id="weak" hidden>
+    <h3>弱点サブトピック（×・△の優先順）</h3>
+    <p class="muted" id="weak-note"></p>
+    <div class="weak-list" id="weak-list"></div>
+  </section>
+
+  <script src="../quizzes/diagnostic.js"></script>
+  <script src="js/diagnostic-app.js"></script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>
