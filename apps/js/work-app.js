@@ -264,27 +264,29 @@
       ${j.modelAnswer ? `<h5>模範解答</h5><div class="model">${esc(j.modelAnswer)}</div>` : ''}`;
   }
 
+  const verdictClass = v => v === '正解' ? 'ok' : v === '部分正解' ? 'part' : v === '不正解' ? 'ng' : '';
+  const stamp = ts => { const d = new Date(ts), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+
+  // 採点のたびに「回」として別々に保存し、各回の全内容を見返せる
   function showResult(card, key) {
     const attempts = (Store.q(key).attempts || []);
     if (!attempts.length) return;
-    const latest = attempts[attempts.length - 1];
     const out = card.querySelector('.grade-result');
-    const past = attempts.slice(0, -1).reverse();
-    const hist = past.length ? `
-      <details class="history">
-        <summary>採点履歴（${attempts.length}回）</summary>
-        ${past.map(a => {
-          const v = a.result || {}; const d = new Date(a.at);
-          const vc = v.verdict === '正解' ? 'ok' : v.verdict === '部分正解' ? 'part' : 'ng';
-          return `<div class="hist-item">
-            <span class="verdict ${vc}">${esc(v.verdict || '-')}</span>
-            ${v.score != null ? `<span class="score">${esc(v.score)}点</span>` : ''}
-            <span class="hist-meta">${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}・経過${fmt(a.elapsed || 0)}</span>
-            <div class="hist-ans">解答：${esc(a.answer)}</div>
-          </div>`;
-        }).join('')}
+    const n = attempts.length;
+    const latest = attempts[n - 1];
+    const meta = a => `<span class="hist-meta">${stamp(a.at)}・経過 ${fmt(a.elapsed || 0)}</span>`;
+    const head = (a, no) => { const v = a.result || {}; return `${no}回目　<span class="verdict ${verdictClass(v.verdict)}">${esc(v.verdict || '-')}</span>${v.score != null ? ` <span class="score">${esc(v.score)} / ${esc(v.scoreMax ?? 10)}点</span>` : ''}　${meta(a)}`; };
+    const full = a => `<div class="attempt-answer"><b>この回の解答：</b>${esc(a.answer)}</div><div class="result">${resultHtml(a.result)}</div>`;
+    const past = attempts.slice(0, -1); // 0..n-2 が過去回（1回目..n-1回目）
+    const history = past.length ? `
+      <details class="history"><summary>これまでの採点（${past.length}回）を見返す</summary>
+        ${past.map((a, i) => `<details class="attempt"><summary>${head(a, i + 1)}</summary>${full(a)}</details>`).reverse().join('')}
       </details>` : '';
-    out.innerHTML = `<div class="result">${resultHtml(latest.result)}${hist}</div>`;
+    out.innerHTML = `<div class="result">
+      <div class="attempt-head latest">最新（${n}回目）　${meta(latest)}</div>
+      ${resultHtml(latest.result)}
+      <div class="attempt-answer"><b>この回の解答：</b>${esc(latest.answer)}</div>
+      ${history}</div>`;
   }
 
   // ---- 操作（ビュー切替・ズーム・タイマー・やり直し・一覧へ） ----------

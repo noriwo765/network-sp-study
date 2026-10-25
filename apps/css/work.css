@@ -119,9 +119,16 @@ details.passage-wrap > summary { cursor: pointer; font-weight: 600; padding: 4px
   .timer .t-limit { display: none; }
 }
 
-/* 採点履歴 */
-.result .history { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 6px; }
-.result .history > summary { cursor: pointer; font-size: .85rem; color: var(--muted); }
+/* 採点履歴（回ごとに別管理） */
+.attempt-head { font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
+.attempt-head.latest { font-weight: 600; color: var(--text); }
+.attempt-head .verdict { font-size: .78rem; padding: 1px 8px; }
+.attempt-answer { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; margin: 6px 0; font-size: .9rem; white-space: pre-wrap; word-break: break-word; }
+.result .history { margin-top: 12px; border-top: 1px dashed var(--border); padding-top: 8px; }
+.result .history > summary { cursor: pointer; font-size: .85rem; color: var(--muted); font-weight: 600; }
+.result .history .attempt { border: 1px solid var(--border); border-radius: 8px; margin: 8px 0; padding: 6px 10px; background: var(--surface); }
+.result .history .attempt > summary { cursor: pointer; }
+.result .history .attempt .result { border: none; margin-top: 6px; padding-top: 6px; }
 .hist-item { border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; margin: 6px 0; font-size: .85rem; }
 .hist-item .verdict { font-size: .78rem; padding: 1px 8px; }
 .hist-item .score { margin-left: 6px; font-weight: 600; }
