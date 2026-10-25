@@ -129,6 +129,7 @@
       start(p) { this.stop(); pid = p.id; limit = limitSec(p); sec = Store.timer(pid); running = true;
         $('#t-limit').textContent = `/ 目安 ${fmt(limit)}`; paint(); iv = setInterval(tick, 1000); },
       toggle() { running = !running; if (running) iv = setInterval(tick, 1000); else { clearInterval(iv); Store.setTimer(pid, sec); } paint(); },
+      pause() { if (running) { running = false; clearInterval(iv); Store.setTimer(pid, sec); paint(); } },
       reset() { sec = 0; Store.setTimer(pid, sec); paint(); },
       stop() { if (iv) clearInterval(iv); iv = null; if (pid) Store.setTimer(pid, sec); },
       get sec() { return sec; },
@@ -162,6 +163,8 @@
     renderViewSeg();
     $('#s-questions').innerHTML = p.questions.map(q => renderQuestion(p, q)).join('');
     bindQuestions(p);
+    $('#grade-summary').innerHTML = '';
+    $('#grade-all-note').textContent = `全${p.questions.length}問。書けた分だけでも提出できます`;
     Timer.start(p);
     applySwap();
     $('#exam-body').scrollTop = 0; $('#answer-pane').scrollTop = 0;
@@ -224,13 +227,8 @@
   }
 
   // ---- 採点 ----------------------------------------------------------
-  async function gradeOne(p, q, card, key) {
-    const ta = card.querySelector('textarea');
-    const answer = ta.value.trim();
+  async function runGrade(p, q, card, key, answer) {
     const out = card.querySelector('.grade-result');
-    if (!answer) { out.innerHTML = `<p class="err">解答を入力してください。</p>`; return; }
-    if (!serverOk) { out.innerHTML = `<p class="err">中継サーバが利用できません。<code>node server/relay.js</code> を起動してください。</p>`; return; }
-    const btn = card.querySelector('.grade'); btn.disabled = true;
     out.innerHTML = `<p class="spinner">Claude が採点中…</p>`;
     try {
       const r = await fetch('/grade', {
@@ -242,12 +240,79 @@
         }),
       });
       const j = await r.json();
-      if (!r.ok) { out.innerHTML = `<p class="err">採点エラー：${esc(j.error || r.status)}${j.detail ? '<br>' + esc(j.detail) : ''}</p>`; return; }
+      if (!r.ok) { out.innerHTML = `<p class="err">採点エラー：${esc(j.error || r.status)}${j.detail ? '<br>' + esc(j.detail) : ''}</p>`; return null; }
       Store.addAttempt(key, { at: Date.now(), elapsed: Timer.sec, answer, result: j });
       showResult(card, key);
+      return j;
     } catch (e) {
       out.innerHTML = `<p class="err">通信に失敗しました：${esc(e.message)}</p>`;
-    } finally { btn.disabled = false; }
+      return null;
+    }
+  }
+
+  async function gradeOne(p, q, card, key) {
+    const answer = card.querySelector('textarea').value.trim();
+    const out = card.querySelector('.grade-result');
+    if (!answer) { out.innerHTML = `<p class="err">解答を入力してください。</p>`; return; }
+    if (!serverOk) { out.innerHTML = `<p class="err">中継サーバが利用できません。<code>node server/relay.js</code> を起動してください。</p>`; return; }
+    const btn = card.querySelector('.grade'); btn.disabled = true;
+    await runGrade(p, q, card, key, answer);
+    btn.disabled = false;
+  }
+
+  // まとめて採点（提出）：入力済みの設問を一括採点し、合計点を表示（本番に近い流れ）
+  async function gradeAll() {
+    const p = current; if (!p) return;
+    if (!serverOk) { $('#grade-summary').innerHTML = `<div class="banner warn">中継サーバが利用できません。<code>node server/relay.js</code> を起動してください。</div>`; return; }
+    const cards = {};
+    $('#s-questions').querySelectorAll('.setq').forEach(c => { cards[c.dataset.qid] = c; });
+    const items = p.questions.map(q => {
+      const card = cards[q.id];
+      return { q, card, key: `${p.id}:${q.id}`, answer: card.querySelector('textarea').value.trim() };
+    });
+    const answered = items.filter(x => x.answer);
+    const empties = items.length - answered.length;
+    if (!answered.length) { $('#grade-summary').innerHTML = `<p class="err">解答がまだ入力されていません。</p>`; return; }
+    if (!confirm(`入力済みの ${answered.length} 問をまとめて採点します。${empties ? `（未入力 ${empties} 問は採点されません）` : ''}\nよろしいですか？`)) return;
+    Timer.pause();
+    const btn = $('#grade-all'); btn.disabled = true;
+    const sum = $('#grade-summary');
+    let done = 0;
+    const prog = () => { sum.innerHTML = `<div class="batch-sum"><span class="spinner">採点中… ${done} / ${answered.length}</span></div>`; };
+    prog();
+    const results = [];
+    const queue = answered.slice();
+    const worker = async () => {
+      while (queue.length) {
+        const it = queue.shift();
+        results.push(await runGrade(p, it.q, it.card, it.key, it.answer));
+        done++; prog();
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]); // 最大3並列
+    renderBatchSummary(results, empties);
+    btn.disabled = false;
+  }
+  function renderBatchSummary(results, empties) {
+    const ok = results.filter(r => r && r.verdict === '正解').length;
+    const part = results.filter(r => r && r.verdict === '部分正解').length;
+    const ng = results.filter(r => r && r.verdict === '不正解').length;
+    const failed = results.filter(r => !r).length;
+    const score = results.reduce((a, r) => a + (r && typeof r.score === 'number' ? r.score : 0), 0);
+    const max = results.reduce((a, r) => a + (r && typeof r.scoreMax === 'number' ? r.scoreMax : (r ? 10 : 0)), 0);
+    $('#grade-summary').innerHTML = `<div class="batch-sum">
+      <div class="batch-score">採点結果　得点 ${score} / ${max}</div>
+      <div class="batch-breakdown">
+        <span class="verdict ok">正解 ${ok}</span>
+        <span class="verdict part">部分正解 ${part}</span>
+        <span class="verdict ng">不正解 ${ng}</span>
+        ${failed ? `<span class="muted">採点失敗 ${failed}</span>` : ''}
+        ${empties ? `<span class="muted">未入力 ${empties}</span>` : ''}
+        <span class="muted">所要 ${fmt(Timer.sec)}</span>
+      </div>
+      <p class="muted">各設問の詳細は下の採点結果へ。もう一度解くなら「やり直す」。</p>
+    </div>`;
+    $('#grade-summary').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   function resultHtml(j) {
@@ -305,6 +370,7 @@
     try { localStorage.setItem('nespe-work-swap', swapped ? '1' : '0'); } catch (_) {}
     applySwap();
   });
+  $('#grade-all').addEventListener('click', gradeAll);
   $('#t-toggle').addEventListener('click', () => Timer.toggle());
   $('#t-reset').addEventListener('click', () => { if (confirm('時間を 0 に戻しますか？')) Timer.reset(); });
   $('#retry').addEventListener('click', () => {
@@ -313,6 +379,7 @@
     Store.retry(current);
     $('#s-questions').innerHTML = current.questions.map(q => renderQuestion(current, q)).join('');
     bindQuestions(current);
+    $('#grade-summary').innerHTML = '';
     Timer.start(current);
   });
   $('#to-list').addEventListener('click', e => {

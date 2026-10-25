@@ -134,3 +134,13 @@ details.passage-wrap > summary { cursor: pointer; font-weight: 600; padding: 4px
 .hist-item .score { margin-left: 6px; font-weight: 600; }
 .hist-meta { color: var(--muted); margin-left: 6px; }
 .hist-ans { margin-top: 4px; white-space: pre-wrap; word-break: break-word; }
+
+/* まとめて採点（提出） */
+.answer-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 8px; }
+.answer-actions .btn.primary { font-weight: 600; }
+.answer-actions .muted { font-size: .8rem; }
+.batch-sum { border: 1px solid var(--accent); border-radius: 10px; background: var(--code-bg); padding: 10px 12px; margin: 6px 0 12px; }
+.batch-score { font-weight: 700; font-size: 1.05rem; }
+.batch-breakdown { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
+.batch-breakdown .verdict { font-size: .82rem; padding: 1px 10px; }
+.batch-sum .muted { font-size: .82rem; }
