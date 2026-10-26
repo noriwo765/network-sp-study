@@ -5,7 +5,7 @@
 //   （更新内容は「次に開いたとき」に反映される）
 // - ファイルを追加・削除したら FILES を直し、VERSION を上げる（tools/check.js が漏れを検出する）
 
-const VERSION = 'nespe-v9';
+const VERSION = 'nespe-v10';
 
 const FILES = [
   './',
@@ -32,6 +32,7 @@ const FILES = [
   './js/compare-app.js',
   './js/drills.js',
   './js/flow-engine.js',
+  './js/gate.js',
   './js/ports-app.js',
   './js/pwa.js',
   './js/qa-app.js',

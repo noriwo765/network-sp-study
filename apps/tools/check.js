@@ -14,7 +14,7 @@ const bad = msg => { errors++; console.log('NG', msg); };
 // ---- シナリオ ---------------------------------------------------------
 
 const html = fs.readFileSync(path.join(APP, 'packet-flow.html'), 'utf8');
-const scripts = [...html.matchAll(/<script src="(js\/[^"]+)"/g)].map(m => m[1]).filter(s => !s.endsWith('pwa.js'));
+const scripts = [...html.matchAll(/<script src="(js\/[^"]+)"/g)].map(m => m[1]).filter(s => !s.endsWith('pwa.js') && !s.endsWith('gate.js'));
 const code = scripts.map(s => fs.readFileSync(path.join(APP, s), 'utf8')).join('\n')
   + '\n;globalThis.__out = { SCENARIOS, BOOK, HEADER_LAYOUTS };';
 const ctx = {};
