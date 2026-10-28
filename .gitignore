@@ -2,8 +2,9 @@
 server/.env
 .env
 
-# 学習履歴（端末ローカルの個人データ。端末間の持ち運びは手動）
+# 学習履歴・配点予想（端末ローカルの個人データ）
 server/history.json
+server/haiten.json
 
 # 解答記録（採点のたびに自動生成される個人の解答・採点。README だけ追跡）
 解答記録/*
@@ -22,3 +23,4 @@ apps/work/pages/
 apps/work/figs/
 apps/work/_pages.js
 apps/work/r*_pm*_q*.js
+tmp/*

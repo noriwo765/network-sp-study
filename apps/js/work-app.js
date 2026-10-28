@@ -40,31 +40,40 @@
         save();
       },
       doneCount(prob) { return prob.questions.filter(q => (this.q(`${prob.id}:${q.id}`).attempts || []).length).length; },
-      // 配点予想。data.__haiten['pid:qid'] に、単一なら数値／空欄別なら {ラベル:点数} を保持
-      haiten(pid, qid) { // その設問の満点（空欄別なら合計）
-        const h = (data.__haiten || {})[`${pid}:${qid}`];
-        if (typeof h === 'number') return h > 0 ? h : null;
-        if (h && typeof h === 'object') { const s = Object.values(h).reduce((a, v) => a + (Number(v) > 0 ? Number(v) : 0), 0); return s > 0 ? s : null; }
-        return null;
-      },
-      haitenMap(pid, qid) { const h = (data.__haiten || {})[`${pid}:${qid}`]; return (h && typeof h === 'object') ? h : null; },
-      haitenField(pid, qid, label) { const h = this.haitenMap(pid, qid); const v = h ? Number(h[label]) : NaN; return v > 0 ? v : null; },
-      setHaitenSingle(pid, qid, val) {
-        data.__haiten = data.__haiten || {}; const k = `${pid}:${qid}`, n = Number(val);
-        if (n > 0) data.__haiten[k] = n; else delete data.__haiten[k];
-        save();
-      },
-      setHaitenField(pid, qid, label, val) {
-        data.__haiten = data.__haiten || {}; const k = `${pid}:${qid}`;
-        const h = (data.__haiten[k] && typeof data.__haiten[k] === 'object') ? data.__haiten[k] : {};
-        const n = Number(val); if (n > 0) h[label] = n; else delete h[label];
-        if (Object.keys(h).length) data.__haiten[k] = h; else delete data.__haiten[k];
-        save();
-      },
-      problemMax(prob) { return prob.questions.reduce((s, q) => s + (this.haiten(prob.id, q.id) || 0), 0); },
+      // 旧仕様で履歴に相乗りしていた配点(__haiten)を取り出して履歴からは消す（Haitenへ移行）
+      takeLegacyHaiten() { const h = data.__haiten; if (h) { delete data.__haiten; save(); } return (h && typeof h === 'object') ? h : null; },
       // バックアップ／復元用：保存データ全体の読み書き
       raw() { return data; },
       replaceAll(obj) { data = obj || {}; save(); },
+    };
+  })();
+
+  // ---- 配点予想（履歴とは完全に別保存：別キー・別ファイル。履歴の上書きに巻き込まれない） ----
+  // localStorage キー 'nespe-work-haiten-v1' と サーバの /haiten（server/haiten.json）に保存。
+  // 読み込みは「マージ（既存を消さない）」なので、同期で配点が消える事故が起きない。
+  const Haiten = (() => {
+    const KEY = 'nespe-work-haiten-v1';
+    let map = {};
+    try { map = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (_) {}
+    let putTimer = null;
+    const payload = () => ({ app: BACKUP_TAG, savedAt: new Date().toISOString(), haiten: map });
+    const persist = () => {
+      try { localStorage.setItem(KEY, JSON.stringify(map)); } catch (_) {}
+      if (serverHist) { clearTimeout(putTimer); putTimer = setTimeout(() => { fetch('/haiten', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload()) }).catch(() => {}); }, 600); }
+    };
+    const sum = h => Object.values(h).reduce((a, v) => a + (Number(v) > 0 ? Number(v) : 0), 0);
+    return {
+      haiten(pid, qid) { const h = map[`${pid}:${qid}`]; if (typeof h === 'number') return h > 0 ? h : null; if (h && typeof h === 'object') { const s = sum(h); return s > 0 ? s : null; } return null; },
+      map(pid, qid) { const h = map[`${pid}:${qid}`]; return (h && typeof h === 'object') ? h : null; },
+      field(pid, qid, label) { const h = this.map(pid, qid); const v = h ? Number(h[label]) : NaN; return v > 0 ? v : null; },
+      setSingle(pid, qid, val) { const k = `${pid}:${qid}`, n = Number(val); if (n > 0) map[k] = n; else delete map[k]; persist(); },
+      setField(pid, qid, label, val) { const k = `${pid}:${qid}`; const h = (map[k] && typeof map[k] === 'object') ? map[k] : {}; const n = Number(val); if (n > 0) h[label] = n; else delete h[label]; if (Object.keys(h).length) map[k] = h; else delete map[k]; persist(); },
+      problemMax(prob) { return prob.questions.reduce((s, q) => s + (this.haiten(prob.id, q.id) || 0), 0); },
+      // マージ取り込み（既存キーは残す＝ローカル優先。無いキーだけ足す）。消えない。
+      mergeIn(obj) { let ch = false; for (const [k, v] of Object.entries(obj || {})) { if (!(k in map) && v != null) { map[k] = v; ch = true; } } if (ch) persist(); return ch; },
+      raw() { return map; },
+      flush() { if (!serverHist) return Promise.resolve(false); clearTimeout(putTimer); return fetch('/haiten', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload()) }).then(r => r.ok).catch(() => false); },
+      pushUp() { if (serverHist && Object.keys(map).length) persist(); },
     };
   })();
 
@@ -318,7 +327,7 @@
     }
     return `<div class="setq" data-qid="${esc(q.id)}" data-mode="${shape.mode}" data-limit="${limitNum(q)}">
       ${q.group ? `<p class="group">${esc(q.group)}</p>` : ''}
-      <p class="prompt"><span class="qid">${esc(q.id)}</span>${esc(q.prompt)}${q.charLimit ? `<span class="limit">（${esc(q.charLimit)}）</span>` : ''}${Store.haiten(p.id, q.id) ? `<span class="haiten-tag">配点 ${Store.haiten(p.id, q.id)}点</span>` : ''}</p>
+      <p class="prompt"><span class="qid">${esc(q.id)}</span>${esc(q.prompt)}${q.charLimit ? `<span class="limit">（${esc(q.charLimit)}）</span>` : ''}${Haiten.haiten(p.id, q.id) ? `<span class="haiten-tag">配点 ${Haiten.haiten(p.id, q.id)}点</span>` : ''}</p>
       ${inputArea}${legacy}
       <div class="count"></div>
       <div class="row">
@@ -370,8 +379,8 @@
     const out = card.querySelector('.grade-result');
     out.innerHTML = `<p class="spinner">Claude が採点中…</p>`;
     try {
-      const scoreMax = Store.haiten(p.id, q.id); // 配点予想（設問の満点）。未設定なら null
-      const hMap = Store.haitenMap(p.id, q.id);   // 空欄別配点 {ラベル:点数}（あれば）
+      const scoreMax = Haiten.haiten(p.id, q.id); // 配点予想（設問の満点）。未設定なら null
+      const hMap = Haiten.map(p.id, q.id);        // 空欄別配点 {ラベル:点数}（あれば）
       const scoreBreakdown = hMap ? Object.entries(hMap).filter(([, v]) => Number(v) > 0).map(([k, v]) => `${k}=${v}点`).join('、') : '';
       const r = await fetch('/grade', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -563,28 +572,28 @@
       const shape = answerShape(q);
       let fields;
       if (shape.mode === 'single') {
-        const v = Store.haiten(p.id, q.id);
+        const v = Haiten.haiten(p.id, q.id);
         fields = `<div class="haiten-field">${numInput(`data-single="1" value="${v == null ? '' : v}"`)} 点</div>`;
       } else {
         fields = shape.fields.map(lb => {
-          const v = Store.haitenField(p.id, q.id, lb);
+          const v = Haiten.field(p.id, q.id, lb);
           return `<div class="haiten-field"><span class="hf-label">${esc(lb)}</span>${numInput(`data-label="${esc(lb)}" value="${v == null ? '' : v}"`)} 点</div>`;
-        }).join('') + `<div class="haiten-subtotal">小計 <b>${Store.haiten(p.id, q.id) || 0}</b> 点</div>`;
+        }).join('') + `<div class="haiten-subtotal">小計 <b>${Haiten.haiten(p.id, q.id) || 0}</b> 点</div>`;
       }
       return `<div class="haiten-q" data-qid="${esc(q.id)}">
         <p class="prompt"><span class="qid">${esc(q.id)}</span>${esc(q.prompt)}</p>
         <div class="haiten-fields">${fields}</div>
       </div>`;
     }).join('');
-    $('#haiten-body').innerHTML = rows + `<p class="haiten-total">問題の合計：<b id="haiten-sum">${Store.problemMax(p)}</b> 点</p>`;
+    $('#haiten-body').innerHTML = rows + `<p class="haiten-total">問題の合計：<b id="haiten-sum">${Haiten.problemMax(p)}</b> 点</p>`;
     $('#haiten-body').querySelectorAll('.haiten-q').forEach(qEl => {
       const qid = qEl.dataset.qid;
       const subEl = qEl.querySelector('.haiten-subtotal b');
       qEl.querySelectorAll('input').forEach(inp => inp.addEventListener('input', () => {
-        if (inp.dataset.single) Store.setHaitenSingle(p.id, qid, inp.value);
-        else Store.setHaitenField(p.id, qid, inp.dataset.label, inp.value);
-        if (subEl) subEl.textContent = Store.haiten(p.id, qid) || 0;
-        $('#haiten-sum').textContent = Store.problemMax(p);
+        if (inp.dataset.single) Haiten.setSingle(p.id, qid, inp.value);
+        else Haiten.setField(p.id, qid, inp.dataset.label, inp.value);
+        if (subEl) subEl.textContent = Haiten.haiten(p.id, qid) || 0;
+        $('#haiten-sum').textContent = Haiten.problemMax(p);
       }));
     });
   }
@@ -593,7 +602,7 @@
   $('#haiten-save').addEventListener('click', async () => {
     const btn = $('#haiten-save'), label = btn.textContent;
     btn.disabled = true; btn.textContent = '保存中…';
-    const ok = await flushToServer();
+    const ok = await Haiten.flush();
     btn.textContent = ok ? '保存しました ✓' : '保存（この端末に）✓';
     setTimeout(() => { btn.textContent = label; btn.disabled = false; }, 2000);
   });
@@ -700,11 +709,24 @@
       fetch('/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(currentPayload()) }).catch(() => {});
       if (fileKeys) note('この端末の方が新しいため、端末の内容を保持してサーバへ反映しました。');
     }
+    await loadHaiten(); // 配点は履歴とは別に、サーバの別ファイルからマージ読み込み
     renderPicker();
+  }
+  // 配点の読み込み：旧仕様で履歴に相乗りしていた分を移行し、サーバの配点ファイルをマージ。
+  // マージ（既存を消さない）なので、ここで配点が消えることはない。
+  async function loadHaiten() {
+    const legacy = Store.takeLegacyHaiten(); // 履歴に残っていた旧 __haiten を回収（あれば）
+    if (legacy) Haiten.mergeIn(legacy);
+    if (!serverHist) return;
+    try {
+      const r = await fetch('/haiten', { cache: 'no-store' });
+      if (r.ok) { const j = await r.json(); Haiten.mergeIn((j && j.haiten) ? j.haiten : {}); }
+    } catch (_) { /* 取得失敗時はローカルのみ */ }
+    Haiten.flush(); // マージ結果をサーバの配点ファイルへ即時反映
   }
   // 手動：現在の履歴をファイルに書き出す（バックアップ／持ち運び用）
   function exportHistory() {
-    const blob = new Blob([JSON.stringify(currentPayload(), null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ ...currentPayload(), haiten: Haiten.raw() }, null, 2)], { type: 'application/json' });
     const d = new Date(), p = n => String(n).padStart(2, '0');
     const name = `nespe-work-backup-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.json`;
     const a = document.createElement('a');
@@ -724,6 +746,7 @@
       if (!confirm(`復元します。\n\nこの端末の今の履歴は、ファイルの内容で完全に置き換えられます（上書き）。\n読み込む項目：${n} 件\n\nよろしいですか？`)) return;
       Store.replaceAll(payload.data); // これで syncToServer も走り、サーバのファイルも更新される
       try { if (payload.swap != null) localStorage.setItem('nespe-work-swap', payload.swap); } catch (_) {}
+      if (payload.haiten) { Haiten.mergeIn(payload.haiten); Haiten.flush(); } // 配点も復元（マージ）
       note('復元しました。画面を更新します…');
       setTimeout(() => location.reload(), 900);
     };

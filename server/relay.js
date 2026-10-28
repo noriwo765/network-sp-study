@@ -44,6 +44,9 @@ const server = http.createServer(async (req, res) => {
     // 学習履歴ファイル（端末間の持ち運び用）。この端末のローカルにだけ置く。
     if (req.method === 'GET' && req.url === '/history') return void readHistory(res);
     if ((req.method === 'PUT' || req.method === 'POST') && req.url === '/history') return void (await writeHistory(req, res));
+    // 配点予想（履歴とは別ファイル haiten.json）
+    if (req.method === 'GET' && req.url === '/haiten') return void readHaiten(res);
+    if ((req.method === 'PUT' || req.method === 'POST') && req.url === '/haiten') return void (await writeHaiten(req, res));
     // 解答記録（Markdown）を解答記録/ フォルダへ書き出す
     if ((req.method === 'POST' || req.method === 'PUT') && req.url === '/record') return void (await writeRecord(req, res));
     if (req.method === 'GET') return serveStatic(req, res);
@@ -145,6 +148,22 @@ function readHistory(res) {
 async function writeHistory(req, res) {
   const body = await readJson(req);
   fs.writeFile(HISTORY_FILE, JSON.stringify(body), 'utf8', err => {
+    if (err) return send(res, 500, { error: String(err.message || err) });
+    send(res, 200, { ok: true });
+  });
+}
+
+// ---- /haiten（配点予想の保存ファイル。履歴とは別管理） ------------------
+const HAITEN_FILE = path.join(__dirname, 'haiten.json');
+function readHaiten(res) {
+  fs.readFile(HAITEN_FILE, 'utf8', (err, txt) => {
+    if (err) return send(res, 200, {}); // まだ無ければ空
+    try { return send(res, 200, JSON.parse(txt)); } catch (_) { return send(res, 200, {}); }
+  });
+}
+async function writeHaiten(req, res) {
+  const body = await readJson(req);
+  fs.writeFile(HAITEN_FILE, JSON.stringify(body), 'utf8', err => {
     if (err) return send(res, 500, { error: String(err.message || err) });
     send(res, 200, { ok: true });
   });
