@@ -40,6 +40,15 @@
         save();
       },
       doneCount(prob) { return prob.questions.filter(q => (this.q(`${prob.id}:${q.id}`).attempts || []).length).length; },
+      // 配点予想（設問ごとの満点）。data.__haiten に 'pid:qid' → 点数 で保持
+      haiten(pid, qid) { const h = (data.__haiten || {})[`${pid}:${qid}`]; return (typeof h === 'number' && h > 0) ? h : null; },
+      setHaiten(pid, qid, val) {
+        data.__haiten = data.__haiten || {};
+        const n = Number(val);
+        if (n > 0) data.__haiten[`${pid}:${qid}`] = n; else delete data.__haiten[`${pid}:${qid}`];
+        save();
+      },
+      problemMax(prob) { return prob.questions.reduce((s, q) => s + (this.haiten(prob.id, q.id) || 0), 0); },
       // バックアップ／復元用：保存データ全体の読み書き
       raw() { return data; },
       replaceAll(obj) { data = obj || {}; save(); },
@@ -272,7 +281,7 @@
     }
     return `<div class="setq" data-qid="${esc(q.id)}" data-mode="${shape.mode}" data-limit="${limitNum(q)}">
       ${q.group ? `<p class="group">${esc(q.group)}</p>` : ''}
-      <p class="prompt"><span class="qid">${esc(q.id)}</span>${esc(q.prompt)}${q.charLimit ? `<span class="limit">（${esc(q.charLimit)}）</span>` : ''}</p>
+      <p class="prompt"><span class="qid">${esc(q.id)}</span>${esc(q.prompt)}${q.charLimit ? `<span class="limit">（${esc(q.charLimit)}）</span>` : ''}${Store.haiten(p.id, q.id) ? `<span class="haiten-tag">配点 ${Store.haiten(p.id, q.id)}点</span>` : ''}</p>
       ${inputArea}${legacy}
       <div class="count"></div>
       <div class="row">
@@ -324,16 +333,20 @@
     const out = card.querySelector('.grade-result');
     out.innerHTML = `<p class="spinner">Claude が採点中…</p>`;
     try {
+      const scoreMax = Store.haiten(p.id, q.id); // 配点予想（設問の満点）。未設定なら null
       const r = await fetch('/grade', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           context: `${p.yearLabel} ${p.sectionLabel} 問${p.no}「${p.title}」\n${p.overview || ''}\n\n${bodyToText(p.body)}`,
           questionNo: q.id, questionText: q.prompt, charLimit: q.charLimit || '',
           officialAnswer: q.answer || '', commentary: p.commentary || '', studentAnswer: answer,
+          scoreMax: scoreMax || undefined,
         }),
       });
       const j = await r.json();
       if (!r.ok) { out.innerHTML = `<p class="err">採点エラー：${esc(j.error || r.status)}${j.detail ? '<br>' + esc(j.detail) : ''}</p>`; return null; }
+      // 配点予想があれば満点を固定し、点数をその範囲に収める
+      if (scoreMax) { j.scoreMax = scoreMax; if (typeof j.score === 'number') j.score = Math.max(0, Math.min(scoreMax, j.score)); }
       Store.addAttempt(key, { at: Date.now(), elapsed: Timer.sec, answer, result: j });
       showResult(card, key);
       return j; // 記録ファイルの保存は呼び出し側（1採点＝1ファイル）で行う
@@ -494,6 +507,37 @@
     renderPicker(); window.scrollTo(0, 0);
   });
   $('#h-open').addEventListener('click', () => { $('#history').hidden = true; if (historyPid) openProblem(historyPid); });
+
+  // ---- 配点設定（設問ごとの満点＝配点予想） --------------------------
+  function openHaiten(selId) {
+    $('#pick').hidden = true; $('#haiten').hidden = false;
+    const sel = $('#haiten-select');
+    sel.innerHTML = PROBLEMS.map(p => `<option value="${p.id}">${esc(p.yearLabel)} ${esc(p.sectionLabel)} 問${p.no}　${esc(p.title)}</option>`).join('');
+    if (selId) sel.value = selId;
+    renderHaiten(sel.value);
+    window.scrollTo(0, 0);
+  }
+  function renderHaiten(pid) {
+    const p = PROBLEMS.find(x => x.id === pid); if (!p) return;
+    const rows = p.questions.map(q => {
+      const v = Store.haiten(p.id, q.id);
+      return `<div class="haiten-row" data-qid="${esc(q.id)}">
+        <span class="hq">${esc(q.id)}</span>
+        <span class="hp">${esc(q.prompt)}</span>
+        <span class="hin"><input type="number" min="0" max="100" step="1" inputmode="numeric" value="${v == null ? '' : v}" placeholder="—"> 点</span>
+      </div>`;
+    }).join('');
+    $('#haiten-body').innerHTML = rows + `<p class="haiten-total">合計：<b id="haiten-sum">${Store.problemMax(p)}</b> 点</p>`;
+    $('#haiten-body').querySelectorAll('.haiten-row input').forEach(inp => {
+      inp.addEventListener('input', () => {
+        Store.setHaiten(p.id, inp.closest('.haiten-row').dataset.qid, inp.value);
+        $('#haiten-sum').textContent = Store.problemMax(p);
+      });
+    });
+  }
+  $('#open-haiten').addEventListener('click', () => openHaiten());
+  $('#haiten-select').addEventListener('change', e => renderHaiten(e.target.value));
+  $('#haiten-to-list').addEventListener('click', e => { e.preventDefault(); $('#haiten').hidden = true; $('#pick').hidden = false; renderPicker(); window.scrollTo(0, 0); });
 
   // ---- 操作（ビュー切替・ズーム・タイマー・やり直し・一覧へ） ----------
   $('#view-seg').addEventListener('click', e => {

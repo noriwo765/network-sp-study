@@ -65,8 +65,9 @@ server.listen(PORT, () => {
 async function handleGrade(req, res) {
   if (!API_KEY) return send(res, 503, { error: 'ANTHROPIC_API_KEY が未設定です。server/.env か環境変数に設定してください。' });
   const body = await readJson(req);
-  const { context, questionNo, questionText, charLimit, officialAnswer, commentary, studentAnswer } = body || {};
+  const { context, questionNo, questionText, charLimit, officialAnswer, commentary, studentAnswer, scoreMax } = body || {};
   if (!questionText || studentAnswer == null) return send(res, 400, { error: 'questionText と studentAnswer が必要です。' });
+  const hasMax = typeof scoreMax === 'number' && scoreMax > 0;
 
   const system = [
     'あなたはネットワークスペシャリスト試験（IPA）午後問題の採点官です。',
@@ -77,7 +78,8 @@ async function handleGrade(req, res) {
     '{',
     '  "verdict": "正解" | "部分正解" | "不正解",',
     '  "score": 数値,            // 0〜scoreMax の目安',
-    '  "scoreMax": 数値,         // 配点が不明なら 10',
+    hasMax ? `  "scoreMax": ${scoreMax},         // この設問の満点は ${scoreMax} 点。score は 0〜${scoreMax} で付ける`
+           : '  "scoreMax": 数値,         // 配点が不明なら 10',
     '  "good": [string],         // 加点できる要素（箇条書き）',
     '  "missing": [string],      // 不足・誤り（箇条書き）',
     '  "diff": string,           // 解答例との差分の要約',
@@ -91,6 +93,7 @@ async function handleGrade(req, res) {
     questionNo ? `【設問】${questionNo}` : '【設問】',
     questionText,
     charLimit ? `（字数制限: ${charLimit}）` : '',
+    hasMax ? `（この設問の満点: ${scoreMax}点。score は 0〜${scoreMax} の範囲で付けること）` : '',
     '',
     `【公式解答例】\n${officialAnswer || '(なし)'}`,
     commentary ? `\n【採点講評（抜粋）】\n${commentary}` : '',
