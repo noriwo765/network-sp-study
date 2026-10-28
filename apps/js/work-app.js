@@ -535,7 +535,7 @@
   }
   function renderHaiten(pid) {
     const p = PROBLEMS.find(x => x.id === pid); if (!p) return;
-    const numInput = attr => `<input type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="—" ${attr}>`;
+    const numInput = attr => `<input type="number" min="0" max="100" step="0.5" inputmode="decimal" placeholder="—" ${attr}>`;
     const rows = p.questions.map(q => {
       const shape = answerShape(q);
       let fields;
