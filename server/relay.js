@@ -41,6 +41,11 @@ const server = http.createServer(async (req, res) => {
   try {
     if (req.method === 'POST' && req.url === '/grade') return void (await handleGrade(req, res));
     if (req.method === 'GET' && req.url === '/health') return send(res, 200, { ok: true, model: MODEL, hasKey: !!API_KEY });
+    // 学習履歴ファイル（端末間の持ち運び用）。この端末のローカルにだけ置く。
+    if (req.method === 'GET' && req.url === '/history') return void readHistory(res);
+    if ((req.method === 'PUT' || req.method === 'POST') && req.url === '/history') return void (await writeHistory(req, res));
+    // 解答記録（Markdown）を解答記録/ フォルダへ書き出す
+    if ((req.method === 'POST' || req.method === 'PUT') && req.url === '/record') return void (await writeRecord(req, res));
     if (req.method === 'GET') return serveStatic(req, res);
     res.writeHead(405).end('Method Not Allowed');
   } catch (e) {
@@ -122,6 +127,50 @@ async function handleGrade(req, res) {
   send(res, 200, parsed);
 }
 
+// ---- /history（学習履歴の保存ファイル） --------------------------------
+// ブラウザの localStorage だけだと端末ごとに別管理になるため、ここで server/history.json に
+// 保存しておき、起動時にブラウザへ読み込ませる（完全上書き）。中身は受験者の解答・採点履歴。
+const HISTORY_FILE = path.join(__dirname, 'history.json');
+function readHistory(res) {
+  fs.readFile(HISTORY_FILE, 'utf8', (err, txt) => {
+    if (err) return send(res, 200, {}); // まだ無ければ空を返す
+    try { return send(res, 200, JSON.parse(txt)); } catch (_) { return send(res, 200, {}); }
+  });
+}
+async function writeHistory(req, res) {
+  const body = await readJson(req);
+  fs.writeFile(HISTORY_FILE, JSON.stringify(body), 'utf8', err => {
+    if (err) return send(res, 500, { error: String(err.message || err) });
+    send(res, 200, { ok: true });
+  });
+}
+
+// ---- /record（解答記録 Markdown の書き出し） ---------------------------
+// 採点のたびにブラウザが組み立てた Markdown を、リポジトリ直下の 解答記録/ に保存する。
+// 中身は個人の解答・採点なので .gitignore 済み（README だけ追跡）。
+const RECORDS_DIR = path.join(ROOT, '解答記録');
+async function writeRecord(req, res) {
+  const body = await readJson(req);
+  const { name, markdown } = body || {};
+  if (!name || typeof markdown !== 'string') return send(res, 400, { error: 'name と markdown が必要です。' });
+  // パスを区切りごとに分解し、各セグメントをサニタイズ。「..」「.」やドライブ指定は除去する
+  // （解答記録/ の外へは絶対に書けないようにする）。サブフォルダ1階層（問題フォルダ）を許容。
+  const parts = String(name).split(/[\/\\]+/)
+    .map(s => s.replace(/[:*?"<>|]/g, '_').replace(/^\.+$/, '_').trim().slice(0, 80))
+    .filter(s => s && s !== '.' && s !== '..');
+  if (!parts.length) return send(res, 400, { error: 'name が不正です。' });
+  if (!parts[parts.length - 1].toLowerCase().endsWith('.md')) return send(res, 400, { error: 'name は .md で終わる必要があります。' });
+  const file = path.join(RECORDS_DIR, ...parts);
+  if (file !== RECORDS_DIR && !file.startsWith(RECORDS_DIR + path.sep)) return send(res, 403, { error: '不正なパスです。' });
+  fs.mkdir(path.dirname(file), { recursive: true }, errDir => {
+    if (errDir) return send(res, 500, { error: String(errDir.message || errDir) });
+    fs.writeFile(file, markdown, 'utf8', err => {
+      if (err) return send(res, 500, { error: String(err.message || err) });
+      send(res, 200, { ok: true, path: `解答記録/${parts.join('/')}` });
+    });
+  });
+}
+
 // ---- 補助 ---------------------------------------------------------------
 function serveStatic(req, res) {
   const urlPath = decodeURIComponent(new URL(req.url, 'http://x').pathname);
@@ -138,7 +187,7 @@ function serveStatic(req, res) {
 function readJson(req) {
   return new Promise((resolve, reject) => {
     let d = '';
-    req.on('data', c => { d += c; if (d.length > 2e6) req.destroy(); });
+    req.on('data', c => { d += c; if (d.length > 2e7) req.destroy(); });
     req.on('end', () => { try { resolve(d ? JSON.parse(d) : {}); } catch (e) { reject(e); } });
     req.on('error', reject);
   });

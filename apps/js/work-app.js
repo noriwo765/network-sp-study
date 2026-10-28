@@ -19,12 +19,14 @@
     return h ? `${h}:${pad(m)}:${pad(x)}` : `${pad(m)}:${pad(x)}`;
   };
 
-  // ---- 保存（localStorage） ------------------------------------------
+  // ---- 保存（localStorage ＋ ローカルサーバのファイル） --------------
+  const BACKUP_TAG = 'nespe-work';
+  let serverHist = false; // ローカルサーバの履歴保存(/history)が使えるか（起動時に判定）
   const Store = (() => {
     const KEY = 'nespe-work-v1';
     let data = {};
     try { data = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (_) {}
-    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (_) {} };
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (_) {} syncToServer(); };
     return {
       q(key) { return data[key] || { answer: '', attempts: [] }; },
       setDraft(key, answer) { const q = this.q(key); q.answer = answer; data[key] = q; save(); },
@@ -38,6 +40,9 @@
         save();
       },
       doneCount(prob) { return prob.questions.filter(q => (this.q(`${prob.id}:${q.id}`).attempts || []).length).length; },
+      // バックアップ／復元用：保存データ全体の読み書き
+      raw() { return data; },
+      replaceAll(obj) { data = obj || {}; save(); },
     };
   })();
 
@@ -243,6 +248,7 @@
       if (!r.ok) { out.innerHTML = `<p class="err">採点エラー：${esc(j.error || r.status)}${j.detail ? '<br>' + esc(j.detail) : ''}</p>`; return null; }
       Store.addAttempt(key, { at: Date.now(), elapsed: Timer.sec, answer, result: j });
       showResult(card, key);
+      saveRecord(p); // 採点のたび、解答記録(Markdown)を 解答記録/ に自動保存
       return j;
     } catch (e) {
       out.innerHTML = `<p class="err">通信に失敗しました：${esc(e.message)}</p>`;
@@ -369,6 +375,7 @@
     swapped = !swapped;
     try { localStorage.setItem('nespe-work-swap', swapped ? '1' : '0'); } catch (_) {}
     applySwap();
+    syncToServer();
   });
   $('#grade-all').addEventListener('click', gradeAll);
   $('#t-toggle').addEventListener('click', () => Timer.toggle());
@@ -393,7 +400,145 @@
   });
   window.addEventListener('beforeunload', () => Timer.stop());
 
+  // ---- 学習履歴の持ち運び（完全上書き方式） --------------------------
+  // 履歴はブラウザ(localStorage)に保存されるが、それだけだと端末ごとに別管理になる。
+  // ローカルサーバ経由のときは server/history.json にも自動保存し、起動時に自動で
+  // 読み込む（＝起動時インポート）。ファイルが正で、この端末の履歴を丸ごと上書きする。
+  // Windows ⇄ Mac で引き継ぐには、この history.json（または書き出したバックアップ）を
+  // もう一方へコピーするだけ。手動の書き出し／復元も「完全上書き」で用意する。
+  function currentPayload() {
+    let swap = '0'; try { swap = localStorage.getItem('nespe-work-swap') || '0'; } catch (_) {}
+    return { app: BACKUP_TAG, version: 1, savedAt: new Date().toISOString(), swap, data: Store.raw() };
+  }
+  // 使用中：save() から呼ばれ、少し待ってからサーバのファイルへ書き戻す（まとめ書き）
+  let putTimer = null;
+  function syncToServer() {
+    if (!serverHist) return;
+    clearTimeout(putTimer);
+    putTimer = setTimeout(() => {
+      fetch('/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(currentPayload()) }).catch(() => {});
+    }, 800);
+  }
+  // 起動時：サーバのファイルを読み、中身があればこの端末を丸ごと上書きする
+  async function startupSync() {
+    let payload = null;
+    try { const r = await fetch('/history', { cache: 'no-store' }); if (!r.ok) return; payload = await r.json(); }
+    catch (_) { return; } // サーバ無し（GitHub Pages 等）→ localStorage だけで動く
+    serverHist = true;
+    if (payload && payload.data && Object.keys(payload.data).length) {
+      Store.replaceAll(payload.data); // ファイルが正＝完全上書き
+      try { if (payload.swap != null) localStorage.setItem('nespe-work-swap', payload.swap); } catch (_) {}
+      swapped = payload.swap === '1';
+      note(`サーバの履歴を読み込みました（${new Date(payload.savedAt || Date.now()).toLocaleString()} 時点・項目 ${Object.keys(payload.data).length} 件）。`);
+    } else {
+      // ファイルが空なら、今この端末にある履歴でファイルを作る（初回の取りこぼし防止）
+      fetch('/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(currentPayload()) }).catch(() => {});
+      note('この端末の履歴をサーバ(server/history.json)に保存しました。別端末へはこのファイルをコピーしてください。');
+    }
+    renderPicker();
+  }
+  // 手動：現在の履歴をファイルに書き出す（バックアップ／持ち運び用）
+  function exportHistory() {
+    const blob = new Blob([JSON.stringify(currentPayload(), null, 2)], { type: 'application/json' });
+    const d = new Date(), p = n => String(n).padStart(2, '0');
+    const name = `nespe-work-backup-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.json`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    note(`「${name}」を書き出しました。`);
+  }
+  // 手動：ファイルを読み込み、この端末の履歴を丸ごと置き換える（完全上書き）
+  function importHistory(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      let payload;
+      try { payload = JSON.parse(reader.result); } catch (_) { return note('ファイルを読めませんでした（JSON ではありません）。', true); }
+      if (!payload || payload.app !== BACKUP_TAG || !payload.data) return note('このアプリのバックアップファイルではありません。', true);
+      const n = Object.keys(payload.data).length;
+      if (!confirm(`復元します。\n\nこの端末の今の履歴は、ファイルの内容で完全に置き換えられます（上書き）。\n読み込む項目：${n} 件\n\nよろしいですか？`)) return;
+      Store.replaceAll(payload.data); // これで syncToServer も走り、サーバのファイルも更新される
+      try { if (payload.swap != null) localStorage.setItem('nespe-work-swap', payload.swap); } catch (_) {}
+      note('復元しました。画面を更新します…');
+      setTimeout(() => location.reload(), 900);
+    };
+    reader.onerror = () => note('ファイルの読み込みに失敗しました。', true);
+    reader.readAsText(file);
+  }
+  function note(msg, warn) {
+    const el = $('#backup-note'); if (!el) return;
+    el.textContent = msg; el.classList.toggle('warn', !!warn);
+  }
+  $('#hist-export').addEventListener('click', exportHistory);
+  $('#hist-import').addEventListener('click', () => $('#hist-file').click());
+  $('#hist-file').addEventListener('change', e => { const f = e.target.files[0]; if (f) importHistory(f); e.target.value = ''; });
+  // 閉じる直前に、まだ送っていない変更を確実にサーバのファイルへ流す（直近の入力の取りこぼし防止）
+  window.addEventListener('beforeunload', () => {
+    if (!serverHist) return;
+    try { navigator.sendBeacon('/history', new Blob([JSON.stringify(currentPayload())], { type: 'application/json' })); } catch (_) {}
+  });
+
+  // ---- 解答記録（Markdown）の自動書き出し：回ごとに別ファイル ---------
+  // 採点のたびに、その時点の問題スナップショット（全設問・解答・AI採点・模範解答）を
+  // 「問題ごとのフォルダ」に「日時つきの新規ファイル」として保存する（上書きしない）。
+  //   解答記録/令和6年_午後Ⅰ_問1_○○/2026-11-02_143500.md
+  // ローカルサーバ経由のときだけ保存（静的配信では何もしない）。
+  const safeSeg = s => String(s).replace(/[\/\\:*?"<>|]/g, '_').replace(/\s+/g, '_').slice(0, 80);
+  function recordDir(p) { return safeSeg(`${p.yearLabel}_${p.sectionLabel}_問${p.no}_${p.title}`); }
+  function tsStamp() {
+    const d = new Date(), z = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}`;
+  }
+  function quote(s) { return '> ' + String(s == null ? '' : s).replace(/\r?\n/g, '\n> '); }
+  function resultMd(j) {
+    if (!j) return ['_採点結果なし_', ''];
+    if (j.raw) return ['採点結果を解釈できませんでした：', '', '```', String(j.raw), '```', ''];
+    const out = [`**判定**：${j.verdict || '-'}${j.score != null ? `　${j.score} / ${j.scoreMax ?? 10} 点` : ''}`, ''];
+    const list = (title, arr) => { if (arr && arr.length) { out.push(`**${title}**`, ''); arr.forEach(x => out.push(`- ${x}`)); out.push(''); } };
+    list('加点できる点', j.good);
+    list('不足・誤り', j.missing);
+    if (j.diff) out.push(`**解答例との差分**：${j.diff}`, '');
+    if (j.advice) out.push(`**アドバイス**：${j.advice}`, '');
+    if (j.modelAnswer) out.push(`**模範解答**：${j.modelAnswer}`, '');
+    return out;
+  }
+  // 「今この瞬間」の問題全体のスナップショット（各設問は最新の採点回を載せる）
+  function buildSnapshotMd(p) {
+    const L = [`# ${p.yearLabel} ${p.sectionLabel} 問${p.no}　${p.title}`, ''];
+    L.push(`- 記録日時：${stamp(Date.now())}`);
+    const tsec = Store.timer(p.id); if (tsec) L.push(`- 所要時間：${fmt(tsec)}`);
+    if (p.overview) L.push(`- 出題趣旨：${p.overview}`);
+    if (p.source) L.push(`- 出典：${p.source}`);
+    L.push('');
+    for (const q of p.questions) {
+      const attempts = Store.q(`${p.id}:${q.id}`).attempts || [];
+      L.push(`## 設問 ${q.id}${q.group ? `（${q.group}）` : ''}`, '');
+      L.push(`**問題**：${q.prompt}${q.charLimit ? `（${q.charLimit}）` : ''}`, '');
+      if (q.answer) L.push(`**公式解答例**：${q.answer}`, '');
+      if (!attempts.length) { L.push('_この時点では未採点_', ''); continue; }
+      const a = attempts[attempts.length - 1];
+      L.push(`**この時点：第${attempts.length}回（${stamp(a.at)}・経過 ${fmt(a.elapsed || 0)}）**`, '');
+      L.push('**あなたの解答**：', '', quote(a.answer), '');
+      L.push(...resultMd(a.result));
+    }
+    return L.join('\n');
+  }
+  let recTimer = null;
+  function saveRecord(p) {
+    if (!serverHist || !p) return;
+    clearTimeout(recTimer); // まとめて採点など連続採点は 1 ファイルにまとめる
+    const snapshot = buildSnapshotMd(p);
+    const name = `${recordDir(p)}/${tsStamp()}.md`;
+    recTimer = setTimeout(() => {
+      fetch('/record', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name, markdown: snapshot }),
+      }).catch(() => {});
+    }, 500);
+  }
+
   // ---- 起動 ----------------------------------------------------------
   renderPicker();
   checkServer();
+  startupSync();
 })();

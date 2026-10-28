@@ -25,8 +25,18 @@ iPhone / iPad の Safari で開いて「共有 → ホーム画面に追加」�
 3. 気づき・アプリの誤りを学習計画のメモ欄に書き、アプリを修正・追加していく
 
 ## ワーク演習（記述式・AI採点）
-直近3年（令和5〜7年）の午後問題を解いて **Claude に採点**してもらえる（[apps/work.html](apps/work.html)）。API キーを持つ中継サーバが必要：
+令和4〜7年の午後問題を解いて **Claude に採点**してもらえる（[apps/work.html](apps/work.html)）。API キーを持つ中継サーバが必要。
+
+かんたん起動（ダブルクリック）：
+- **Windows**：`ワーク演習を起動.bat`
+- **Mac**：`ワーク演習を起動.command`
+
+直接コマンドでも起動できる：
 ```
 node server/relay.js
 ```
 を実行し、`http://localhost:8787/apps/work.html` を開く。準備は [server/README.md](server/README.md)。
+
+AI 採点するたびに、その時点のスナップショット（解答・採点・模範解答）が Markdown で [解答記録/](解答記録/) に保存される。問題ごとのフォルダに日時つきで**回ごとに別ファイル**として残るので、何周しても上書きされない（見返し用。個人データなので Git 管理外）。
+
+> 外出先の MacBook でも同じ手順で使える。API キー（`server/.env`）は Git に含まれないので、Mac 側でも [server/.env.example](server/.env.example) を参考に一度だけ設定する。学習履歴はローカル起動時に `server/history.json` に自動保存・起動時に自動読み込みされ、端末間はこのファイルをコピーするだけで引き継げる（完全上書き）。詳細は [server/README.md](server/README.md)。

@@ -144,3 +144,10 @@ details.passage-wrap > summary { cursor: pointer; font-weight: 600; padding: 4px
 .batch-breakdown { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
 .batch-breakdown .verdict { font-size: .82rem; padding: 1px 10px; }
 .batch-sum .muted { font-size: .82rem; }
+
+/* 学習履歴のバックアップ／復元（端末をまたいで引き継ぐ） */
+.backup-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 18px; padding-top: 12px; border-top: 1px dashed var(--border); }
+.backup-bar .backup-label { font-weight: 600; font-size: .9rem; color: var(--muted); }
+.backup-bar .muted { font-size: .82rem; }
+.backup-bar .muted.warn { color: var(--danger, #c0392b); }
+.backup-bar .backup-help { flex-basis: 100%; margin: 4px 0 0; font-size: .8rem; line-height: 1.5; }

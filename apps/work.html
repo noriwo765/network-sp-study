@@ -32,6 +32,16 @@
       <nav id="section-chips" aria-label="区分"></nav>
     </div>
     <div class="prob-list" id="prob-list"></div>
+
+    <!-- 学習履歴のバックアップ／復元（端末をまたいで引き継ぐ） -->
+    <div class="backup-bar" id="backup-bar">
+      <span class="backup-label">学習履歴</span>
+      <button class="btn small" id="hist-export" title="解答・採点履歴をファイルに書き出す">バックアップを書き出す</button>
+      <button class="btn small" id="hist-import" title="ファイルを読み込み、この端末の履歴を丸ごと置き換える">ファイルから復元する</button>
+      <input type="file" id="hist-file" accept="application/json,.json" hidden>
+      <span class="muted" id="backup-note"></span>
+      <p class="backup-help muted">ローカル起動時は <code>server/history.json</code> に自動保存され、起動時に自動で読み込まれます。別の端末へ移すには、このファイル（か上で書き出したバックアップ）をコピーしてください。</p>
+    </div>
   </section>
 
   <!-- 演習（CBT形式） -->

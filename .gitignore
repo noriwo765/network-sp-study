@@ -2,6 +2,13 @@
 server/.env
 .env
 
+# 学習履歴（端末ローカルの個人データ。端末間の持ち運びは手動）
+server/history.json
+
+# 解答記録（採点のたびに自動生成される個人の解答・採点。README だけ追跡）
+解答記録/*
+!解答記録/README.md
+
 # OS / エディタ
 .DS_Store
 Thumbs.db
