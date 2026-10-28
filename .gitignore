@@ -12,6 +12,7 @@ server/history.json
 
 # OS / エディタ
 .DS_Store
+._*
 Thumbs.db
 *.code-workspace
 node_modules/

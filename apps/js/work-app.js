@@ -789,6 +789,7 @@
       if (fileKeys) note('この端末の方が新しいため、端末の内容を保持してサーバへ反映しました。');
     }
     await loadHaiten(); // 配点は履歴とは別に、サーバの別ファイルからマージ読み込み
+    saveSummary();      // 起動時にも学習状況サマリーを最新化（もう一方のマシンの Claude Code 用）
     renderPicker();
   }
   // 配点の読み込み：旧仕様で履歴に相乗りしていた分を移行し、サーバの配点ファイルをマージ。
@@ -908,7 +909,49 @@
     return fetch('/record', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ name: `${recordDir(p)}/${tsStamp()}.md`, markdown: buildSnapshotMd(p, opts) }),
-    }).then(r => r.ok).catch(() => false);
+    }).then(r => { saveSummary(); return r.ok; }).catch(() => false);
+  }
+
+  // ---- 学習状況サマリー（解答記録/_学習状況.md） ----------------------
+  // Claude Code のメモリはマシンごとで SSD に乗らないため、Mac/Windows どちらの Claude Code でも
+  // このファイル1つを読めば学習状況が分かるようにする（中身は学習状況ページと同じ集計＋要復習一覧）。
+  function buildSummaryMd() {
+    const rows = PROBLEMS.map(p => ({ p, s: problemStats(p) }));
+    const N = PROBLEMS.length;
+    const touched = rows.filter(x => x.s.graded > 0).length;
+    const completed = rows.filter(x => x.s.graded === x.s.total).length;
+    const gradedQ = rows.reduce((a, x) => a + x.s.graded, 0);
+    const totalTime = rows.reduce((a, x) => a + x.s.time, 0);
+    const totScore = rows.reduce((a, x) => a + x.s.score, 0), totMax = rows.reduce((a, x) => a + x.s.max, 0);
+    const pct = totMax ? Math.round(totScore / totMax * 100) : 0;
+    const L = ['# 午後問題 学習状況（自動生成・編集しない）', '',
+      `- 更新：${stamp(Date.now())}`,
+      `- 挑戦 ${touched}/${N} 問・完答 ${completed}/${N} 問・採点した設問 ${gradedQ}・学習時間 ${hhmm(totalTime)}・平均得点率 ${pct}%`,
+      '- 詳細：各回の解答・採点は `解答記録/<問題>/<日時>.md`、生データは `server/history.json`、配点は `server/haiten.json`', '',
+      '## 問題ごと', '', '| 問題 | 完答 | 得点（最新） | 周回 | 最終学習日 |', '|---|---|---|---|---|'];
+    for (const { p, s } of rows) {
+      const score = s.graded ? `${s.score}/${s.max}（${s.max ? Math.round(s.score / s.max * 100) : 0}%）` : '—';
+      L.push(`| ${p.yearLabel} ${p.sectionLabel} 問${p.no} ${p.title} | ${s.graded}/${s.total} | ${score} | ${s.rounds || '—'} | ${dayStamp(s.lastAt)} |`);
+    }
+    L.push('', '## 要復習（最新の判定が正解以外の設問）', '');
+    let n = 0;
+    for (const p of PROBLEMS) for (const q of p.questions) {
+      const at = Store.q(`${p.id}:${q.id}`).attempts || [];
+      if (!at.length) continue;
+      const last = at[at.length - 1], r = last.result || {};
+      if (r.verdict === '正解') continue;
+      n++;
+      L.push(`- ${p.yearLabel} ${p.sectionLabel} 問${p.no} ${q.id}：${r.verdict || '判定不能'}${typeof r.score === 'number' ? ` ${r.score}/${r.scoreMax ?? 10}点` : ''}（${dayStamp(last.at)}・${at.length}回目）`);
+    }
+    if (!n) L.push('- なし');
+    return L.join('\n') + '\n';
+  }
+  function saveSummary() {
+    if (!serverHist) return;
+    fetch('/record', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: '_学習状況.md', markdown: buildSummaryMd() }),
+    }).catch(() => {});
   }
 
   // ---- 起動 ----------------------------------------------------------

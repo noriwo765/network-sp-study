@@ -39,4 +39,4 @@ node server/relay.js
 
 AI 採点するたびに、その時点のスナップショット（解答・採点・模範解答）が Markdown で [解答記録/](解答記録/) に保存される。問題ごとのフォルダに日時つきで**回ごとに別ファイル**として残るので、何周しても上書きされない（見返し用。個人データなので Git 管理外）。
 
-> 外出先の MacBook でも同じ手順で使える。API キー（`server/.env`）は Git に含まれないので、Mac 側でも [server/.env.example](server/.env.example) を参考に一度だけ設定する。学習履歴はローカル起動時に `server/history.json` に自動保存・起動時に自動読み込みされ、端末間はこのファイルをコピーするだけで引き継げる（完全上書き）。詳細は [server/README.md](server/README.md)。
+> このフォルダは SSD に置いて Windows と MacBook で持ち運んで使う。学習記録（`server/history.json`・`解答記録/`）、配点（`server/haiten.json`）、APIキー（`server/.env`）はすべてフォルダ内にあるので SSD ごと移動し、どちらのマシンでも同じ記録の続きから使える。抜く前はブラウザのタブを閉じてからサーバを Ctrl+C で止める。詳細は [server/README.md](server/README.md#ssd-で-windows-と-mac-を行き来する)。Claude Code 向けの共有メモは [CLAUDE.md](CLAUDE.md)。

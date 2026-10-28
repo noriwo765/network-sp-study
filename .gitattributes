@@ -1,3 +1,10 @@
+# SSD(exFAT)上の同じ作業ツリーを Windows と Mac で共有するため、改行コードを OS に依存させず固定する。
+# （Windows の Git は autocrlf=true、Mac は未設定なので、固定しないと片方で全ファイルが「変更あり」に見える）
+* text=auto eol=lf
+
+# Windows の起動バッチは CRLF
+*.bat     text eol=crlf
+
 # Mac 用の起動スクリプトは必ず LF（CRLF だと macOS の bash で動かない）
 *.command text eol=lf
 *.sh      text eol=lf
