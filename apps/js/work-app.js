@@ -50,17 +50,23 @@
 
   // ---- 配点予想（履歴とは完全に別保存：別キー・別ファイル。履歴の上書きに巻き込まれない） ----
   // localStorage キー 'nespe-work-haiten-v1' と サーバの /haiten（server/haiten.json）に保存。
-  // 読み込みは「マージ（既存を消さない）」なので、同期で配点が消える事故が起きない。
+  // rev（最終編集時刻）を持ち、起動時はファイルの rev が新しければファイルの値を採用、そうでなければ
+  // 足りないキーだけ取り込む（どちらの場合もローカルにしか無い値は消さない）。
+  // サーバは古い rev での上書きを拒否するので、開きっぱなしのブラウザが新しいファイル
+  // （もう一方のマシンや Claude Code が書いたもの）を潰すことはない。
   const Haiten = (() => {
-    const KEY = 'nespe-work-haiten-v1';
-    let map = {};
-    try { map = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (_) {}
+    const KEY = 'nespe-work-haiten-v1', REV_KEY = 'nespe-work-haiten-rev';
+    let map = {}, rev = 0;
+    try { map = JSON.parse(localStorage.getItem(KEY)) || {}; rev = Number(localStorage.getItem(REV_KEY)) || 0; } catch (_) {}
     let putTimer = null;
-    // savedAt は入れない（中身が変わらない限りファイルも変わらない＝Git差分が出ない）
-    const payload = () => ({ app: BACKUP_TAG, haiten: map });
-    const persist = () => {
-      try { localStorage.setItem(KEY, JSON.stringify(map)); } catch (_) {}
-      if (serverHist) { clearTimeout(putTimer); putTimer = setTimeout(() => { fetch('/haiten', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload()) }).catch(() => {}); }, 600); }
+    // savedAt は入れない（rev は編集時だけ変わる＝読み込むだけではファイルも Git 差分も変わらない）
+    const payload = () => ({ app: BACKUP_TAG, rev, haiten: map });
+    // 戻り値：true=保存 / 'stale'=ファイル側が新しく拒否された / false=失敗
+    const put = () => fetch('/haiten', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload()) }).then(r => r.status === 409 ? 'stale' : r.ok).catch(() => false);
+    const keep = () => { try { localStorage.setItem(KEY, JSON.stringify(map)); localStorage.setItem(REV_KEY, String(rev)); } catch (_) {} };
+    const persist = () => { // 編集：rev を進めてローカル保存＋サーバへ（まとめ書き）
+      rev = Date.now(); keep();
+      if (serverHist) { clearTimeout(putTimer); putTimer = setTimeout(put, 600); }
     };
     const sum = h => Object.values(h).reduce((a, v) => a + (Number(v) > 0 ? Number(v) : 0), 0);
     return {
@@ -70,11 +76,22 @@
       setSingle(pid, qid, val) { const k = `${pid}:${qid}`, n = Number(val); if (n > 0) map[k] = n; else delete map[k]; persist(); },
       setField(pid, qid, label, val) { const k = `${pid}:${qid}`; const h = (map[k] && typeof map[k] === 'object') ? map[k] : {}; const n = Number(val); if (n > 0) h[label] = n; else delete h[label]; if (Object.keys(h).length) map[k] = h; else delete map[k]; persist(); },
       problemMax(prob) { return prob.questions.reduce((s, q) => s + (this.haiten(prob.id, q.id) || 0), 0); },
-      // マージ取り込み（既存キーは残す＝ローカル優先。無いキーだけ足す）。消えない。
+      // 取り込み（バックアップ復元・旧データ移行用）：無いキーだけ足す。消えない。
       mergeIn(obj) { let ch = false; for (const [k, v] of Object.entries(obj || {})) { if (!(k in map) && v != null) { map[k] = v; ch = true; } } if (ch) persist(); return ch; },
+      // 起動時：サーバのファイルと照合する。戻り値 needPush はファイルへ書き戻す必要があるか。
+      applyFile(fileMap, fileRev) {
+        fileMap = fileMap || {}; fileRev = Number(fileRev) || 0;
+        if (fileRev > rev) { // ファイルの方が新しい → ファイルの値を採用（ローカルにしか無いキーは残す）
+          for (const [k, v] of Object.entries(fileMap)) map[k] = v;
+          rev = fileRev;
+        } else {
+          for (const [k, v] of Object.entries(fileMap)) if (!(k in map) && v != null) map[k] = v;
+        }
+        keep();
+        return { needPush: rev > fileRev || Object.keys(map).some(k => !(k in fileMap)) };
+      },
       raw() { return map; },
-      flush() { if (!serverHist) return Promise.resolve(false); clearTimeout(putTimer); return fetch('/haiten', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload()) }).then(r => r.ok).catch(() => false); },
-      pushUp() { if (serverHist && Object.keys(map).length) persist(); },
+      flush() { if (!serverHist) return Promise.resolve(false); clearTimeout(putTimer); return put(); },
     };
   })();
 
@@ -234,58 +251,8 @@
   }
 
   // ---- 解答欄を解答例から自動生成（答案用紙を参考にした構造） -----------
-  // 解答例は「ラベル：値　ラベル：値」(全角コロン＋全角スペース) か「・項目　・項目」で
-  // 統一されているので、そこから解答欄の構造を復元する（答えは出さず、欄とラベルだけ作る）。
-  //   labeled … a/b/c・認証/認可・大阪本社/東京支社 などラベル付きの複数ボックス
-  //   bullets … 「四つ答えよ」などの ・箇条書き（番号付きの複数ボックス）
-  //   single  … 1つの記述欄
-  const splitFW = s => String(s || '').split(/　+/).map(x => x.trim()).filter(Boolean);
-  const isNote = s => /^[（(].*[）)]$/.test(s); // 「（順不同）」などの注記（解答欄ではない）
-  const contentSegs = s => splitFW(s).filter(x => !isNote(x));
-  const ENUM = /^([①-⑳])\s*(.*)$/; // ①〜⑳ で始まる連番項目か
-  // 「ラベル：値」の並び。さらに「ラベル：①項目　②項目　③項目」のように丸数字で
-  // 連番項目がぶら下がる場合は、ラベル①/ラベル②/… と1項目ずつの欄に分解する。
-  function parseLabeled(str) {
-    const segs = contentSegs(str);
-    if (!segs.length) return null;
-    const out = [];
-    let group = null;
-    for (const seg of segs) {
-      const i = seg.indexOf('：');
-      if (i > 0 && i <= 20 && !/[。、]/.test(seg.slice(0, i))) {
-        const label = seg.slice(0, i).trim(), rest = seg.slice(i + 1).trim();
-        const em = ENUM.exec(rest);
-        if (em) out.push({ label: label + em[1], value: em[2].trim() }); // ラベル＋①
-        else out.push({ label, value: rest });
-        group = label;
-      } else {
-        const em = ENUM.exec(seg); // 直前ラベルに続く ②③… の連番項目
-        if (em && group) out.push({ label: group + em[1], value: em[2].trim() });
-        else return null; // 解釈できない → ラベル付き扱いにしない
-      }
-    }
-    return out.length ? out : null;
-  }
-  // 設問文が「複数答えさせている」か（二つ/四つ/それぞれ/全て答えよ 等）。
-  // これに当てはまらない箇条書き解答例は「別解の列挙」とみなし、1欄にする。
-  function asksMultiple(q) {
-    const t = q.prompt || '';
-    return /([一二三四五六七八九十]|[0-9０-９]+)\s*つ/.test(t) || /それぞれ/.test(t) || /(全て|すべて).{0,6}(答え|挙げ|示せ|記)/.test(t);
-  }
-  function answerShape(q) {
-    const labeled = parseLabeled(q.answer);
-    if (labeled) return { mode: 'labeled', fields: labeled.map(b => b.label) };
-    const segs = contentSegs(q.answer);
-    // グループラベル無しの連番リスト（①X　②Y　③Z…）→ 丸数字ごとの欄
-    // （「①，②，⑤，⑥」のようにスペース区切りでない＝1セグメントのものは選択解答なので対象外）
-    if (segs.length >= 2 && segs.every(s => ENUM.test(s))) return { mode: 'labeled', fields: segs.map(s => ENUM.exec(s)[1]) };
-    const bullets = segs.filter(s => s.startsWith('・'));
-    if (bullets.length >= 2 && bullets.length === segs.length && asksMultiple(q)) return { mode: 'bullets', fields: bullets.map((_, i) => `${i + 1}`) };
-    return { mode: 'single', fields: [] };
-  }
-  const labeledValue = (savedStr, label) => { const f = (parseLabeled(savedStr) || []).find(b => b.label === label); return f ? f.value : ''; };
-  const bulletValues = savedStr => splitFW(savedStr).map(s => s.replace(/^・/, '').trim());
-  const limitNum = q => { const m = /(\d+)/.exec(q.charLimit || ''); return m ? Number(m[1]) : 0; };
+  // 判定ロジックは js/work-shape.js（検証ツール apps/tools/work-check.js と共用）。
+  const { splitFW, parseLabeled, answerShape, labeledValue, bulletValues, limitNum } = window.WorkShape;
   // 1枚のカードから現在の解答文字列を組み立てる（空欄は除くので未入力判定は trim() で効く）
   function cardAnswer(card) {
     const mode = card.dataset.mode;
@@ -604,6 +571,7 @@
     const btn = $('#haiten-save'), label = btn.textContent;
     btn.disabled = true; btn.textContent = '保存中…';
     const ok = await Haiten.flush();
+    if (ok === 'stale') { btn.textContent = label; btn.disabled = false; alert('ファイル側の配点の方が新しいため、上書きしませんでした。\nページを再読み込みしてから入力し直してください。'); return; }
     btn.textContent = ok ? '保存しました ✓' : '保存（この端末に）✓';
     setTimeout(() => { btn.textContent = label; btn.disabled = false; }, 2000);
   });
@@ -795,15 +763,14 @@
   // 配点の読み込み：旧仕様で履歴に相乗りしていた分を移行し、サーバの配点ファイルをマージ。
   // マージ（既存を消さない）なので、ここで配点が消えることはない。
   async function loadHaiten() {
-    let changed = false;
     const legacy = Store.takeLegacyHaiten(); // 履歴に残っていた旧 __haiten を回収（あれば）
-    if (legacy && Haiten.mergeIn(legacy)) changed = true;
+    if (legacy) Haiten.mergeIn(legacy);
     if (!serverHist) return;
-    try {
-      const r = await fetch('/haiten', { cache: 'no-store' });
-      if (r.ok) { const j = await r.json(); if (Haiten.mergeIn((j && j.haiten) ? j.haiten : {})) changed = true; }
-    } catch (_) { /* 取得失敗時はローカルのみ */ }
-    if (changed) Haiten.flush(); // 新たに取り込んだ分があるときだけファイルへ反映（無駄な書き込み＝Git差分を出さない）
+    let j = null;
+    try { const r = await fetch('/haiten', { cache: 'no-store' }); if (r.ok) j = await r.json(); }
+    catch (_) { return; } // 取得失敗時はローカルのみ
+    const { needPush } = Haiten.applyFile(j && j.haiten, j && j.rev);
+    if (needPush) Haiten.flush(); // 書き戻しが必要なときだけ（読み込むだけではファイル＝Git差分を変えない）
   }
   // 手動：現在の履歴をファイルに書き出す（バックアップ／持ち運び用）
   function exportHistory() {

@@ -163,7 +163,12 @@ function readHaiten(res) {
 }
 async function writeHaiten(req, res) {
   const body = await readJson(req);
-  fs.writeFile(HAITEN_FILE, JSON.stringify(body), 'utf8', err => {
+  // 古い rev（最終編集時刻）での上書きは拒否する。開きっぱなしのブラウザが、もう一方のマシンや
+  // Claude Code が更新した新しいファイルを潰さないため。
+  let curRev = 0;
+  try { curRev = Number(JSON.parse(fs.readFileSync(HAITEN_FILE, 'utf8')).rev) || 0; } catch (_) { /* 無い・壊れている → 0 */ }
+  if ((Number(body && body.rev) || 0) < curRev) return send(res, 409, { error: 'ファイル側の配点の方が新しいため上書きしませんでした。ページを再読み込みしてください。' });
+  fs.writeFile(HAITEN_FILE, JSON.stringify(body, null, 2) + '\n', 'utf8', err => {
     if (err) return send(res, 500, { error: String(err.message || err) });
     send(res, 200, { ok: true });
   });
