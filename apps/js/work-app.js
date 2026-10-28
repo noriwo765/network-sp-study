@@ -194,13 +194,50 @@
       `<button data-view="text" class="${view === 'text' ? 'active' : ''}">文字版</button>`;
   }
 
+  // ---- 穴埋め（type:'fill'）の空欄を解答例から自動抽出 ----------------
+  // 解答例は全問「a：値　b：値…」（全角コロン＋全角スペース区切り）で統一されているので、
+  // ここからラベル(a,b,c / ア,イ / ①② …)だけ取り出して空欄ごとの入力欄を作る（答えは出さない）。
+  function parseBlanks(str) {
+    if (!str) return [];
+    return String(str).split(/　+/).map(seg => {
+      const i = seg.indexOf('：');
+      if (i === -1) return null;
+      return { label: seg.slice(0, i).trim(), value: seg.slice(i + 1).trim() };
+    }).filter(b => b && b.label);
+  }
+  const fillLabels = q => (q.type === 'fill') ? parseBlanks(q.answer).map(b => b.label) : [];
+  const blankValue = (savedStr, label) => (parseBlanks(savedStr).find(b => b.label === label) || {}).value || '';
+  // 入力欄→保存文字列（空の欄は除くので、未入力判定は従来どおり trim() で効く）
+  function combineFills(card) {
+    return [...card.querySelectorAll('.fill-input')]
+      .map(inp => ({ label: inp.dataset.label, v: inp.value.trim() }))
+      .filter(x => x.v).map(x => `${x.label}：${x.v}`).join('　');
+  }
+  // カード種別によらず現在の解答文字列を取り出す
+  function cardAnswer(card) {
+    const a = (card.dataset.kind === 'fill') ? combineFills(card) : (card.querySelector('textarea') ? card.querySelector('textarea').value : '');
+    return a.trim();
+  }
+
   function renderQuestion(p, q) {
     const key = `${p.id}:${q.id}`;
     const saved = Store.q(key);
-    return `<div class="setq" data-qid="${esc(q.id)}">
+    const labels = fillLabels(q);
+    // 旧・自由記述の下書きが空欄別に変換できない場合は、消さずに注記として見せる
+    let legacy = '';
+    if (labels.length && (saved.answer || '').trim() && !parseBlanks(saved.answer).some(b => labels.includes(b.label))) {
+      legacy = `<p class="legacy-draft">以前の下書き：${esc(saved.answer)}<br>（空欄別入力に未変換。必要なら上の欄に入れ直してください）</p>`;
+    }
+    const inputArea = labels.length
+      ? `<div class="fills">` + labels.map(lb =>
+          `<label class="fill"><span class="fill-label">${esc(lb)}</span>` +
+          `<input type="text" class="fill-input" data-label="${esc(lb)}" value="${esc(blankValue(saved.answer, lb))}" placeholder="解答"></label>`
+        ).join('') + `</div>` + legacy
+      : `<textarea placeholder="ここに解答を入力">${esc(saved.answer || '')}</textarea>`;
+    return `<div class="setq" data-qid="${esc(q.id)}" data-kind="${labels.length ? 'fill' : 'desc'}">
       ${q.group ? `<p class="group">${esc(q.group)}</p>` : ''}
       <p class="prompt"><span class="qid">${esc(q.id)}</span>${esc(q.prompt)}${q.charLimit ? `<span class="limit">（${esc(q.charLimit)}）</span>` : ''}</p>
-      <textarea placeholder="ここに解答を入力">${esc(saved.answer || '')}</textarea>
+      ${inputArea}
       <div class="count"></div>
       <div class="row">
         <button class="btn primary grade">AIに採点してもらう</button>
@@ -216,11 +253,18 @@
       const qid = card.dataset.qid;
       const q = p.questions.find(x => x.id === qid);
       const key = `${p.id}:${qid}`;
-      const ta = card.querySelector('textarea');
+      const isFill = card.dataset.kind === 'fill';
       const count = card.querySelector('.count');
-      const updateCount = () => { count.textContent = `${[...ta.value.trim()].length} 字`; };
+      const inputs = isFill ? [...card.querySelectorAll('.fill-input')] : [card.querySelector('textarea')];
+      const labels = isFill ? fillLabels(q) : [];
+      const updateCount = () => {
+        count.textContent = isFill
+          ? `${combineFills(card) ? parseBlanks(combineFills(card)).length : 0} / ${labels.length} 個入力`
+          : `${[...cardAnswer(card)].length} 字`;
+      };
       updateCount();
-      ta.addEventListener('input', () => { updateCount(); Store.setDraft(key, ta.value); });
+      const onInput = () => { updateCount(); Store.setDraft(key, cardAnswer(card)); };
+      inputs.forEach(el => el && el.addEventListener('input', onInput));
       card.querySelector('.toggle-model').addEventListener('click', () => {
         const box = card.querySelector('.model'); box.hidden = !box.hidden;
         box.querySelector('.model-box').textContent = q.answer || '(なし)';
@@ -256,7 +300,7 @@
   }
 
   async function gradeOne(p, q, card, key) {
-    const answer = card.querySelector('textarea').value.trim();
+    const answer = cardAnswer(card);
     const out = card.querySelector('.grade-result');
     if (!answer) { out.innerHTML = `<p class="err">解答を入力してください。</p>`; return; }
     if (!serverOk) { out.innerHTML = `<p class="err">中継サーバが利用できません。<code>node server/relay.js</code> を起動してください。</p>`; return; }
@@ -274,7 +318,7 @@
     $('#s-questions').querySelectorAll('.setq').forEach(c => { cards[c.dataset.qid] = c; });
     const items = p.questions.map(q => {
       const card = cards[q.id];
-      return { q, card, key: `${p.id}:${q.id}`, answer: card.querySelector('textarea').value.trim() };
+      return { q, card, key: `${p.id}:${q.id}`, answer: cardAnswer(card) };
     });
     const answered = items.filter(x => x.answer);
     const empties = items.length - answered.length;
@@ -379,6 +423,16 @@
     syncToServer();
   });
   $('#grade-all').addEventListener('click', gradeAll);
+  // 保存して中断：採点せず、今の下書き・経過時間を保存（下書きは常に、記録はサーバ経由なら出力）
+  $('#save-pause').addEventListener('click', async () => {
+    if (!current) return;
+    Timer.pause(); // 経過時間を確定して保存
+    const btn = $('#save-pause'), label = btn.textContent;
+    btn.disabled = true; btn.textContent = '保存中…';
+    const ok = await saveRecord(current, { kind: '中断保存' });
+    btn.textContent = ok ? '保存しました ✓' : '下書きを保存 ✓';
+    setTimeout(() => { btn.textContent = label; btn.disabled = false; }, 2000);
+  });
   $('#t-toggle').addEventListener('click', () => Timer.toggle());
   $('#t-reset').addEventListener('click', () => { if (confirm('時間を 0 に戻しますか？')) Timer.reset(); });
   $('#retry').addEventListener('click', () => {
@@ -503,35 +557,45 @@
     if (j.modelAnswer) out.push(`**模範解答**：${j.modelAnswer}`, '');
     return out;
   }
-  // 「今この瞬間」の問題全体のスナップショット（各設問は最新の採点回を載せる）
-  function buildSnapshotMd(p) {
+  // 「今この瞬間」の問題全体のスナップショット（下書き・最新の採点回の両方を載せる）
+  function buildSnapshotMd(p, opts) {
+    const kind = (opts && opts.kind) || '採点';
     const L = [`# ${p.yearLabel} ${p.sectionLabel} 問${p.no}　${p.title}`, ''];
     L.push(`- 記録日時：${stamp(Date.now())}`);
+    L.push(`- 種別：${kind === '中断保存' ? '中断保存（採点なし）' : '採点'}`);
     const tsec = Store.timer(p.id); if (tsec) L.push(`- 所要時間：${fmt(tsec)}`);
     if (p.overview) L.push(`- 出題趣旨：${p.overview}`);
     if (p.source) L.push(`- 出典：${p.source}`);
     L.push('');
     for (const q of p.questions) {
-      const attempts = Store.q(`${p.id}:${q.id}`).attempts || [];
+      const saved = Store.q(`${p.id}:${q.id}`);
+      const attempts = saved.attempts || [];
+      const draft = (saved.answer || '').trim();
       L.push(`## 設問 ${q.id}${q.group ? `（${q.group}）` : ''}`, '');
       L.push(`**問題**：${q.prompt}${q.charLimit ? `（${q.charLimit}）` : ''}`, '');
       if (q.answer) L.push(`**公式解答例**：${q.answer}`, '');
-      if (!attempts.length) { L.push('_この時点では未採点_', ''); continue; }
-      const a = attempts[attempts.length - 1];
-      L.push(`**この時点：第${attempts.length}回（${stamp(a.at)}・経過 ${fmt(a.elapsed || 0)}）**`, '');
-      L.push('**あなたの解答**：', '', quote(a.answer), '');
-      L.push(...resultMd(a.result));
+      if (attempts.length) {
+        const a = attempts[attempts.length - 1];
+        L.push(`**第${attempts.length}回の採点（${stamp(a.at)}・経過 ${fmt(a.elapsed || 0)}）**`, '');
+        L.push('**あなたの解答**：', '', quote(a.answer), '');
+        L.push(...resultMd(a.result));
+        if (draft && draft !== (a.answer || '').trim()) L.push('**現在の下書き（未採点）**：', '', quote(draft), '');
+      } else if (draft) {
+        L.push('**下書き（未採点）**：', '', quote(draft), '');
+      } else {
+        L.push('_未入力・未採点_', '');
+      }
     }
     return L.join('\n');
   }
-  // 1採点アクション（単問採点 or まとめて採点）につき 1 ファイルだけ保存する。
-  // runGrade からは呼ばず、採点が終わった呼び出し側で1回だけ呼ぶこと（多重生成の防止）。
-  function saveRecord(p) {
-    if (!serverHist || !p) return;
-    fetch('/record', {
+  // 1アクション（単問採点／まとめて採点／中断保存）につき 1 ファイルだけ保存する。
+  // runGrade からは呼ばず、採点や保存が終わった呼び出し側で1回だけ呼ぶこと（多重生成の防止）。
+  function saveRecord(p, opts) {
+    if (!serverHist || !p) return Promise.resolve(false);
+    return fetch('/record', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name: `${recordDir(p)}/${tsStamp()}.md`, markdown: buildSnapshotMd(p) }),
-    }).catch(() => {});
+      body: JSON.stringify({ name: `${recordDir(p)}/${tsStamp()}.md`, markdown: buildSnapshotMd(p, opts) }),
+    }).then(r => r.ok).catch(() => false);
   }
 
   // ---- 起動 ----------------------------------------------------------
