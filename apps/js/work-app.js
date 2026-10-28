@@ -194,50 +194,79 @@
       `<button data-view="text" class="${view === 'text' ? 'active' : ''}">文字版</button>`;
   }
 
-  // ---- 穴埋め（type:'fill'）の空欄を解答例から自動抽出 ----------------
-  // 解答例は全問「a：値　b：値…」（全角コロン＋全角スペース区切り）で統一されているので、
-  // ここからラベル(a,b,c / ア,イ / ①② …)だけ取り出して空欄ごとの入力欄を作る（答えは出さない）。
-  function parseBlanks(str) {
-    if (!str) return [];
-    return String(str).split(/　+/).map(seg => {
+  // ---- 解答欄を解答例から自動生成（答案用紙を参考にした構造） -----------
+  // 解答例は「ラベル：値　ラベル：値」(全角コロン＋全角スペース) か「・項目　・項目」で
+  // 統一されているので、そこから解答欄の構造を復元する（答えは出さず、欄とラベルだけ作る）。
+  //   labeled … a/b/c・認証/認可・大阪本社/東京支社 などラベル付きの複数ボックス
+  //   bullets … 「四つ答えよ」などの ・箇条書き（番号付きの複数ボックス）
+  //   single  … 1つの記述欄
+  const splitFW = s => String(s || '').split(/　+/).map(x => x.trim()).filter(Boolean);
+  const isNote = s => /^[（(].*[）)]$/.test(s); // 「（順不同）」などの注記（解答欄ではない）
+  const contentSegs = s => splitFW(s).filter(x => !isNote(x));
+  function parseLabeled(str) {
+    const segs = contentSegs(str);
+    const out = segs.map(seg => {
       const i = seg.indexOf('：');
-      if (i === -1) return null;
-      return { label: seg.slice(0, i).trim(), value: seg.slice(i + 1).trim() };
-    }).filter(b => b && b.label);
+      const label = i > 0 ? seg.slice(0, i).trim() : '';
+      return (i > 0 && i <= 20 && !/[。、]/.test(label)) ? { label, value: seg.slice(i + 1).trim() } : null;
+    });
+    return (segs.length && out.every(Boolean)) ? out : null;
   }
-  const fillLabels = q => (q.type === 'fill') ? parseBlanks(q.answer).map(b => b.label) : [];
-  const blankValue = (savedStr, label) => (parseBlanks(savedStr).find(b => b.label === label) || {}).value || '';
-  // 入力欄→保存文字列（空の欄は除くので、未入力判定は従来どおり trim() で効く）
-  function combineFills(card) {
-    return [...card.querySelectorAll('.fill-input')]
-      .map(inp => ({ label: inp.dataset.label, v: inp.value.trim() }))
-      .filter(x => x.v).map(x => `${x.label}：${x.v}`).join('　');
+  function answerShape(q) {
+    const labeled = parseLabeled(q.answer);
+    if (labeled) return { mode: 'labeled', fields: labeled.map(b => b.label) };
+    const segs = contentSegs(q.answer);
+    const bullets = segs.filter(s => s.startsWith('・'));
+    if (bullets.length >= 2 && bullets.length === segs.length) return { mode: 'bullets', fields: bullets.map((_, i) => `${i + 1}`) };
+    return { mode: 'single', fields: [] };
   }
-  // カード種別によらず現在の解答文字列を取り出す
+  const labeledValue = (savedStr, label) => { const f = (parseLabeled(savedStr) || []).find(b => b.label === label); return f ? f.value : ''; };
+  const bulletValues = savedStr => splitFW(savedStr).map(s => s.replace(/^・/, '').trim());
+  const limitNum = q => { const m = /(\d+)/.exec(q.charLimit || ''); return m ? Number(m[1]) : 0; };
+  // 1枚のカードから現在の解答文字列を組み立てる（空欄は除くので未入力判定は trim() で効く）
   function cardAnswer(card) {
-    const a = (card.dataset.kind === 'fill') ? combineFills(card) : (card.querySelector('textarea') ? card.querySelector('textarea').value : '');
-    return a.trim();
+    const mode = card.dataset.mode;
+    if (mode === 'labeled') return [...card.querySelectorAll('[data-label]')].map(el => ({ l: el.dataset.label, v: el.value.trim() })).filter(x => x.v).map(x => `${x.l}：${x.v}`).join('　');
+    if (mode === 'bullets') return [...card.querySelectorAll('[data-bullet]')].map(el => el.value.trim()).filter(Boolean).map(v => `・${v}`).join('　');
+    const ta = card.querySelector('textarea'); return (ta ? ta.value : '').trim();
+  }
+  function cardMatchesSaved(shape, savedStr) {
+    if (shape.mode === 'labeled') return (parseLabeled(savedStr) || []).some(b => shape.fields.includes(b.label));
+    if (shape.mode === 'bullets') return splitFW(savedStr).some(s => s.startsWith('・'));
+    return true;
   }
 
   function renderQuestion(p, q) {
     const key = `${p.id}:${q.id}`;
     const saved = Store.q(key);
-    const labels = fillLabels(q);
-    // 旧・自由記述の下書きが空欄別に変換できない場合は、消さずに注記として見せる
-    let legacy = '';
-    if (labels.length && (saved.answer || '').trim() && !parseBlanks(saved.answer).some(b => labels.includes(b.label))) {
-      legacy = `<p class="legacy-draft">以前の下書き：${esc(saved.answer)}<br>（空欄別入力に未変換。必要なら上の欄に入れ直してください）</p>`;
+    const shape = answerShape(q);
+    const inp = (attr, val) => `<input type="text" class="fld-input" ${attr} value="${esc(val)}" placeholder="解答">`;
+    let inputArea = '';
+    if (shape.mode === 'labeled') {
+      inputArea = `<div class="fields">` + shape.fields.map(lb => {
+        const v = labeledValue(saved.answer, lb);
+        const field = (q.type === 'fill')
+          ? inp(`data-label="${esc(lb)}"`, v)
+          : `<textarea class="fld-input" data-label="${esc(lb)}" rows="2" placeholder="解答">${esc(v)}</textarea>`;
+        return `<label class="field"><span class="field-label">${esc(lb)}</span>${field}</label>`;
+      }).join('') + `</div>`;
+    } else if (shape.mode === 'bullets') {
+      const vals = bulletValues(saved.answer);
+      inputArea = `<div class="fields">` + shape.fields.map((n, i) =>
+        `<label class="field"><span class="field-label">${esc(n)}</span>${inp(`data-bullet="${i}"`, vals[i] || '')}</label>`
+      ).join('') + `</div>`;
+    } else {
+      inputArea = `<textarea placeholder="ここに解答を入力">${esc(saved.answer || '')}</textarea>`;
     }
-    const inputArea = labels.length
-      ? `<div class="fills">` + labels.map(lb =>
-          `<label class="fill"><span class="fill-label">${esc(lb)}</span>` +
-          `<input type="text" class="fill-input" data-label="${esc(lb)}" value="${esc(blankValue(saved.answer, lb))}" placeholder="解答"></label>`
-        ).join('') + `</div>` + legacy
-      : `<textarea placeholder="ここに解答を入力">${esc(saved.answer || '')}</textarea>`;
-    return `<div class="setq" data-qid="${esc(q.id)}" data-kind="${labels.length ? 'fill' : 'desc'}">
+    // 旧・自由記述の下書きが新しい欄に移せない場合は、消さずに注記で残す
+    let legacy = '';
+    if (shape.mode !== 'single' && (saved.answer || '').trim() && !cardMatchesSaved(shape, saved.answer)) {
+      legacy = `<p class="legacy-draft">以前の下書き：${esc(saved.answer)}<br>（新しい欄に未変換。必要なら上の欄に入れ直してください）</p>`;
+    }
+    return `<div class="setq" data-qid="${esc(q.id)}" data-mode="${shape.mode}" data-limit="${limitNum(q)}">
       ${q.group ? `<p class="group">${esc(q.group)}</p>` : ''}
       <p class="prompt"><span class="qid">${esc(q.id)}</span>${esc(q.prompt)}${q.charLimit ? `<span class="limit">（${esc(q.charLimit)}）</span>` : ''}</p>
-      ${inputArea}
+      ${inputArea}${legacy}
       <div class="count"></div>
       <div class="row">
         <button class="btn primary grade">AIに採点してもらう</button>
@@ -253,14 +282,22 @@
       const qid = card.dataset.qid;
       const q = p.questions.find(x => x.id === qid);
       const key = `${p.id}:${qid}`;
-      const isFill = card.dataset.kind === 'fill';
+      const mode = card.dataset.mode;
+      const limit = Number(card.dataset.limit) || 0;
       const count = card.querySelector('.count');
-      const inputs = isFill ? [...card.querySelectorAll('.fill-input')] : [card.querySelector('textarea')];
-      const labels = isFill ? fillLabels(q) : [];
+      const inputs = [...card.querySelectorAll('.fld-input, textarea')];
       const updateCount = () => {
-        count.textContent = isFill
-          ? `${combineFills(card) ? parseBlanks(combineFills(card)).length : 0} / ${labels.length} 個入力`
-          : `${[...cardAnswer(card)].length} 字`;
+        const ans = cardAnswer(card);
+        if (mode === 'labeled' || mode === 'bullets') {
+          const total = card.querySelectorAll('[data-label],[data-bullet]').length;
+          const filled = (mode === 'labeled') ? (parseLabeled(ans) || []).length : splitFW(ans).length;
+          count.textContent = `${filled} / ${total} 欄 入力`;
+          count.classList.remove('over');
+        } else {
+          const n = [...ans].length;
+          count.textContent = limit ? `${n} / ${limit} 字` : `${n} 字`;
+          count.classList.toggle('over', !!limit && n > limit);
+        }
       };
       updateCount();
       const onInput = () => { updateCount(); Store.setDraft(key, cardAnswer(card)); };
