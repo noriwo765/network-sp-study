@@ -609,6 +609,84 @@
   });
   $('#haiten-to-list').addEventListener('click', e => { e.preventDefault(); $('#haiten').hidden = true; $('#pick').hidden = false; renderPicker(); window.scrollTo(0, 0); });
 
+  // ---- 学習状況（達成度ダッシュボード） ------------------------------
+  function problemStats(p) {
+    let graded = 0, score = 0, max = 0, rounds = 0, lastAt = 0;
+    for (const q of p.questions) {
+      const at = Store.q(`${p.id}:${q.id}`).attempts || [];
+      if (!at.length) continue;
+      graded++; rounds = Math.max(rounds, at.length);
+      const latest = at[at.length - 1], r = latest.result || {};
+      score += (typeof r.score === 'number' ? r.score : 0);
+      max += (Haiten.haiten(p.id, q.id) || (typeof r.scoreMax === 'number' ? r.scoreMax : 10));
+      lastAt = Math.max(lastAt, latest.at || 0);
+    }
+    return { graded, total: p.questions.length, score, max, rounds, lastAt, time: Store.timer(p.id) || 0 };
+  }
+  const hhmm = sec => { sec = Math.floor(sec); const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60); return h ? `${h}時間${m}分` : `${m}分`; };
+  const dayStamp = ts => { if (!ts) return '—'; const d = new Date(ts), z = n => String(n).padStart(2, '0'); return `${d.getFullYear()}/${z(d.getMonth() + 1)}/${z(d.getDate())}`; };
+  const bar = pct => `<span class="pbar"><span class="pbar-fill" style="width:${Math.max(0, Math.min(100, pct))}%"></span></span>`;
+
+  function openProgress() {
+    $('#pick').hidden = true; $('#progress').hidden = false;
+    renderProgress(); window.scrollTo(0, 0);
+  }
+  function renderProgress() {
+    const rows = PROBLEMS.map(p => ({ p, s: problemStats(p) }));
+    const touched = rows.filter(x => x.s.graded > 0).length;
+    const completed = rows.filter(x => x.s.graded === x.s.total).length;
+    const totalTime = rows.reduce((a, x) => a + x.s.time, 0);
+    const gradedQ = rows.reduce((a, x) => a + x.s.graded, 0);
+    const totScore = rows.reduce((a, x) => a + x.s.score, 0), totMax = rows.reduce((a, x) => a + x.s.max, 0);
+    const pct = totMax ? Math.round(totScore / totMax * 100) : 0;
+    const secPct = sec => { const g = rows.filter(x => x.p.section === sec); const t = g.filter(x => x.s.graded > 0).length; return { t, n: g.length, pct: g.length ? Math.round(t / g.length * 100) : 0 }; };
+    const pm1 = secPct('pm1'), pm2 = secPct('pm2');
+    const left = PROBLEMS.length - touched;
+    const cheer = completed === PROBLEMS.length ? '🎉 全問制覇！おみごとです。'
+      : touched === 0 ? 'まずは1問、挑戦してみましょう。'
+      : `あと ${left} 問で全問に挑戦達成。いいペースです！`;
+
+    const cards = `
+      <div class="prog-cards">
+        <div class="prog-card"><div class="pc-num">${touched}<span class="pc-den"> / ${PROBLEMS.length}</span></div><div class="pc-lbl">挑戦した問題</div></div>
+        <div class="prog-card"><div class="pc-num">${completed}<span class="pc-den"> / ${PROBLEMS.length}</span></div><div class="pc-lbl">完答した問題</div></div>
+        <div class="prog-card"><div class="pc-num">${gradedQ}</div><div class="pc-lbl">採点した設問</div></div>
+        <div class="prog-card"><div class="pc-num">${hhmm(totalTime)}</div><div class="pc-lbl">学習時間</div></div>
+        <div class="prog-card"><div class="pc-num">${pct}<span class="pc-den">%</span></div><div class="pc-lbl">平均得点率</div></div>
+      </div>`;
+
+    const sections = `
+      <div class="prog-sec">
+        <div class="ps-row"><span class="ps-name">午後Ⅰ</span>${bar(pm1.pct)}<span class="ps-val">${pm1.t} / ${pm1.n} 問</span></div>
+        <div class="ps-row"><span class="ps-name">午後Ⅱ</span>${bar(pm2.pct)}<span class="ps-val">${pm2.t} / ${pm2.n} 問</span></div>
+      </div>`;
+
+    const table = `<div class="prog-list">` + rows.map(({ p, s }) => {
+      const donePct = Math.round(s.graded / s.total * 100);
+      const scorePct = s.max ? Math.round(s.score / s.max * 100) : 0;
+      const state = s.graded === 0 ? 'none' : s.graded === s.total ? 'done' : 'part';
+      const badge = state === 'done' ? '<span class="pstate done">完答</span>' : state === 'part' ? '<span class="pstate part">着手</span>' : '<span class="pstate none">未</span>';
+      return `<button class="prog-item" data-id="${p.id}">
+        <div class="pi-head"><span class="pi-tag">${esc(p.yearLabel)} ${esc(p.sectionLabel)} 問${p.no}</span>${badge}</div>
+        <div class="pi-ttl">${esc(p.title)}</div>
+        <div class="pi-metrics">
+          <span class="pi-m">完答 ${s.graded}/${s.total} ${bar(donePct)}</span>
+          <span class="pi-m">${s.graded ? `得点 ${s.score}/${s.max}（${scorePct}%）` : '—'}</span>
+          <span class="pi-m">${s.rounds ? `${s.rounds}周` : ''}</span>
+          <span class="pi-m muted">${s.time ? hhmm(s.time) : ''}${s.lastAt ? '・' + dayStamp(s.lastAt) : ''}</span>
+        </div>
+      </button>`;
+    }).join('') + `</div>`;
+
+    $('#progress-body').innerHTML = `<p class="prog-cheer">${cheer}</p>${cards}${sections}
+      <p class="prog-overall">全体の得点率 ${bar(pct)} <b>${pct}%</b>（採点済み設問の最新得点ベース）</p>
+      <h4 class="prog-h">問題ごとの状況</h4>${table}
+      <p class="muted" style="font-size:.8rem">各行をタップするとその問題を開きます。得点率は配点設定があればそれを満点に、無ければAI採点の満点（目安10点）で計算します。</p>`;
+    $('#progress-body .prog-list').onclick = e => { const b = e.target.closest('.prog-item'); if (b) { $('#progress').hidden = true; openProblem(b.dataset.id); } };
+  }
+  $('#open-progress').addEventListener('click', openProgress);
+  $('#progress-to-list').addEventListener('click', e => { e.preventDefault(); $('#progress').hidden = true; $('#pick').hidden = false; renderPicker(); window.scrollTo(0, 0); });
+
   // ---- 操作（ビュー切替・ズーム・タイマー・やり直し・一覧へ） ----------
   $('#view-seg').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b || b.disabled) return;

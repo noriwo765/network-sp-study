@@ -31,7 +31,10 @@
       <p class="label">区分</p>
       <nav id="section-chips" aria-label="区分"></nav>
     </div>
-    <p class="pick-tools"><button class="btn small" id="open-haiten" title="設問ごとの配点予想（満点）を入力する">配点設定</button></p>
+    <p class="pick-tools">
+      <button class="btn small" id="open-progress" title="午後問題の学習状況・達成度を見る">学習状況</button>
+      <button class="btn small" id="open-haiten" title="設問ごとの配点予想（満点）を入力する">配点設定</button>
+    </p>
     <div class="prob-list" id="prob-list"></div>
 
     <!-- 学習履歴のバックアップ／復元（端末をまたいで引き継ぐ） -->
@@ -98,6 +101,15 @@
       <button class="btn small" id="h-open" title="この問題を解く画面へ">この問題を解く</button>
     </div>
     <div id="history-body"></div>
+  </section>
+
+  <!-- 学習状況（午後問題の達成度） -->
+  <section id="progress" hidden>
+    <div class="exam-topbar">
+      <a href="#" id="progress-to-list" class="back-sm">← 一覧</a>
+      <span class="exam-title">学習状況</span>
+    </div>
+    <div id="progress-body"></div>
   </section>
 
   <!-- 配点設定（設問ごとの満点＝配点予想を入力） -->

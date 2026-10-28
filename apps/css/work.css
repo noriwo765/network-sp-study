@@ -192,3 +192,31 @@ textarea.fld-input { resize: vertical; line-height: 1.6; }
 .haiten-total { text-align: right; font-weight: 600; margin: 12px 0 24px; }
 .haiten-total b { color: var(--accent); font-size: 1.15rem; }
 .haiten-tag { margin-left: 8px; font-size: .78rem; color: var(--accent); background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1px 8px; }
+
+/* 学習状況ダッシュボード */
+.prog-cheer { font-weight: 700; font-size: 1.05rem; margin: 10px 0; }
+.prog-cards { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 16px; }
+.prog-card { flex: 1 1 120px; min-width: 110px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); padding: 12px 14px; text-align: center; }
+.prog-card .pc-num { font-size: 1.7rem; font-weight: 800; color: var(--accent); line-height: 1.1; }
+.prog-card .pc-den { font-size: .9rem; font-weight: 600; color: var(--muted); }
+.prog-card .pc-lbl { font-size: .78rem; color: var(--muted); margin-top: 4px; }
+.pbar { display: inline-block; vertical-align: middle; width: 90px; height: 8px; border-radius: 6px; background: var(--code-bg); border: 1px solid var(--border); overflow: hidden; }
+.pbar-fill { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--ok, #2ecc71)); }
+.prog-sec { margin: 8px 0 16px; }
+.ps-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+.ps-row .ps-name { flex: 0 0 4em; font-weight: 700; }
+.ps-row .ps-val { font-size: .85rem; color: var(--muted); }
+.prog-overall { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+.prog-h { margin: 18px 0 8px; }
+.prog-list { display: flex; flex-direction: column; gap: 8px; }
+.prog-item { text-align: left; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); padding: 10px 12px; cursor: pointer; font: inherit; }
+.prog-item:hover { border-color: var(--accent); }
+.pi-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pi-tag { font-size: .78rem; color: var(--muted); }
+.pi-ttl { font-weight: 600; margin: 2px 0 6px; }
+.pi-metrics { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .82rem; align-items: center; }
+.pi-metrics .pi-m.muted { color: var(--muted); }
+.pstate { font-size: .72rem; padding: 1px 8px; border-radius: 10px; font-weight: 700; }
+.pstate.done { background: var(--ok, #2ecc71); color: #fff; }
+.pstate.part { background: var(--accent); color: #fff; }
+.pstate.none { background: var(--code-bg); color: var(--muted); border: 1px solid var(--border); }
