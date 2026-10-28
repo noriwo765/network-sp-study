@@ -40,12 +40,25 @@
         save();
       },
       doneCount(prob) { return prob.questions.filter(q => (this.q(`${prob.id}:${q.id}`).attempts || []).length).length; },
-      // 配点予想（設問ごとの満点）。data.__haiten に 'pid:qid' → 点数 で保持
-      haiten(pid, qid) { const h = (data.__haiten || {})[`${pid}:${qid}`]; return (typeof h === 'number' && h > 0) ? h : null; },
-      setHaiten(pid, qid, val) {
-        data.__haiten = data.__haiten || {};
-        const n = Number(val);
-        if (n > 0) data.__haiten[`${pid}:${qid}`] = n; else delete data.__haiten[`${pid}:${qid}`];
+      // 配点予想。data.__haiten['pid:qid'] に、単一なら数値／空欄別なら {ラベル:点数} を保持
+      haiten(pid, qid) { // その設問の満点（空欄別なら合計）
+        const h = (data.__haiten || {})[`${pid}:${qid}`];
+        if (typeof h === 'number') return h > 0 ? h : null;
+        if (h && typeof h === 'object') { const s = Object.values(h).reduce((a, v) => a + (Number(v) > 0 ? Number(v) : 0), 0); return s > 0 ? s : null; }
+        return null;
+      },
+      haitenMap(pid, qid) { const h = (data.__haiten || {})[`${pid}:${qid}`]; return (h && typeof h === 'object') ? h : null; },
+      haitenField(pid, qid, label) { const h = this.haitenMap(pid, qid); const v = h ? Number(h[label]) : NaN; return v > 0 ? v : null; },
+      setHaitenSingle(pid, qid, val) {
+        data.__haiten = data.__haiten || {}; const k = `${pid}:${qid}`, n = Number(val);
+        if (n > 0) data.__haiten[k] = n; else delete data.__haiten[k];
+        save();
+      },
+      setHaitenField(pid, qid, label, val) {
+        data.__haiten = data.__haiten || {}; const k = `${pid}:${qid}`;
+        const h = (data.__haiten[k] && typeof data.__haiten[k] === 'object') ? data.__haiten[k] : {};
+        const n = Number(val); if (n > 0) h[label] = n; else delete h[label];
+        if (Object.keys(h).length) data.__haiten[k] = h; else delete data.__haiten[k];
         save();
       },
       problemMax(prob) { return prob.questions.reduce((s, q) => s + (this.haiten(prob.id, q.id) || 0), 0); },
@@ -334,13 +347,15 @@
     out.innerHTML = `<p class="spinner">Claude が採点中…</p>`;
     try {
       const scoreMax = Store.haiten(p.id, q.id); // 配点予想（設問の満点）。未設定なら null
+      const hMap = Store.haitenMap(p.id, q.id);   // 空欄別配点 {ラベル:点数}（あれば）
+      const scoreBreakdown = hMap ? Object.entries(hMap).filter(([, v]) => Number(v) > 0).map(([k, v]) => `${k}=${v}点`).join('、') : '';
       const r = await fetch('/grade', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           context: `${p.yearLabel} ${p.sectionLabel} 問${p.no}「${p.title}」\n${p.overview || ''}\n\n${bodyToText(p.body)}`,
           questionNo: q.id, questionText: q.prompt, charLimit: q.charLimit || '',
           officialAnswer: q.answer || '', commentary: p.commentary || '', studentAnswer: answer,
-          scoreMax: scoreMax || undefined,
+          scoreMax: scoreMax || undefined, scoreBreakdown: scoreBreakdown || undefined,
         }),
       });
       const j = await r.json();
@@ -519,20 +534,34 @@
   }
   function renderHaiten(pid) {
     const p = PROBLEMS.find(x => x.id === pid); if (!p) return;
+    const numInput = attr => `<input type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="—" ${attr}>`;
     const rows = p.questions.map(q => {
-      const v = Store.haiten(p.id, q.id);
-      return `<div class="haiten-row" data-qid="${esc(q.id)}">
-        <span class="hq">${esc(q.id)}</span>
-        <span class="hp">${esc(q.prompt)}</span>
-        <span class="hin"><input type="number" min="0" max="100" step="1" inputmode="numeric" value="${v == null ? '' : v}" placeholder="—"> 点</span>
+      const shape = answerShape(q);
+      let fields;
+      if (shape.mode === 'single') {
+        const v = Store.haiten(p.id, q.id);
+        fields = `<div class="haiten-field">${numInput(`data-single="1" value="${v == null ? '' : v}"`)} 点</div>`;
+      } else {
+        fields = shape.fields.map(lb => {
+          const v = Store.haitenField(p.id, q.id, lb);
+          return `<div class="haiten-field"><span class="hf-label">${esc(lb)}</span>${numInput(`data-label="${esc(lb)}" value="${v == null ? '' : v}"`)} 点</div>`;
+        }).join('') + `<div class="haiten-subtotal">小計 <b>${Store.haiten(p.id, q.id) || 0}</b> 点</div>`;
+      }
+      return `<div class="haiten-q" data-qid="${esc(q.id)}">
+        <p class="prompt"><span class="qid">${esc(q.id)}</span>${esc(q.prompt)}</p>
+        <div class="haiten-fields">${fields}</div>
       </div>`;
     }).join('');
-    $('#haiten-body').innerHTML = rows + `<p class="haiten-total">合計：<b id="haiten-sum">${Store.problemMax(p)}</b> 点</p>`;
-    $('#haiten-body').querySelectorAll('.haiten-row input').forEach(inp => {
-      inp.addEventListener('input', () => {
-        Store.setHaiten(p.id, inp.closest('.haiten-row').dataset.qid, inp.value);
+    $('#haiten-body').innerHTML = rows + `<p class="haiten-total">問題の合計：<b id="haiten-sum">${Store.problemMax(p)}</b> 点</p>`;
+    $('#haiten-body').querySelectorAll('.haiten-q').forEach(qEl => {
+      const qid = qEl.dataset.qid;
+      const subEl = qEl.querySelector('.haiten-subtotal b');
+      qEl.querySelectorAll('input').forEach(inp => inp.addEventListener('input', () => {
+        if (inp.dataset.single) Store.setHaitenSingle(p.id, qid, inp.value);
+        else Store.setHaitenField(p.id, qid, inp.dataset.label, inp.value);
+        if (subEl) subEl.textContent = Store.haiten(p.id, qid) || 0;
         $('#haiten-sum').textContent = Store.problemMax(p);
-      });
+      }));
     });
   }
   $('#open-haiten').addEventListener('click', () => openHaiten());

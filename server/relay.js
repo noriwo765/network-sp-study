@@ -65,9 +65,10 @@ server.listen(PORT, () => {
 async function handleGrade(req, res) {
   if (!API_KEY) return send(res, 503, { error: 'ANTHROPIC_API_KEY が未設定です。server/.env か環境変数に設定してください。' });
   const body = await readJson(req);
-  const { context, questionNo, questionText, charLimit, officialAnswer, commentary, studentAnswer, scoreMax } = body || {};
+  const { context, questionNo, questionText, charLimit, officialAnswer, commentary, studentAnswer, scoreMax, scoreBreakdown } = body || {};
   if (!questionText || studentAnswer == null) return send(res, 400, { error: 'questionText と studentAnswer が必要です。' });
   const hasMax = typeof scoreMax === 'number' && scoreMax > 0;
+  const hasBreakdown = hasMax && typeof scoreBreakdown === 'string' && scoreBreakdown.trim();
 
   const system = [
     'あなたはネットワークスペシャリスト試験（IPA）午後問題の採点官です。',
@@ -94,6 +95,7 @@ async function handleGrade(req, res) {
     questionText,
     charLimit ? `（字数制限: ${charLimit}）` : '',
     hasMax ? `（この設問の満点: ${scoreMax}点。score は 0〜${scoreMax} の範囲で付けること）` : '',
+    hasBreakdown ? `（配点内訳: ${scoreBreakdown}。各空欄・項目をこの配点で部分採点し、合計を score とすること）` : '',
     '',
     `【公式解答例】\n${officialAnswer || '(なし)'}`,
     commentary ? `\n【採点講評（抜粋）】\n${commentary}` : '',
