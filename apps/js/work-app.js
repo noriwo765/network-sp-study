@@ -26,7 +26,7 @@
     const KEY = 'nespe-work-v1';
     let data = {};
     try { data = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (_) {}
-    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (_) {} syncToServer(); };
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); localStorage.setItem('nespe-work-at', String(Date.now())); } catch (_) {} syncToServer(); };
     return {
       q(key) { return data[key] || { answer: '', attempts: [] }; },
       setDraft(key, answer) { const q = this.q(key); q.answer = answer; data[key] = q; save(); },
@@ -572,6 +572,13 @@
   }
   $('#open-haiten').addEventListener('click', () => openHaiten());
   $('#haiten-select').addEventListener('change', e => renderHaiten(e.target.value));
+  $('#haiten-save').addEventListener('click', async () => {
+    const btn = $('#haiten-save'), label = btn.textContent;
+    btn.disabled = true; btn.textContent = '保存中…';
+    const ok = await flushToServer();
+    btn.textContent = ok ? '保存しました ✓' : '保存（この端末に）✓';
+    setTimeout(() => { btn.textContent = label; btn.disabled = false; }, 2000);
+  });
   $('#haiten-to-list').addEventListener('click', e => { e.preventDefault(); $('#haiten').hidden = true; $('#pick').hidden = false; renderPicker(); window.scrollTo(0, 0); });
 
   // ---- 操作（ビュー切替・ズーム・タイマー・やり直し・一覧へ） ----------
@@ -630,9 +637,12 @@
   // 読み込む（＝起動時インポート）。ファイルが正で、この端末の履歴を丸ごと上書きする。
   // Windows ⇄ Mac で引き継ぐには、この history.json（または書き出したバックアップ）を
   // もう一方へコピーするだけ。手動の書き出し／復元も「完全上書き」で用意する。
+  const localSavedAt = () => { try { return Number(localStorage.getItem('nespe-work-at')) || 0; } catch (_) { return 0; } };
   function currentPayload() {
     let swap = '0'; try { swap = localStorage.getItem('nespe-work-swap') || '0'; } catch (_) {}
-    return { app: BACKUP_TAG, version: 1, savedAt: new Date().toISOString(), swap, data: Store.raw() };
+    // savedAt はこの端末のデータの「最終保存時刻」。PUT時の now ではなく実際の保存時刻を載せる
+    const at = localSavedAt() || Date.now();
+    return { app: BACKUP_TAG, version: 1, savedAt: new Date(at).toISOString(), swap, data: Store.raw() };
   }
   // 使用中：save() から呼ばれ、少し待ってからサーバのファイルへ書き戻す（まとめ書き）
   let putTimer = null;
@@ -643,21 +653,34 @@
       fetch('/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(currentPayload()) }).catch(() => {});
     }, 800);
   }
-  // 起動時：サーバのファイルを読み、中身があればこの端末を丸ごと上書きする
+  // 明示保存：デバウンスを待たず、いますぐサーバのファイルへ確定保存する
+  function flushToServer() {
+    if (!serverHist) return Promise.resolve(false);
+    clearTimeout(putTimer);
+    return fetch('/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(currentPayload()) }).then(r => r.ok).catch(() => false);
+  }
+  // 起動時：サーバのファイルとこの端末を照合し、「新しい方」を残す（更新時刻で判定）。
+  // こうすることで、ローカルの方が新しい（例：直前に入れた配点）のにファイルで上書き
+  // して消す、という事故を防ぐ。端末間の持ち運びも「新しいファイルが勝つ」で成立する。
   async function startupSync() {
     let payload = null;
     try { const r = await fetch('/history', { cache: 'no-store' }); if (!r.ok) return; payload = await r.json(); }
     catch (_) { return; } // サーバ無し（GitHub Pages 等）→ localStorage だけで動く
     serverHist = true;
-    if (payload && payload.data && Object.keys(payload.data).length) {
-      Store.replaceAll(payload.data); // ファイルが正＝完全上書き
+    const fileKeys = (payload && payload.data) ? Object.keys(payload.data).length : 0;
+    const localKeys = Object.keys(Store.raw()).length;
+    const fileAt = (payload && payload.savedAt) ? Date.parse(payload.savedAt) || 0 : 0;
+    const localAt = localSavedAt();
+    const fileWins = fileKeys && (localKeys === 0 || fileAt > localAt);
+    if (fileWins) {
+      Store.replaceAll(payload.data); // ファイルの方が新しい（または端末が空）→ファイルを採用
       try { if (payload.swap != null) localStorage.setItem('nespe-work-swap', payload.swap); } catch (_) {}
       swapped = payload.swap === '1';
-      note(`サーバの履歴を読み込みました（${new Date(payload.savedAt || Date.now()).toLocaleString()} 時点・項目 ${Object.keys(payload.data).length} 件）。`);
-    } else {
-      // ファイルが空なら、今この端末にある履歴でファイルを作る（初回の取りこぼし防止）
+      note(`サーバの履歴を読み込みました（${new Date(fileAt || Date.now()).toLocaleString()} 時点・項目 ${fileKeys} 件）。`);
+    } else if (localKeys) {
+      // この端末の方が新しい（または同点）→ 端末を残し、ファイルへ反映（ローカルの取りこぼし防止）
       fetch('/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(currentPayload()) }).catch(() => {});
-      note('この端末の履歴をサーバ(server/history.json)に保存しました。別端末へはこのファイルをコピーしてください。');
+      if (fileKeys) note('この端末の方が新しいため、端末の内容を保持してサーバへ反映しました。');
     }
     renderPicker();
   }
