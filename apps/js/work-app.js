@@ -85,12 +85,19 @@
     const list = PROBLEMS.filter(p => (fYear === 'all' || p.year === fYear) && (fSec === 'all' || p.section === fSec));
     $('#prob-list').innerHTML = list.length ? list.map(p => {
       const done = Store.doneCount(p), total = p.questions.length;
-      return `<button data-id="${p.id}">
-        <span class="tag">${esc(p.yearLabel)}　${esc(p.sectionLabel)}　問${p.no}</span>
-        <div class="ttl">${esc(p.title)}${done ? `<span class="done">解答済 ${done}/${total}</span>` : ''}</div>
-      </button>`;
+      const hasData = p.questions.some(q => { const s = Store.q(`${p.id}:${q.id}`); return (s.attempts && s.attempts.length) || (s.answer && s.answer.trim()); });
+      return `<div class="prob-item">
+        <button class="prob-open" data-id="${p.id}">
+          <span class="tag">${esc(p.yearLabel)}　${esc(p.sectionLabel)}　問${p.no}</span>
+          <div class="ttl">${esc(p.title)}${done ? `<span class="done">解答済 ${done}/${total}</span>` : ''}</div>
+        </button>
+        ${hasData ? `<button class="hist-btn" data-id="${p.id}" title="過去の解答・採点を見る">履歴</button>` : ''}
+      </div>`;
     }).join('') : `<p class="muted">該当する問題がありません。</p>`;
-    $('#prob-list').onclick = e => { const b = e.target.closest('button'); if (b) openProblem(b.dataset.id); };
+    $('#prob-list').onclick = e => {
+      const hb = e.target.closest('.hist-btn'); if (hb) return void openHistory(hb.dataset.id);
+      const ob = e.target.closest('.prob-open'); if (ob) openProblem(ob.dataset.id);
+    };
   }
 
   // ---- 本文（文字版）描画 --------------------------------------------
@@ -441,6 +448,52 @@
       <div class="attempt-answer"><b>この回の解答：</b>${esc(latest.answer)}</div>
       ${history}</div>`;
   }
+
+  // ---- 過去の解答・採点（読み取り専用ビュー） ------------------------
+  let historyPid = null;
+  const attemptBadge = j => { j = j || {}; return `<span class="verdict ${verdictClass(j.verdict)}">${esc(j.verdict || '-')}</span>${j.score != null ? ` <span class="score">${esc(j.score)} / ${esc(j.scoreMax ?? 10)}点</span>` : ''}`; };
+  function openHistory(id) {
+    const p = PROBLEMS.find(x => x.id === id); if (!p) return;
+    historyPid = p.id;
+    $('#pick').hidden = true;
+    const h = $('#history'); h.hidden = false;
+    $('#h-title').textContent = `${p.yearLabel} ${p.sectionLabel} 問${p.no}　${p.title}`;
+    renderHistory(p);
+    window.scrollTo(0, 0);
+  }
+  function renderHistory(p) {
+    $('#history-body').innerHTML = p.questions.map(q => {
+      const saved = Store.q(`${p.id}:${q.id}`);
+      const attempts = saved.attempts || [];
+      const draft = (saved.answer || '').trim();
+      let inner;
+      if (!attempts.length) {
+        inner = draft
+          ? `<div class="hist-attempt"><div class="attempt-head">未採点の下書き</div><div class="attempt-answer">${esc(draft)}</div></div>`
+          : `<p class="muted">まだ解答していません。</p>`;
+      } else {
+        inner = attempts.map((a, i) => ({ a, no: i + 1 })).reverse().map(({ a, no }) =>
+          `<details class="attempt"${no === attempts.length ? ' open' : ''}>
+            <summary>第${no}回　${attemptBadge(a.result)}　<span class="hist-meta">${stamp(a.at)}・経過 ${fmt(a.elapsed || 0)}</span></summary>
+            <div class="attempt-answer"><b>解答：</b>${esc(a.answer)}</div>
+            <div class="result">${resultHtml(a.result || {})}</div>
+          </details>`).join('');
+        if (draft && draft !== (attempts[attempts.length - 1].answer || '').trim())
+          inner += `<div class="hist-attempt"><div class="attempt-head">現在の下書き（未採点）</div><div class="attempt-answer">${esc(draft)}</div></div>`;
+      }
+      return `<div class="hist-q">
+        <p class="prompt"><span class="qid">${esc(q.id)}</span>${esc(q.prompt)}${q.charLimit ? `<span class="limit">（${esc(q.charLimit)}）</span>` : ''}</p>
+        ${inner}
+        <details class="hist-model"><summary>公式解答例を見る</summary><div class="model-box">${esc(q.answer || '(なし)')}</div></details>
+      </div>`;
+    }).join('');
+  }
+  $('#hist-to-list').addEventListener('click', e => {
+    e.preventDefault();
+    $('#history').hidden = true; $('#pick').hidden = false;
+    renderPicker(); window.scrollTo(0, 0);
+  });
+  $('#h-open').addEventListener('click', () => { $('#history').hidden = true; if (historyPid) openProblem(historyPid); });
 
   // ---- 操作（ビュー切替・ズーム・タイマー・やり直し・一覧へ） ----------
   $('#view-seg').addEventListener('click', e => {

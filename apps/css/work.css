@@ -14,6 +14,21 @@
 .prob-list .tag { font-size: .78rem; color: var(--muted); }
 .prob-list .ttl { font-weight: 600; margin-top: 2px; }
 .prob-list .done { color: var(--ok); font-size: .78rem; margin-left: 6px; }
+.prob-list .prob-item { display: flex; gap: 8px; align-items: stretch; }
+.prob-list .prob-open { flex: 1 1 auto; }
+.prob-list .hist-btn { flex: 0 0 auto; align-self: center; padding: 8px 14px; font-size: .82rem; white-space: nowrap; }
+
+/* 過去の解答・採点ビュー */
+#history-body { margin: 10px 0 24px; }
+.hist-q { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin: 10px 0; background: var(--surface); }
+.hist-q > .prompt { margin: 0 0 8px; }
+.hist-q .attempt { border: 1px solid var(--border); border-radius: 8px; margin: 8px 0; padding: 6px 10px; background: var(--bg); }
+.hist-q .attempt > summary { cursor: pointer; }
+.hist-q .attempt .result { border: none; margin-top: 6px; padding-top: 6px; }
+.hist-q .hist-attempt { border: 1px dashed var(--border); border-radius: 8px; margin: 8px 0; padding: 6px 10px; }
+.hist-q .hist-model { margin-top: 8px; }
+.hist-q .hist-model > summary { cursor: pointer; font-size: .85rem; color: var(--muted); }
+.hist-q .hist-model .model-box { margin-top: 6px; white-space: pre-wrap; word-break: break-word; background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
 
 /* 本文 */
 .passage { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 14px 16px; margin: 12px 0; }
