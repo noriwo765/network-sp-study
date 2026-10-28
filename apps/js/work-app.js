@@ -232,14 +232,29 @@
   const splitFW = s => String(s || '').split(/　+/).map(x => x.trim()).filter(Boolean);
   const isNote = s => /^[（(].*[）)]$/.test(s); // 「（順不同）」などの注記（解答欄ではない）
   const contentSegs = s => splitFW(s).filter(x => !isNote(x));
+  const ENUM = /^([①-⑳])\s*(.*)$/; // ①〜⑳ で始まる連番項目か
+  // 「ラベル：値」の並び。さらに「ラベル：①項目　②項目　③項目」のように丸数字で
+  // 連番項目がぶら下がる場合は、ラベル①/ラベル②/… と1項目ずつの欄に分解する。
   function parseLabeled(str) {
     const segs = contentSegs(str);
-    const out = segs.map(seg => {
+    if (!segs.length) return null;
+    const out = [];
+    let group = null;
+    for (const seg of segs) {
       const i = seg.indexOf('：');
-      const label = i > 0 ? seg.slice(0, i).trim() : '';
-      return (i > 0 && i <= 20 && !/[。、]/.test(label)) ? { label, value: seg.slice(i + 1).trim() } : null;
-    });
-    return (segs.length && out.every(Boolean)) ? out : null;
+      if (i > 0 && i <= 20 && !/[。、]/.test(seg.slice(0, i))) {
+        const label = seg.slice(0, i).trim(), rest = seg.slice(i + 1).trim();
+        const em = ENUM.exec(rest);
+        if (em) out.push({ label: label + em[1], value: em[2].trim() }); // ラベル＋①
+        else out.push({ label, value: rest });
+        group = label;
+      } else {
+        const em = ENUM.exec(seg); // 直前ラベルに続く ②③… の連番項目
+        if (em && group) out.push({ label: group + em[1], value: em[2].trim() });
+        else return null; // 解釈できない → ラベル付き扱いにしない
+      }
+    }
+    return out.length ? out : null;
   }
   // 設問文が「複数答えさせている」か（二つ/四つ/それぞれ/全て答えよ 等）。
   // これに当てはまらない箇条書き解答例は「別解の列挙」とみなし、1欄にする。
@@ -251,6 +266,9 @@
     const labeled = parseLabeled(q.answer);
     if (labeled) return { mode: 'labeled', fields: labeled.map(b => b.label) };
     const segs = contentSegs(q.answer);
+    // グループラベル無しの連番リスト（①X　②Y　③Z…）→ 丸数字ごとの欄
+    // （「①，②，⑤，⑥」のようにスペース区切りでない＝1セグメントのものは選択解答なので対象外）
+    if (segs.length >= 2 && segs.every(s => ENUM.test(s))) return { mode: 'labeled', fields: segs.map(s => ENUM.exec(s)[1]) };
     const bullets = segs.filter(s => s.startsWith('・'));
     if (bullets.length >= 2 && bullets.length === segs.length && asksMultiple(q)) return { mode: 'bullets', fields: bullets.map((_, i) => `${i + 1}`) };
     return { mode: 'single', fields: [] };
