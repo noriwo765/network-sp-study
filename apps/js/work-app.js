@@ -248,8 +248,7 @@
       if (!r.ok) { out.innerHTML = `<p class="err">採点エラー：${esc(j.error || r.status)}${j.detail ? '<br>' + esc(j.detail) : ''}</p>`; return null; }
       Store.addAttempt(key, { at: Date.now(), elapsed: Timer.sec, answer, result: j });
       showResult(card, key);
-      saveRecord(p); // 採点のたび、解答記録(Markdown)を 解答記録/ に自動保存
-      return j;
+      return j; // 記録ファイルの保存は呼び出し側（1採点＝1ファイル）で行う
     } catch (e) {
       out.innerHTML = `<p class="err">通信に失敗しました：${esc(e.message)}</p>`;
       return null;
@@ -262,8 +261,9 @@
     if (!answer) { out.innerHTML = `<p class="err">解答を入力してください。</p>`; return; }
     if (!serverOk) { out.innerHTML = `<p class="err">中継サーバが利用できません。<code>node server/relay.js</code> を起動してください。</p>`; return; }
     const btn = card.querySelector('.grade'); btn.disabled = true;
-    await runGrade(p, q, card, key, answer);
+    const j = await runGrade(p, q, card, key, answer);
     btn.disabled = false;
+    if (j) saveRecord(p); // 単問採点：成功したら記録を1ファイル保存
   }
 
   // まとめて採点（提出）：入力済みの設問を一括採点し、合計点を表示（本番に近い流れ）
@@ -298,6 +298,7 @@
     await Promise.all([worker(), worker(), worker()]); // 最大3並列
     renderBatchSummary(results, empties);
     btn.disabled = false;
+    if (results.some(Boolean)) saveRecord(p); // まとめて採点：全問終わってから記録を1ファイルだけ保存
   }
   function renderBatchSummary(results, empties) {
     const ok = results.filter(r => r && r.verdict === '正解').length;
@@ -523,18 +524,14 @@
     }
     return L.join('\n');
   }
-  let recTimer = null;
+  // 1採点アクション（単問採点 or まとめて採点）につき 1 ファイルだけ保存する。
+  // runGrade からは呼ばず、採点が終わった呼び出し側で1回だけ呼ぶこと（多重生成の防止）。
   function saveRecord(p) {
     if (!serverHist || !p) return;
-    clearTimeout(recTimer); // まとめて採点など連続採点は 1 ファイルにまとめる
-    const snapshot = buildSnapshotMd(p);
-    const name = `${recordDir(p)}/${tsStamp()}.md`;
-    recTimer = setTimeout(() => {
-      fetch('/record', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name, markdown: snapshot }),
-      }).catch(() => {});
-    }, 500);
+    fetch('/record', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: `${recordDir(p)}/${tsStamp()}.md`, markdown: buildSnapshotMd(p) }),
+    }).catch(() => {});
   }
 
   // ---- 起動 ----------------------------------------------------------
