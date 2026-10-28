@@ -15,6 +15,7 @@ server/history.json
 ._*
 Thumbs.db
 *.code-workspace
+.claude/settings.local.json
 node_modules/
 
 # IPA過去問に由来するコンテンツは再配布しない（ローカル専用・push対象外）
