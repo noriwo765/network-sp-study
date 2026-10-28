@@ -241,12 +241,18 @@
     });
     return (segs.length && out.every(Boolean)) ? out : null;
   }
+  // 設問文が「複数答えさせている」か（二つ/四つ/それぞれ/全て答えよ 等）。
+  // これに当てはまらない箇条書き解答例は「別解の列挙」とみなし、1欄にする。
+  function asksMultiple(q) {
+    const t = q.prompt || '';
+    return /([一二三四五六七八九十]|[0-9０-９]+)\s*つ/.test(t) || /それぞれ/.test(t) || /(全て|すべて).{0,6}(答え|挙げ|示せ|記)/.test(t);
+  }
   function answerShape(q) {
     const labeled = parseLabeled(q.answer);
     if (labeled) return { mode: 'labeled', fields: labeled.map(b => b.label) };
     const segs = contentSegs(q.answer);
     const bullets = segs.filter(s => s.startsWith('・'));
-    if (bullets.length >= 2 && bullets.length === segs.length) return { mode: 'bullets', fields: bullets.map((_, i) => `${i + 1}`) };
+    if (bullets.length >= 2 && bullets.length === segs.length && asksMultiple(q)) return { mode: 'bullets', fields: bullets.map((_, i) => `${i + 1}`) };
     return { mode: 'single', fields: [] };
   }
   const labeledValue = (savedStr, label) => { const f = (parseLabeled(savedStr) || []).find(b => b.label === label); return f ? f.value : ''; };
