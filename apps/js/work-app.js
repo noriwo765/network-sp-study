@@ -56,7 +56,8 @@
     let map = {};
     try { map = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (_) {}
     let putTimer = null;
-    const payload = () => ({ app: BACKUP_TAG, savedAt: new Date().toISOString(), haiten: map });
+    // savedAt は入れない（中身が変わらない限りファイルも変わらない＝Git差分が出ない）
+    const payload = () => ({ app: BACKUP_TAG, haiten: map });
     const persist = () => {
       try { localStorage.setItem(KEY, JSON.stringify(map)); } catch (_) {}
       if (serverHist) { clearTimeout(putTimer); putTimer = setTimeout(() => { fetch('/haiten', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload()) }).catch(() => {}); }, 600); }
@@ -715,14 +716,15 @@
   // 配点の読み込み：旧仕様で履歴に相乗りしていた分を移行し、サーバの配点ファイルをマージ。
   // マージ（既存を消さない）なので、ここで配点が消えることはない。
   async function loadHaiten() {
+    let changed = false;
     const legacy = Store.takeLegacyHaiten(); // 履歴に残っていた旧 __haiten を回収（あれば）
-    if (legacy) Haiten.mergeIn(legacy);
+    if (legacy && Haiten.mergeIn(legacy)) changed = true;
     if (!serverHist) return;
     try {
       const r = await fetch('/haiten', { cache: 'no-store' });
-      if (r.ok) { const j = await r.json(); Haiten.mergeIn((j && j.haiten) ? j.haiten : {}); }
+      if (r.ok) { const j = await r.json(); if (Haiten.mergeIn((j && j.haiten) ? j.haiten : {})) changed = true; }
     } catch (_) { /* 取得失敗時はローカルのみ */ }
-    Haiten.flush(); // マージ結果をサーバの配点ファイルへ即時反映
+    if (changed) Haiten.flush(); // 新たに取り込んだ分があるときだけファイルへ反映（無駄な書き込み＝Git差分を出さない）
   }
   // 手動：現在の履歴をファイルに書き出す（バックアップ／持ち運び用）
   function exportHistory() {
