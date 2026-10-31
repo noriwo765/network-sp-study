@@ -47,6 +47,9 @@ const server = http.createServer(async (req, res) => {
     // 配点予想（履歴とは別ファイル haiten.json）
     if (req.method === 'GET' && req.url === '/haiten') return void readHaiten(res);
     if ((req.method === 'PUT' || req.method === 'POST') && req.url === '/haiten') return void (await writeHaiten(req, res));
+    // 想定合格率（AI 判定。結果は estimate.json に保存）
+    if (req.method === 'GET' && req.url === '/estimate') return void readEstimate(res);
+    if (req.method === 'POST' && req.url === '/estimate') return void (await handleEstimate(req, res));
     // 学習計画（予定・チェック・メモ。plan.json）
     if (req.method === 'GET' && req.url === '/plan') return void readPlan(res);
     if ((req.method === 'PUT' || req.method === 'POST') && req.url === '/plan') return void (await writePlan(req, res));
@@ -137,6 +140,58 @@ async function handleGrade(req, res) {
   const parsed = extractJson(text);
   if (!parsed) return send(res, 200, { verdict: '判定不能', raw: text });
   send(res, 200, parsed);
+}
+
+// ---- /estimate（想定合格率の AI 判定） ----------------------------------
+// ブラウザが集計した「各設問の最終の採点結果（未回答は0点）」を渡し、厳しめに合格可能性を判定させる。
+// 結果は server/estimate.json に保存（履歴・配点とは別ファイル。もう一方のマシンでも見られる）。
+const ESTIMATE_FILE = path.join(__dirname, 'estimate.json');
+function readEstimate(res) {
+  fs.readFile(ESTIMATE_FILE, 'utf8', (err, txt) => {
+    if (err) return send(res, 200, {});
+    try { return send(res, 200, JSON.parse(txt)); } catch (_) { return send(res, 200, {}); }
+  });
+}
+async function handleEstimate(req, res) {
+  if (!API_KEY) return send(res, 503, { error: 'ANTHROPIC_API_KEY が未設定です。server/.env か環境変数に設定してください。' });
+  const body = await readJson(req);
+  if (!body || !body.stats) return send(res, 400, { error: 'stats が必要です。' });
+
+  const system = [
+    'あなたはネットワークスペシャリスト試験（IPA）の指導経験が豊富な講師です。',
+    '受験者の午後問題（過去問演習）の採点結果から、本番の想定合格率を「厳しめ」に見積もります。',
+    '前提：',
+    '- 合格には午後Ⅰ・午後Ⅱとも100点満点で60点以上が必要（午前は考慮しない）。午後Ⅰは3問から2問、午後Ⅱは2問から1問を選んで解く。',
+    '- 判定は各設問の「最終の採点結果」をもとにする。まだ解いていない問題・設問は0点として扱う（解けるかどうか未確認のため）。',
+    '- 過去問の点は、同じ問題を繰り返し解くほど本番より高く出やすい。周回で上がった点は割り引いて考える。',
+    '- AI 採点は本番の採点より甘くなりがちなので、その分も割り引く。',
+    '- 本番までの残り日数と、伸びの傾向（同じ問題の点の推移）は考慮してよいが、楽観的にしない。',
+    '出力は必ず次の JSON だけ（前後に文章を付けない）。日本語で書く。',
+    '{',
+    '  "rate": 数値,              // 想定合格率（%、0〜100 の整数。厳しめ）',
+    '  "pm1": 数値, "pm2": 数値,  // 現時点の本番想定点（100点満点、厳しめ）',
+    '  "summary": string,         // 一言での判定（60字程度）',
+    '  "reasons": [string],       // 判定の根拠（3〜5個、数字を引用して具体的に）',
+    '  "actions": [string]        // 合格率を上げるために次にやること（3個、具体的に）',
+    '}',
+  ].join('\n');
+  const user = `【受験者の演習データ】\n${JSON.stringify(body.stats, null, 1)}\n\n上記から想定合格率を厳しめに判定し、指定の JSON だけを出力してください。`;
+
+  const apiRes = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: MODEL, max_tokens: 3000, system, messages: [{ role: 'user', content: user }] }),
+  });
+  if (!apiRes.ok) {
+    const text = await apiRes.text();
+    return send(res, 502, { error: `Anthropic API エラー (${apiRes.status})`, detail: text.slice(0, 500) });
+  }
+  const data = await apiRes.json();
+  const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+  const parsed = extractJson(text);
+  if (!parsed || typeof parsed.rate !== 'number') return send(res, 502, { error: '判定結果を解釈できませんでした。', detail: text.slice(0, 500) });
+  const out = { at: Date.now(), model: MODEL, ...parsed, basis: body.basis || null };
+  fs.writeFile(ESTIMATE_FILE, JSON.stringify(out, null, 2) + '\n', 'utf8', () => send(res, 200, out));
 }
 
 // ---- /history（学習履歴の保存ファイル） --------------------------------

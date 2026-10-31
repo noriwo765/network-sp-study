@@ -59,5 +59,20 @@
   const bulletValues = savedStr => splitFW(savedStr).map(s => s.replace(/^・/, '').trim());
   const limitNum = q => { const m = /(\d+)/.exec(q.charLimit || ''); return m ? Number(m[1]) : 0; };
 
-  root.WorkShape = { splitFW, isNote, contentSegs, ENUM, parseLabeled, asksMultiple, answerShape, labeledValue, bulletValues, limitNum };
+  // 複数欄の字数上限（欄ごと。上限なしは 0）
+  // 「調整25字以内／効果45字以内」「利点は30字以内」→ その名前の欄だけ（前方一致：「確認すべき内容」→①②にも）
+  // 「それぞれ25字以内」「各25字以内」「35字以内」など欄名の無い指定 → 全ての欄
+  function fieldLimits(q, fields) {
+    const out = fields.map(() => 0);
+    for (const part of String(q.charLimit || '').split(/[／/，,、]/)) {
+      const m = /^\s*(.*?)\s*(?:は|：|:)?\s*(\d+)字以内/.exec(part);
+      if (!m) continue;
+      const label = m[1].replace(/^(それぞれ|各)$/, ''), n = Number(m[2]);
+      if (label) fields.forEach((f, i) => { if (f.startsWith(label)) out[i] = n; });
+      else out.forEach((v, i) => { if (!v) out[i] = n; });
+    }
+    return out;
+  }
+
+  root.WorkShape = { splitFW, isNote, contentSegs, ENUM, parseLabeled, asksMultiple, answerShape, labeledValue, bulletValues, limitNum, fieldLimits };
 })(typeof window !== 'undefined' ? window : globalThis);

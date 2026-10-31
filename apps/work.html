@@ -62,7 +62,21 @@
       </span>
       <button class="btn small" id="swap" title="問題と解答欄の左右を入れ替える">⇄ 左右入替</button>
       <button class="btn small" id="save-pause" title="採点せずに、今の解答と経過時間を保存して中断する">保存して中断</button>
-      <button class="btn small danger" id="retry" title="解答と採点を消してやり直す">やり直す</button>
+      <button class="btn small danger" id="retry" title="画面の解答と採点結果をリセットして次の周を始める（採点結果は履歴に残る）">リセット（次の周へ）</button>
+    </div>
+
+    <!-- 周回モード：解答済みの問題を開いたときの選択 -->
+    <div class="round-dialog" id="round-dialog" hidden>
+      <div class="rd-box" role="dialog" aria-modal="true" aria-labelledby="rd-title">
+        <h3 id="rd-title"></h3>
+        <p id="rd-info"></p>
+        <div class="rd-actions">
+          <button class="btn primary" id="rd-continue">続きから</button>
+          <button class="btn danger" id="rd-reset"></button>
+        </div>
+        <p class="muted rd-note">リセットすると、画面の解答・採点結果・時間が空になります。これまでの採点結果は履歴に残り、一覧の「履歴」・学習状況で見られます。</p>
+        <a href="#" id="rd-back" class="back-sm">← 一覧に戻る</a>
+      </div>
     </div>
 
     <div class="cbt" id="cbt">
@@ -84,7 +98,7 @@
       <div class="answer-pane" id="answer-pane">
         <p class="sub" id="s-overview"></p>
         <div class="answer-actions">
-          <button class="btn primary" id="grade-all">まとめて採点（提出）</button>
+          <button class="btn primary" id="grade-all" title="解答を終了して、入力済みの設問をまとめて AI 採点する">解答終了（まとめて採点）</button>
           <span class="muted" id="grade-all-note"></span>
         </div>
         <div id="grade-summary"></div>

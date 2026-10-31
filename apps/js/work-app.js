@@ -33,13 +33,22 @@
       addAttempt(key, attempt) { const q = this.q(key); q.attempts = q.attempts || []; q.attempts.push(attempt); data[key] = q; save(); },
       timer(pid) { return (data[`${pid}:__timer`] || { sec: 0 }).sec; },
       setTimer(pid, sec) { data[`${pid}:__timer`] = { sec }; save(); },
-      // やり直し：下書きとタイマーを消す（採点履歴は残す）
-      retry(prob) {
+      // 周回：<問題id>:__round = { n: 第何周, at: その周を始めた時刻 }。無ければ第1周（最初から）。
+      round(pid) { const r = data[`${pid}:__round`]; return { n: (r && r.n) || 1, at: (r && r.at) || 0 }; },
+      // この周の採点だけ（画面に出す分）。採点履歴そのものは全周ぶん残っている
+      roundAttempts(pid, qid) { const since = this.round(pid).at; return (this.q(`${pid}:${qid}`).attempts || []).filter(a => (a.at || 0) >= since); },
+      // この周で採点したか（していなければリセットしても周は進めない＝最初からやり直し）
+      roundGraded(prob) { return prob.questions.some(q => this.roundAttempts(prob.id, q.id).length); },
+      // 新しい周を始める：画面（下書き・タイマー）をリセットし、周の開始時刻を記録する。採点履歴は消さない
+      newRound(prob) {
+        const n = this.round(prob.id).n + (this.roundGraded(prob) ? 1 : 0);
         for (const qq of prob.questions) { const q = this.q(`${prob.id}:${qq.id}`); q.answer = ''; data[`${prob.id}:${qq.id}`] = q; }
         data[`${prob.id}:__timer`] = { sec: 0 };
+        data[`${prob.id}:__round`] = { n, at: Date.now() };
         save();
+        return n;
       },
-      doneCount(prob) { return prob.questions.filter(q => (this.q(`${prob.id}:${q.id}`).attempts || []).length).length; },
+      doneCount(prob) { return prob.questions.filter(q => this.roundAttempts(prob.id, q.id).length).length; },
       // 旧仕様で履歴に相乗りしていた配点(__haiten)を取り出して履歴からは消す（Haitenへ移行）
       takeLegacyHaiten() { const h = data.__haiten; if (h) { delete data.__haiten; save(); } return (h && typeof h === 'object') ? h : null; },
       // バックアップ／復元用：保存データ全体の読み書き
@@ -138,13 +147,18 @@
       return `<div class="prob-item">
         <button class="prob-open" data-id="${p.id}">
           <span class="tag">${esc(p.yearLabel)}　${esc(p.sectionLabel)}　問${p.no}</span>
-          <div class="ttl">${esc(p.title)}${done ? `<span class="done">解答済 ${done}/${total}</span>` : ''}</div>
+          <div class="ttl">${esc(p.title)}${Store.round(p.id).n > 1 ? `<span class="round-tag">第${Store.round(p.id).n}周</span>` : ''}${done ? `<span class="done">解答済 ${done}/${total}</span>` : ''}</div>
         </button>
+        ${hasProgress(p) ? `<span class="pick-acts">
+          <button class="btn small primary" data-act="continue" data-id="${p.id}" title="前回の続きから解く">続きから</button>
+          <button class="btn small" data-act="reset" data-id="${p.id}" title="画面の解答・採点結果・時間をリセットして解く（採点結果は履歴に残る）">最初から${Store.roundGraded(p) ? `（第${Store.round(p.id).n + 1}周）` : ''}</button>
+        </span>` : ''}
         ${hasData ? `<button class="hist-btn" data-id="${p.id}" title="過去の解答・採点を見る">履歴</button>` : ''}
       </div>`;
     }).join('') : `<p class="muted">該当する問題がありません。</p>`;
     $('#prob-list').onclick = e => {
       const hb = e.target.closest('.hist-btn'); if (hb) return void openHistory(hb.dataset.id);
+      const ab = e.target.closest('[data-act]'); if (ab) return void openProblem(ab.dataset.id, ab.dataset.act);
       const ob = e.target.closest('.prob-open'); if (ob) openProblem(ob.dataset.id);
     };
   }
@@ -192,7 +206,7 @@
       toggle() { running = !running; if (running) iv = setInterval(tick, 1000); else { clearInterval(iv); Store.setTimer(pid, sec); } paint(); },
       pause() { if (running) { running = false; clearInterval(iv); Store.setTimer(pid, sec); paint(); } },
       reset() { sec = 0; Store.setTimer(pid, sec); paint(); },
-      stop() { if (iv) clearInterval(iv); iv = null; if (pid) Store.setTimer(pid, sec); },
+      stop() { if (iv) clearInterval(iv); iv = null; if (pid) Store.setTimer(pid, sec); pid = null; }, // 止めたら問題を手放す（後で古い時間を書き戻さない）
       get sec() { return sec; },
     };
   })();
@@ -208,14 +222,19 @@
   // ---- 演習表示 ------------------------------------------------------
   let current = null, view = 'image', zoom = 100;
 
-  function openProblem(id) {
+  // mode：省略＝途中なら「続きから／リセット」を聞く、'continue'＝続きから、'reset'＝リセットして解く
+  function openProblem(id, mode) {
     const p = PROBLEMS.find(x => x.id === id);
     if (!p) return;
+    if (mode === 'reset') {
+      const drafts = p.questions.filter(q => !Store.roundAttempts(p.id, q.id).length && (Store.q(`${p.id}:${q.id}`).answer || '').trim()).length;
+      if (drafts && !confirm(`未採点の下書きが ${drafts} 設問あります。リセットすると下書きは消えます（採点結果は履歴に残ります）。\nよろしいですか？`)) return;
+    }
     current = p;
     document.body.classList.add('solving');
     $('#pick').hidden = true;
     const solve = $('#solve'); solve.hidden = false; solve.classList.add('on');
-    $('#s-title').textContent = `${p.yearLabel} ${p.sectionLabel} 問${p.no}　${p.title}`;
+    setSolveTitle(p);
     $('#s-overview').textContent = p.overview ? `出題趣旨：${p.overview}` : '';
     $('#s-source').innerHTML = p.source ? `出典：<a href="${esc(p.source)}" target="_blank" rel="noopener">IPA 公開問題</a>` : '';
     view = (PAGES[p.id] && PAGES[p.id].length) ? 'image' : 'text';
@@ -226,11 +245,55 @@
     bindQuestions(p);
     $('#grade-summary').innerHTML = '';
     $('#grade-all-note').textContent = `全${p.questions.length}問。書けた分だけでも提出できます`;
-    Timer.start(p);
     applySwap();
     $('#exam-body').scrollTop = 0; $('#answer-pane').scrollTop = 0;
     window.scrollTo(0, 0);
+    if (mode === 'reset') startNewRound(p);
+    else if (mode !== 'continue' && hasProgress(p)) askRound(p); // 解答済み・途中の問題は「続きから／リセット」を選んでから始める
+    else Timer.start(p);
   }
+  function setSolveTitle(p) {
+    const n = Store.round(p.id).n;
+    $('#s-title').textContent = `${p.yearLabel} ${p.sectionLabel} 問${p.no}　${p.title}${n > 1 ? `（第${n}周）` : ''}`;
+  }
+  // この周で何か進んでいるか（採点・下書き・経過時間のどれか）
+  function hasProgress(p) {
+    return Store.timer(p.id) > 0 || p.questions.some(q => Store.roundAttempts(p.id, q.id).length || (Store.q(`${p.id}:${q.id}`).answer || '').trim());
+  }
+
+  // ---- 周回モード ----------------------------------------------------
+  // リセット＝画面（解答欄の下書き・時間）と、画面に出す採点結果を新しい周に切り替える。
+  // 採点結果そのものは履歴に残し（「履歴」画面・学習状況・解答記録で見られる）、消さない。
+  function askRound(p) {
+    const r = Store.round(p.id);
+    const graded = p.questions.filter(q => Store.roundAttempts(p.id, q.id).length).length;
+    const drafts = p.questions.filter(q => !Store.roundAttempts(p.id, q.id).length && (Store.q(`${p.id}:${q.id}`).answer || '').trim()).length;
+    const last = Math.max(0, ...p.questions.flatMap(q => Store.roundAttempts(p.id, q.id).map(a => a.at || 0)));
+    $('#t-clock').textContent = fmt(Store.timer(p.id));
+    const next = Store.roundGraded(p) ? r.n + 1 : r.n;
+    $('#rd-title').textContent = graded ? `第${r.n}周の続きがあります` : '途中まで解いた記録があります';
+    $('#rd-info').innerHTML = [
+      `採点済み <b>${graded} / ${p.questions.length}</b> 設問`,
+      drafts ? `未採点の下書き ${drafts} 設問` : '',
+      `経過 ${fmt(Store.timer(p.id))}`,
+      last ? `最終採点 ${stamp(last)}` : '',
+    ].filter(Boolean).join('　・　');
+    $('#rd-reset').textContent = next > r.n ? `リセットして第${next}周を始める` : 'リセットして最初から解く';
+    $('#round-dialog').hidden = false;
+  }
+  function startNewRound(p) {
+    Timer.stop(); // 先に止める（後から止めると、リセット前の経過時間が書き戻される）
+    Store.newRound(p);
+    setSolveTitle(p);
+    $('#s-questions').innerHTML = p.questions.map(q => renderQuestion(p, q)).join('');
+    bindQuestions(p);
+    $('#grade-summary').innerHTML = '';
+    $('#answer-pane').scrollTop = 0;
+    Timer.start(p);
+  }
+  $('#rd-continue').addEventListener('click', () => { $('#round-dialog').hidden = true; if (current) Timer.start(current); });
+  $('#rd-reset').addEventListener('click', () => { $('#round-dialog').hidden = true; if (current) startNewRound(current); });
+  $('#rd-back').addEventListener('click', e => { e.preventDefault(); $('#round-dialog').hidden = true; $('#to-list').click(); });
 
   function renderExam() {
     const p = current, body = $('#exam-body');
@@ -252,7 +315,7 @@
 
   // ---- 解答欄を解答例から自動生成（答案用紙を参考にした構造） -----------
   // 判定ロジックは js/work-shape.js（検証ツール apps/tools/work-check.js と共用）。
-  const { splitFW, parseLabeled, answerShape, labeledValue, bulletValues, limitNum } = window.WorkShape;
+  const { splitFW, parseLabeled, answerShape, labeledValue, bulletValues, limitNum, fieldLimits } = window.WorkShape;
   // 1枚のカードから現在の解答文字列を組み立てる（空欄は除くので未入力判定は trim() で効く）
   function cardAnswer(card) {
     const mode = card.dataset.mode;
@@ -271,19 +334,21 @@
     const saved = Store.q(key);
     const shape = answerShape(q);
     const inp = (attr, val) => `<input type="text" class="fld-input" ${attr} value="${esc(val)}" placeholder="解答">`;
+    const lims = fieldLimits(q, shape.fields); // 欄ごとの字数上限（0＝なし）
+    const fcount = `<span class="fld-count"></span>`;
     let inputArea = '';
     if (shape.mode === 'labeled') {
-      inputArea = `<div class="fields">` + shape.fields.map(lb => {
+      inputArea = `<div class="fields">` + shape.fields.map((lb, i) => {
         const v = labeledValue(saved.answer, lb);
         const field = (q.type === 'fill')
-          ? inp(`data-label="${esc(lb)}"`, v)
-          : `<textarea class="fld-input" data-label="${esc(lb)}" rows="2" placeholder="解答">${esc(v)}</textarea>`;
-        return `<label class="field"><span class="field-label">${esc(lb)}</span>${field}</label>`;
+          ? inp(`data-label="${esc(lb)}" data-limit="${lims[i]}"`, v)
+          : `<textarea class="fld-input" data-label="${esc(lb)}" data-limit="${lims[i]}" rows="2" placeholder="解答">${esc(v)}</textarea>`;
+        return `<label class="field"><span class="field-label">${esc(lb)}</span>${field}${fcount}</label>`;
       }).join('') + `</div>`;
     } else if (shape.mode === 'bullets') {
       const vals = bulletValues(saved.answer);
       inputArea = `<div class="fields">` + shape.fields.map((n, i) =>
-        `<label class="field"><span class="field-label">${esc(n)}</span>${inp(`data-bullet="${i}"`, vals[i] || '')}</label>`
+        `<label class="field"><span class="field-label">${esc(n)}</span>${inp(`data-bullet="${i}" data-limit="${lims[i]}"`, vals[i] || '')}${fcount}</label>`
       ).join('') + `</div>`;
     } else {
       inputArea = `<textarea placeholder="ここに解答を入力">${esc(saved.answer || '')}</textarea>`;
@@ -299,7 +364,6 @@
       ${inputArea}${legacy}
       <div class="count"></div>
       <div class="row">
-        <button class="btn primary grade">AIに採点してもらう</button>
         <button class="btn small toggle-model">模範解答を見る</button>
       </div>
       <div class="model result" hidden><h5>公式解答例</h5><div class="model-box"></div></div>
@@ -321,8 +385,16 @@
         if (mode === 'labeled' || mode === 'bullets') {
           const total = card.querySelectorAll('[data-label],[data-bullet]').length;
           const filled = (mode === 'labeled') ? (parseLabeled(ans) || []).length : splitFW(ans).length;
-          count.textContent = `${filled} / ${total} 欄 入力`;
-          count.classList.remove('over');
+          // 欄ごとの文字数（上限があれば n / 上限 字、超えたら赤）
+          let over = 0;
+          card.querySelectorAll('[data-label],[data-bullet]').forEach(el => {
+            const n = [...el.value.trim()].length, lim = Number(el.dataset.limit) || 0;
+            const c = el.parentNode.querySelector('.fld-count');
+            if (c) { c.textContent = lim ? `${n} / ${lim} 字` : `${n} 字`; c.classList.toggle('over', !!lim && n > lim); }
+            if (lim && n > lim) over++;
+          });
+          count.textContent = `${filled} / ${total} 欄 入力${over ? `　字数オーバー ${over} 欄` : ''}`;
+          count.classList.toggle('over', over > 0);
         } else {
           const n = [...ans].length;
           count.textContent = limit ? `${n} / ${limit} 字` : `${n} 字`;
@@ -336,9 +408,7 @@
         const box = card.querySelector('.model'); box.hidden = !box.hidden;
         box.querySelector('.model-box').textContent = q.answer || '(なし)';
       });
-      const saved = Store.q(key);
-      if (saved.attempts && saved.attempts.length) showResult(card, key);
-      card.querySelector('.grade').addEventListener('click', () => gradeOne(p, q, card, key));
+      if (Store.roundAttempts(p.id, q.id).length) showResult(card, key);
     });
   }
 
@@ -372,17 +442,6 @@
     }
   }
 
-  async function gradeOne(p, q, card, key) {
-    const answer = cardAnswer(card);
-    const out = card.querySelector('.grade-result');
-    if (!answer) { out.innerHTML = `<p class="err">解答を入力してください。</p>`; return; }
-    if (!serverOk) { out.innerHTML = `<p class="err">中継サーバが利用できません。<code>node server/relay.js</code> を起動してください。</p>`; return; }
-    const btn = card.querySelector('.grade'); btn.disabled = true;
-    const j = await runGrade(p, q, card, key, answer);
-    btn.disabled = false;
-    if (j) saveRecord(p); // 単問採点：成功したら記録を1ファイル保存
-  }
-
   // まとめて採点（提出）：入力済みの設問を一括採点し、合計点を表示（本番に近い流れ）
   async function gradeAll() {
     const p = current; if (!p) return;
@@ -396,7 +455,7 @@
     const answered = items.filter(x => x.answer);
     const empties = items.length - answered.length;
     if (!answered.length) { $('#grade-summary').innerHTML = `<p class="err">解答がまだ入力されていません。</p>`; return; }
-    if (!confirm(`入力済みの ${answered.length} 問をまとめて採点します。${empties ? `（未入力 ${empties} 問は採点されません）` : ''}\nよろしいですか？`)) return;
+    if (!confirm(`解答を終了して、入力済みの ${answered.length} 問をまとめて採点します。${empties ? `（未入力 ${empties} 問は採点されません）` : ''}\nよろしいですか？`)) return;
     Timer.pause();
     const btn = $('#grade-all'); btn.disabled = true;
     const sum = $('#grade-summary');
@@ -413,30 +472,49 @@
       }
     };
     await Promise.all([worker(), worker(), worker()]); // 最大3並列
-    renderBatchSummary(results, empties);
+    renderBatchSummary(results, empties, p);
     btn.disabled = false;
     if (results.some(Boolean)) saveRecord(p); // まとめて採点：全問終わってから記録を1ファイルだけ保存
   }
-  function renderBatchSummary(results, empties) {
+  // 解答終了（まとめて採点）後の結果まとめ：この周の合計点・前回比・内訳
+  function renderBatchSummary(results, empties, p) {
     const ok = results.filter(r => r && r.verdict === '正解').length;
     const part = results.filter(r => r && r.verdict === '部分正解').length;
     const ng = results.filter(r => r && r.verdict === '不正解').length;
     const failed = results.filter(r => !r).length;
-    const score = results.reduce((a, r) => a + (r && typeof r.score === 'number' ? r.score : 0), 0);
-    const max = results.reduce((a, r) => a + (r && typeof r.scoreMax === 'number' ? r.scoreMax : (r ? 10 : 0)), 0);
+    // この周の合計（各設問のこの周の最新の採点。未採点は0点）。満点は配点予想（無い設問は採点時の満点か10点）
+    let score = 0, max = 0;
+    for (const q of p.questions) {
+      const at = Store.roundAttempts(p.id, q.id), r = at.length ? at[at.length - 1].result || {} : null;
+      const hm = Haiten.haiten(p.id, q.id), m0 = r && typeof r.scoreMax === 'number' && r.scoreMax > 0 ? r.scoreMax : 10;
+      max += hm || m0;
+      if (r && typeof r.score === 'number') score += hm ? r.score / m0 * hm : r.score;
+    }
+    const n1 = v => (Math.round(v * 10) / 10).toString();
+    const pct = max ? Math.round(score / max * 100) : 0;
+    const rs = scoreRounds(p), prev = rs.length >= 2 ? rs[rs.length - 2] : null;
+    const d = prev ? score - prev.score : null;
+    const diff = d == null ? '<span class="muted">初めての採点です</span>'
+      : Math.abs(d) < 0.05 ? `<span class="trend-same">前回（${stamp(prev.end)}）と同点</span>`
+      : d > 0 ? `<span class="trend-up">前回（${stamp(prev.end)}）から +${n1(d)}点</span>`
+      : `<span class="trend-down">前回（${stamp(prev.end)}）から ${n1(d)}点</span>`;
+    const rn = Store.round(p.id).n;
     $('#grade-summary').innerHTML = `<div class="batch-sum">
-      <div class="batch-score">採点結果　得点 ${score} / ${max}</div>
+      <div class="batch-title">採点結果${rn > 1 ? `（第${rn}周）` : ''}</div>
+      <div class="batch-score"><b>${n1(score)}</b> / ${n1(max)}点　${bar(pct)} ${pct}%</div>
+      <div class="batch-diff">${diff}</div>
       <div class="batch-breakdown">
         <span class="verdict ok">正解 ${ok}</span>
         <span class="verdict part">部分正解 ${part}</span>
         <span class="verdict ng">不正解 ${ng}</span>
         ${failed ? `<span class="muted">採点失敗 ${failed}</span>` : ''}
-        ${empties ? `<span class="muted">未入力 ${empties}</span>` : ''}
+        ${empties ? `<span class="muted">未入力 ${empties}（0点）</span>` : ''}
         <span class="muted">所要 ${fmt(Timer.sec)}</span>
       </div>
-      <p class="muted">各設問の詳細は下の採点結果へ。もう一度解くなら「やり直す」。</p>
+      <p class="muted">各設問の採点は下に表示しています。<button class="btn small" id="bs-history">履歴で推移を見る</button></p>
     </div>`;
-    $('#grade-summary').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    $('#bs-history').onclick = () => { $('#solve').hidden = true; $('#solve').classList.remove('on'); document.body.classList.remove('solving'); Timer.stop(); openHistory(p.id); };
+    $('#grade-summary').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function resultHtml(j) {
@@ -458,7 +536,8 @@
 
   // 採点のたびに「回」として別々に保存し、各回の全内容を見返せる
   function showResult(card, key) {
-    const attempts = (Store.q(key).attempts || []);
+    const i = key.indexOf(':');
+    const attempts = Store.roundAttempts(key.slice(0, i), key.slice(i + 1)); // この周の採点だけを出す
     if (!attempts.length) return;
     const out = card.querySelector('.grade-result');
     const n = attempts.length;
@@ -490,8 +569,72 @@
     renderHistory(p);
     window.scrollTo(0, 0);
   }
+  // 合計点の推移（読み取り専用。履歴は書き換えない）
+  // - 回：採点の間が30分以上あいたら別の回とみなす（1問ずつ採点した日も1回にまとまる）
+  // - 合計：その回の終わり時点での各設問の最新の点。その回に採点していない設問は前回までの点
+  // - 換算：配点予想がある設問は「点/その時の満点 × 今の配点」にそろえる（配点前の10点満点の採点も比較できる）
+  const ROUND_GAP = 30 * 60 * 1000;
+  function scoreRounds(p) {
+    const qmax = q => Haiten.haiten(p.id, q.id);
+    const events = p.questions.flatMap(q => (Store.q(`${p.id}:${q.id}`).attempts || []).map(a => ({ q, a })))
+      .filter(x => x.a.result && typeof x.a.result.score === 'number').sort((x, y) => (x.a.at || 0) - (y.a.at || 0));
+    const rounds = [];
+    for (const ev of events) {
+      const last = rounds[rounds.length - 1];
+      if (last && (ev.a.at || 0) - last.end <= ROUND_GAP) { last.items.push(ev); last.end = ev.a.at || 0; }
+      else rounds.push({ start: ev.a.at || 0, end: ev.a.at || 0, items: [ev] });
+    }
+    const state = {};
+    return rounds.map(r => {
+      for (const { q, a } of r.items) {
+        const r0 = a.result, m0 = typeof r0.scoreMax === 'number' && r0.scoreMax > 0 ? r0.scoreMax : 10, hm = qmax(q);
+        state[q.id] = hm ? { s: r0.score / m0 * hm, m: hm } : { s: r0.score, m: m0 };
+      }
+      const s = Object.values(state);
+      const score = s.reduce((x, v) => x + v.s, 0);
+      const max = p.questions.reduce((x, q) => x + (qmax(q) || (state[q.id] ? state[q.id].m : 10)), 0);
+      return { start: r.start, end: r.end, qs: new Set(r.items.map(x => x.q.id)), graded: s.length, score, max, per: Object.fromEntries(Object.entries(state).map(([k, v]) => [k, v.s])) };
+    });
+  }
+  function scoreTrendHtml(p) {
+    const rs = scoreRounds(p);
+    if (!rs.length) return '';
+    const n1 = v => (Math.round(v * 10) / 10).toString();
+    const total = p.questions.length;
+    const rows = rs.map((r, i) => {
+      const pct = r.max ? Math.round(r.score / r.max * 100) : 0;
+      const prev = i ? r.score - rs[i - 1].score : null;
+      const diff = prev == null ? '' : Math.abs(prev) < 0.05 ? '<span class="trend-same">±0</span>' : prev > 0 ? `<span class="trend-up">+${n1(prev)}</span>` : `<span class="trend-down">${n1(prev)}</span>`;
+      return `<tr${i === rs.length - 1 ? ' class="latest"' : ''}>
+        <td>第${i + 1}回</td><td class="hist-meta">${stamp(r.end)}</td>
+        <td class="trend-score"><b>${n1(r.score)}</b> / ${n1(r.max)}点</td>
+        <td>${bar(pct)} ${pct}%</td><td>${diff}</td>
+        <td class="hist-meta">${r.qs.size}設問を採点${r.graded < total ? `（採点済み ${r.graded}/${total}）` : ''}</td></tr>`;
+    }).join('');
+    const best = rs.reduce((b, r) => (r.max && r.score / r.max > b.score / b.max ? r : b), rs[0]);
+    const first = rs[0], last = rs[rs.length - 1];
+    const gain = last.score - first.score;
+    const cheer = rs.length < 2 ? '2回目を解くと、ここに伸びが表示されます。'
+      : gain > 0 ? `第1回から <b>+${n1(gain)}点</b> 伸びています。最高は第${rs.indexOf(best) + 1}回の ${n1(best.score)}点。`
+      : `最高は第${rs.indexOf(best) + 1}回の ${n1(best.score)}点。`;
+    const grid = `<div class="trend-grid-wrap"><table class="trend-grid">
+      <tr><th>設問</th>${rs.map((_, i) => `<th>第${i + 1}回</th>`).join('')}<th>配点</th></tr>
+      ${p.questions.map(q => `<tr><td>${esc(q.id)}</td>${rs.map(r => {
+        const v = r.per[q.id];
+        return `<td class="${r.qs.has(q.id) ? 'graded' : 'carried'}">${v == null ? '—' : n1(v)}</td>`;
+      }).join('')}<td>${Haiten.haiten(p.id, q.id) ?? '—'}</td></tr>`).join('')}
+    </table></div>`;
+    return `<div class="hist-trend">
+      <div class="attempt-head">合計点の推移</div>
+      <p class="trend-cheer">${cheer}</p>
+      <table class="trend-table">${rows}</table>
+      <details class="trend-detail"><summary>設問ごとの点数の推移</summary>${grid}
+        <p class="muted">太字＝その回に採点した設問、薄字＝前回までの点を引き継いだもの。</p></details>
+      <p class="muted trend-note">採点の間が30分以上あいたら別の回として集計。点数は今の配点予想に換算（配点を入れる前の10点満点の採点も比率で換算）。</p>
+    </div>`;
+  }
   function renderHistory(p) {
-    $('#history-body').innerHTML = p.questions.map(q => {
+    $('#history-body').innerHTML = scoreTrendHtml(p) + p.questions.map(q => {
       const saved = Store.q(`${p.id}:${q.id}`);
       const attempts = saved.attempts || [];
       const draft = (saved.answer || '').trim();
@@ -646,13 +789,101 @@
       </button>`;
     }).join('') + `</div>`;
 
-    $('#progress-body').innerHTML = `<p class="prog-cheer">${cheer}</p>${cards}${sections}
+    $('#progress-body').innerHTML = `<p class="prog-cheer">${cheer}</p><div class="estimate" id="estimate-box"></div>${cards}${sections}
       <p class="prog-overall">全体の得点率 ${bar(pct)} <b>${pct}%</b>（採点済み設問の最新得点ベース）</p>
       <h4 class="prog-h">問題ごとの状況</h4>${table}
       <p class="muted" style="font-size:.8rem">各行をタップするとその問題を開きます。得点率は配点設定があればそれを満点に、無ければAI採点の満点（目安10点）で計算します。</p>`;
     $('#progress-body .prog-list').onclick = e => { const b = e.target.closest('.prog-item'); if (b) { $('#progress').hidden = true; openProblem(b.dataset.id); } };
+    renderEstimate();
   }
   $('#open-progress').addEventListener('click', openProgress);
+
+  // ---- 想定合格率（AI 判定・厳しめ） ----------------------------------
+  // 判定材料は各設問の「最終の採点結果」（周回に関係なく最新）。未回答の設問・問題は0点として数える。
+  // 結果はサーバの estimate.json（履歴・配点とは別ファイル）に保存され、学習状況サマリーにも載る。
+  let estimate = null, estimating = false;
+  const totalAttempts = () => PROBLEMS.reduce((a, p) => a + p.questions.reduce((b, q) => b + (Store.q(`${p.id}:${q.id}`).attempts || []).length, 0), 0);
+  function finalStats() {
+    const r1 = v => Math.round(v * 10) / 10;
+    const problems = PROBLEMS.map(p => {
+      let score = 0, max = 0, graded = 0;
+      const weak = [];
+      for (const q of p.questions) {
+        const at = Store.q(`${p.id}:${q.id}`).attempts || [];
+        const r = at.length ? at[at.length - 1].result || {} : null;
+        const hm = Haiten.haiten(p.id, q.id), m0 = r && typeof r.scoreMax === 'number' && r.scoreMax > 0 ? r.scoreMax : 10;
+        const qmax = hm || m0;
+        max += qmax;
+        if (r && typeof r.score === 'number') {
+          graded++;
+          const v = hm ? r.score / m0 * hm : r.score;
+          score += v;
+          if (v / qmax < 0.5) weak.push(`${q.id}（${r1(v)}/${qmax}点）`);
+        }
+      }
+      const rs = scoreRounds(p);
+      const pctOf = r => r && r.max ? Math.round(r.score / r.max * 100) : null;
+      return {
+        name: `${p.yearLabel} ${p.sectionLabel} 問${p.no} ${p.title}`, section: p.section, year: p.year,
+        graded: `${graded}/${p.questions.length}設問`, score: r1(score), max: r1(max), pct: max ? Math.round(score / max * 100) : 0,
+        rounds: rs.length, firstPct: rs.length > 1 ? pctOf(rs[0]) : null, weak,
+      };
+    });
+    const avg = a => a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : 0;
+    const sec = s => problems.filter(x => x.section === s);
+    // 本番形式の目安：年度ごとに午後Ⅰは得点率の高い2問の平均、午後Ⅱは高い方の1問
+    const examLike = (s, k) => avg([...new Set(PROBLEMS.map(p => p.year))].map(y => avg(sec(s).filter(x => x.year === y).map(x => x.pct).sort((a, b) => b - a).slice(0, k))));
+    const basis = {
+      pm1Avg: avg(sec('pm1').map(x => x.pct)), pm2Avg: avg(sec('pm2').map(x => x.pct)),
+      pm1Exam: examLike('pm1', 2), pm2Exam: examLike('pm2', 1),
+      attempted: problems.filter(x => !x.graded.startsWith('0/')).length, total: problems.length, attempts: totalAttempts(),
+    };
+    return { basis, problems };
+  }
+  async function loadEstimate() {
+    try { const r = await fetch('/estimate', { cache: 'no-store' }); if (r.ok) { const j = await r.json(); if (j && typeof j.rate === 'number') estimate = j; } } catch (_) {}
+  }
+  async function runEstimate() {
+    if (estimating) return;
+    if (!serverOk) { alert('中継サーバが利用できません。node server/relay.js を起動してください。'); return; }
+    estimating = true; renderEstimate();
+    try {
+      const { basis, problems } = finalStats();
+      let examDate = null; try { const r = await fetch('/plan', { cache: 'no-store' }); if (r.ok) { const j = await r.json(); examDate = j.plan && j.plan.examDate; } } catch (_) {}
+      const today = new Date(), daysLeft = examDate ? Math.round((new Date(examDate + 'T00:00:00') - new Date(today.getFullYear(), today.getMonth(), today.getDate())) / 864e5) : null;
+      const stats = { today: dayStamp(Date.now()), examDate, daysLeft, note: '得点は各設問の最終の採点結果。未回答の設問・問題は0点。pct は問題ごとの得点率（%）', basis, problems };
+      const r = await fetch('/estimate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ stats, basis }) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || r.status);
+      estimate = j;
+      saveSummary();
+    } catch (e) { alert(`判定できませんでした：${e.message || e}`); }
+    estimating = false; renderEstimate();
+  }
+  function renderEstimate() {
+    const box = $('#estimate-box'); if (!box) return;
+    const now = finalStats().basis;
+    const btn = `<button class="btn small primary" id="est-run" ${estimating ? 'disabled' : ''}>${estimating ? 'AI が判定中…' : estimate ? '最新の採点結果で判定し直す' : 'AI で判定する'}</button>`;
+    const basisLine = b => `午後Ⅰ 得点率 ${b.pm1Avg}%（本番形式の目安 ${b.pm1Exam}%）・午後Ⅱ ${b.pm2Avg}%（同 ${b.pm2Exam}%）・挑戦 ${b.attempted}/${b.total} 問`;
+    if (!estimate) {
+      box.innerHTML = `<div class="est-head">想定合格率（厳しめ・AI判定）</div>
+        <p class="muted">各設問の最終の採点結果をもとに、AI が厳しめに判定します。まだ解いていない問題は0点として数えます。</p>
+        <p class="est-basis">いまの数字：${basisLine(now)}</p>${btn}`;
+    } else {
+      const e = estimate, cls = e.rate >= 60 ? 'good' : e.rate >= 30 ? 'mid' : 'low';
+      const stale = e.basis && typeof e.basis.attempts === 'number' && now.attempts > e.basis.attempts ? `<span class="est-stale">判定のあと採点が ${now.attempts - e.basis.attempts} 回増えています</span>` : '';
+      const li = a => (a || []).map(x => `<li>${esc(x)}</li>`).join('');
+      box.innerHTML = `<div class="est-head">想定合格率（厳しめ・AI判定）<span class="muted">　${stamp(e.at)} 判定</span></div>
+        <div class="est-main"><span class="est-rate ${cls}">${esc(e.rate)}<small>%</small></span>
+          <span class="est-pts">本番想定　午後Ⅰ <b>${esc(e.pm1 ?? '—')}</b>点・午後Ⅱ <b>${esc(e.pm2 ?? '—')}</b>点<br><span class="muted">（合格は両方 60点以上）</span></span></div>
+        <p class="est-summary">${esc(e.summary || '')}</p>
+        <div class="est-cols"><div><h5>根拠</h5><ul>${li(e.reasons)}</ul></div><div><h5>次にやること</h5><ul>${li(e.actions)}</ul></div></div>
+        <p class="est-basis">判定に使った数字：${e.basis ? basisLine(e.basis) : '—'}</p>
+        <p class="muted" style="font-size:.8rem">各設問の最終の採点結果（未回答は0点）をもとに AI が判定。AI 採点の甘さ・周回による慣れは割り引いています。</p>
+        <div class="est-actions">${btn}${stale}</div>`;
+    }
+    $('#est-run').onclick = runEstimate;
+  }
   $('#progress-to-list').addEventListener('click', e => { e.preventDefault(); $('#progress').hidden = true; $('#pick').hidden = false; renderPicker(); window.scrollTo(0, 0); });
 
   // ---- 操作（ビュー切替・ズーム・タイマー・やり直し・一覧へ） ----------
@@ -687,12 +918,10 @@
   $('#t-reset').addEventListener('click', () => { if (confirm('時間を 0 に戻しますか？')) Timer.reset(); });
   $('#retry').addEventListener('click', () => {
     if (!current) return;
-    if (!confirm('この問題の入力中の解答と時間を消して、やり直しますか？\n（これまでの採点履歴は残ります）')) return;
-    Store.retry(current);
-    $('#s-questions').innerHTML = current.questions.map(q => renderQuestion(current, q)).join('');
-    bindQuestions(current);
-    $('#grade-summary').innerHTML = '';
-    Timer.start(current);
+    const n = Store.round(current.id).n + 1;
+    const msg = Store.roundGraded(current) ? `画面の解答と採点結果をリセットして、第${n}周を始めますか？` : '画面の解答と時間をリセットして、最初から解き直しますか？';
+    if (!confirm(`${msg}\n（これまでの採点結果は履歴に残ります）`)) return;
+    startNewRound(current);
   });
   $('#to-list').addEventListener('click', e => {
     e.preventDefault();
@@ -757,6 +986,7 @@
       if (fileKeys) note('この端末の方が新しいため、端末の内容を保持してサーバへ反映しました。');
     }
     await loadHaiten(); // 配点は履歴とは別に、サーバの別ファイルからマージ読み込み
+    await loadEstimate(); // 想定合格率（前回の AI 判定）
     saveSummary();      // 起動時にも学習状況サマリーを最新化（もう一方のマシンの Claude Code 用）
     renderPicker();
   }
@@ -844,20 +1074,22 @@
     const L = [`# ${p.yearLabel} ${p.sectionLabel} 問${p.no}　${p.title}`, ''];
     L.push(`- 記録日時：${stamp(Date.now())}`);
     L.push(`- 種別：${kind === '中断保存' ? '中断保存（採点なし）' : '採点'}`);
+    const rn = Store.round(p.id).n; if (rn > 1) L.push(`- 周回：第${rn}周`);
     const tsec = Store.timer(p.id); if (tsec) L.push(`- 所要時間：${fmt(tsec)}`);
     if (p.overview) L.push(`- 出題趣旨：${p.overview}`);
     if (p.source) L.push(`- 出典：${p.source}`);
     L.push('');
     for (const q of p.questions) {
       const saved = Store.q(`${p.id}:${q.id}`);
-      const attempts = saved.attempts || [];
+      const all = saved.attempts || [];
+      const attempts = Store.roundAttempts(p.id, q.id); // この周の採点（画面と同じ）
       const draft = (saved.answer || '').trim();
       L.push(`## 設問 ${q.id}${q.group ? `（${q.group}）` : ''}`, '');
       L.push(`**問題**：${q.prompt}${q.charLimit ? `（${q.charLimit}）` : ''}`, '');
       if (q.answer) L.push(`**公式解答例**：${q.answer}`, '');
       if (attempts.length) {
         const a = attempts[attempts.length - 1];
-        L.push(`**第${attempts.length}回の採点（${stamp(a.at)}・経過 ${fmt(a.elapsed || 0)}）**`, '');
+        L.push(`**第${all.indexOf(a) + 1}回の採点（${stamp(a.at)}・経過 ${fmt(a.elapsed || 0)}）**`, '');
         L.push('**あなたの解答**：', '', quote(a.answer), '');
         L.push(...resultMd(a.result));
         if (draft && draft !== (a.answer || '').trim()) L.push('**現在の下書き（未採点）**：', '', quote(draft), '');
@@ -899,6 +1131,12 @@
     for (const { p, s } of rows) {
       const score = s.graded ? `${s.score}/${s.max}（${s.max ? Math.round(s.score / s.max * 100) : 0}%）` : '—';
       L.push(`| ${p.yearLabel} ${p.sectionLabel} 問${p.no} ${p.title} | ${s.graded}/${s.total} | ${score} | ${s.rounds || '—'} | ${dayStamp(s.lastAt)} |`);
+    }
+    if (estimate) {
+      const e = estimate;
+      L.push('', '## 想定合格率（AI判定・厳しめ）', '',
+        `- **${e.rate}%**（${stamp(e.at)} 判定）　本番想定：午後Ⅰ ${e.pm1 ?? '—'}点・午後Ⅱ ${e.pm2 ?? '—'}点（合格は両方60点以上）`,
+        `- ${e.summary || ''}`, ...(e.reasons || []).map(x => `  - 根拠：${x}`), ...(e.actions || []).map(x => `  - 次にやること：${x}`));
     }
     L.push('', '## 要復習（最新の判定が正解以外の設問）', '');
     let n = 0;

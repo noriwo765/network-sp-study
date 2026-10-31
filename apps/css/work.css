@@ -220,3 +220,68 @@ textarea.fld-input { resize: vertical; line-height: 1.6; }
 .pstate.done { background: var(--ok, #2ecc71); color: #fff; }
 .pstate.part { background: var(--accent); color: #fff; }
 .pstate.none { background: var(--code-bg); color: var(--muted); border: 1px solid var(--border); }
+
+/* 履歴：合計点の推移 */
+.hist-trend { border: 1px solid var(--accent); border-radius: 10px; padding: 12px 14px; margin: 10px 0 16px; background: var(--surface); }
+.trend-cheer { margin: 6px 0 8px; }
+.trend-table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+.trend-table td { padding: 5px 8px; border-top: 1px solid var(--border); white-space: nowrap; }
+.trend-table tr.latest td { background: var(--ok-bg); }
+.trend-table .pbar { width: 120px; }
+.trend-up { color: var(--ok); font-weight: 700; }
+.trend-down { color: var(--ng); font-weight: 700; }
+.trend-same { color: var(--muted); }
+.trend-detail { margin-top: 10px; }
+.trend-detail > summary { cursor: pointer; font-size: .88rem; color: var(--muted); }
+.trend-grid-wrap { overflow-x: auto; margin-top: 6px; }
+.trend-grid { border-collapse: collapse; font-size: .85rem; }
+.trend-grid th, .trend-grid td { padding: 4px 8px; border: 1px solid var(--border); text-align: right; white-space: nowrap; }
+.trend-grid td:first-child { text-align: left; }
+.trend-grid td.graded { font-weight: 700; }
+.trend-grid td.carried { color: var(--muted); }
+.trend-note { font-size: .8rem; margin: 8px 0 0; }
+@media (max-width: 640px) { .trend-table { display: block; overflow-x: auto; } }
+
+/* 周回モード */
+.round-dialog { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, .55); padding: 16px; }
+.round-dialog[hidden] { display: none; }
+.rd-box { max-width: 520px; width: 100%; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; box-shadow: 0 10px 40px rgba(0, 0, 0, .35); }
+.rd-box h3 { margin: 0 0 8px; }
+.rd-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0 10px; }
+.rd-actions .btn { flex: 1 1 180px; padding: 10px 14px; }
+.rd-note { font-size: .82rem; }
+.prob-list .round-tag { color: var(--accent); font-size: .78rem; margin-left: 6px; }
+.rd-box a { color: var(--accent); }
+
+/* 問題一覧：続きから／最初から */
+.prob-list .pick-acts { display: flex; flex-direction: column; gap: 4px; align-self: center; flex: 0 0 auto; }
+.prob-list .pick-acts .btn { white-space: nowrap; font-size: .8rem; padding: 6px 10px; }
+@media (max-width: 640px) { .prob-list .prob-item { flex-wrap: wrap; } .prob-list .pick-acts { flex-direction: row; } }
+
+/* 複数欄の欄ごとの文字数 */
+.field .fld-count { flex: 0 0 auto; min-width: 5.5em; align-self: flex-end; text-align: right; font-size: .75rem; color: var(--muted); white-space: nowrap; }
+.field .fld-count.over { color: var(--ng); font-weight: 700; }
+.batch-title { font-size: .85rem; color: var(--muted); }
+.batch-score b { font-size: 1.6rem; }
+.batch-diff { margin: 2px 0 4px; }
+
+/* 想定合格率（AI判定） */
+.estimate { border: 1px solid var(--accent); border-radius: 12px; background: var(--surface); padding: 12px 14px; margin: 8px 0 14px; }
+.est-head { font-weight: 700; }
+.est-head .muted { font-weight: 400; font-size: .8rem; }
+.est-main { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin: 6px 0; }
+.est-rate { font-size: 2.6rem; font-weight: 800; line-height: 1; }
+.est-rate small { font-size: 1.1rem; margin-left: 2px; }
+.est-rate.good { color: var(--ok); }
+.est-rate.mid { color: #d97706; }
+.est-rate.low { color: var(--ng); }
+.est-pts { font-size: .92rem; }
+.est-summary { font-weight: 600; margin: 4px 0 8px; }
+.est-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.est-cols h5 { margin: 0 0 4px; font-size: .85rem; color: var(--muted); }
+.est-cols ul { margin: 0; padding-left: 1.2em; font-size: .88rem; }
+.est-cols li { margin: 2px 0; }
+.est-basis { font-size: .82rem; color: var(--muted); margin: 8px 0 4px; }
+.est-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+.est-stale { font-size: .8rem; color: #d97706; }
+@media (max-width: 640px) { .est-cols { grid-template-columns: 1fr; } }

@@ -6,6 +6,8 @@ server/.env
 server/history.json
 # 学習計画（予定・チェック・メモ。個人データ）
 server/plan.json
+# 想定合格率の AI 判定結果（個人データ）
+server/estimate.json
 # 配点予想（server/haiten.json）は消えないよう Git 管理する（.gitignore しない）
 
 # 解答記録（採点のたびに自動生成される個人の解答・採点。README だけ追跡）

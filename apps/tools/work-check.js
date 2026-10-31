@@ -111,8 +111,8 @@ if (fs.existsSync(histPath)) {
   let attempts = 0;
   for (const [key, v] of Object.entries(d)) {
     if (key === '__haiten') { warn('履歴に旧仕様の配点(__haiten)が残っている（アプリ起動時に配点ファイルへ移行される）'); continue; }
-    const m = /^(.+):__timer$/.exec(key);
-    if (m) { if (!byId.has(m[1])) ng(`履歴: 存在しない問題のタイマー ${key}`); continue; }
+    const m = /^(.+):__(timer|round)$/.exec(key);
+    if (m) { if (!byId.has(m[1])) ng(`履歴: 存在しない問題の${m[2] === 'timer' ? 'タイマー' : '周回'} ${key}`); continue; }
     if (!shapeOf.has(key)) { ng(`履歴: 存在しない設問への記録 ${key}`); continue; }
     if (!Array.isArray(v.attempts)) { ng(`履歴: ${key} の attempts が配列でない`); continue; }
     for (const a of v.attempts) { attempts++; if (!a.at || !a.result) ng(`履歴: ${key} に at/result の無い採点がある`); }
