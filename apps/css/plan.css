@@ -1,0 +1,47 @@
+/* 学習計画（plan.html）専用。カード・バッジは work.css の prog-* / pstate を流用 */
+
+#site-header .back a + a { margin-left: 8px; }
+#plan-body { margin-bottom: 32px; }
+#plan-body h2 { font-size: 1.05rem; margin: 20px 0 8px; }
+
+.plan-banner { border: 1px solid var(--ng); background: var(--ng-bg); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.pace { margin: 0 0 12px; font-weight: 600; color: var(--ok); }
+.pace.behind { color: var(--ng); }
+
+.today-card { border: 2px solid var(--accent); border-radius: 12px; background: var(--surface); padding: 12px 14px; margin: 8px 0 12px; }
+.today-card h2 { margin: 0 0 6px !important; }
+.today-hours { margin: 0 0 4px; font-size: .85rem; color: var(--muted); }
+.today-exam { font-size: 1.2rem; font-weight: 700; }
+
+.plan-tips { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 8px 14px; margin: 8px 0; }
+.plan-tips summary { cursor: pointer; font-weight: 600; }
+.plan-tips ul { margin: 8px 0 4px; padding-left: 1.2em; }
+.plan-tips li { margin: 3px 0; font-size: .9rem; }
+
+.day { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 10px 14px; margin: 8px 0; }
+.day.today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.day.all-done { background: var(--ok-bg); }
+.day.past.all-done { opacity: .8; }
+.day.extra { border-style: dashed; }
+.day-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.day-date { font-weight: 700; }
+.day-hours { font-size: .82rem; color: var(--muted); flex: 1 1 auto; }
+
+.tasks { list-style: none; margin: 6px 0 0; padding: 0; }
+.task { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; }
+.task + .task { border-top: 1px dashed var(--border); }
+.tk-check input { width: 18px; height: 18px; margin-top: 2px; cursor: pointer; }
+.tk-check input:disabled { cursor: default; }
+.tk-main { flex: 1 1 auto; min-width: 0; }
+.tk-kind { display: inline-block; font-size: .72rem; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 0 6px; margin-right: 6px; }
+.tk-title a { color: var(--accent); }
+.task.done .tk-title { color: var(--muted); }
+.task.done .tk-title a { color: var(--muted); }
+.tk-note { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+.tk-info { font-size: .82rem; margin-top: 2px; color: var(--muted); }
+.tk-info.good { color: var(--ok); font-weight: 600; }
+.tk-info.low { color: var(--ng); font-weight: 600; }
+
+.memo { width: 100%; box-sizing: border-box; margin-top: 8px; padding: 6px 8px; font: inherit; font-size: .88rem; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; resize: vertical; }
+.day-toggle { font-size: .8rem; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; cursor: pointer; margin-left: auto; }
+.day-alt { margin: 6px 0 0; font-size: .85rem; color: var(--ng); }

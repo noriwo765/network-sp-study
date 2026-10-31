@@ -131,9 +131,10 @@ const walk = dir => fs.readdirSync(path.join(APP, dir), { withFileTypes: true })
   return e.isDirectory() ? walk(rel) : [rel];
 });
 // キャッシュ対象外：tools/・各階層のREADME.md・sw.js・エディタ用ファイル、
-// およびワーク演習（work.html / work/ / work.css / work-app.js / work-shape.js）。ワーク演習はローカル専用で
+// およびワーク演習（work.html / work/ / work.css / work-app.js / work-shape.js）と学習計画（plan.*）。ローカル専用で
 // 中継サーバから配信するため、公開用オフラインキャッシュ（sw.js）には含めない。
-const served = walk('').filter(f => !/(^tools\/|(^|\/)README\.md$|^sw\.js$|\.code-workspace$|^work\.html$|^work\/|^css\/work\.css$|^js\/work-(app|shape)\.js$)/.test(f)).concat(DATA_FILES);
+// Mac が exFAT に作る付随ファイル（._*）も対象外。
+const served = walk('').filter(f => !/(^tools\/|(^|\/)\._|(^|\/)README\.md$|^sw\.js$|\.code-workspace$|^work\.html$|^work\/|^css\/work\.css$|^js\/work-(app|shape)\.js$|^plan\.html$|^css\/plan\.css$|^js\/plan-app\.js$)/.test(f)).concat(DATA_FILES);
 for (const f of listed) if (!fs.existsSync(path.join(APP, f))) bad(`sw.js にあるが実在しない: ${f}`);
 for (const f of served) if (!listed.includes(f)) bad(`sw.js のキャッシュ対象に漏れ: ${f}`);
 console.log(`キャッシュ対象 ${listed.length} ファイル`);

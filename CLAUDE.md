@@ -9,6 +9,7 @@ Claude Code のメモリ（~/.claude）はマシンごとで SSD に乗らない
 - `解答記録/<年度_区分_問_タイトル>/<日時>.md` … 採点（または中断保存）1回ごとのスナップショット。設問ごとの解答・AI採点・公式解答例。
 - `server/history.json` … 生データ。`data['<問題id>:<設問id>'] = { answer, attempts: [{ at, elapsed, answer, result: { verdict, score, scoreMax, good, missing, diff, advice, modelAnswer } }] }`、`data['<問題id>:__timer'] = { sec }`。`savedAt` は最終保存時刻。
 - `server/haiten.json` … 配点予想。`{ rev, haiten: { '<問題id>:<設問id>': 点数 | { 欄ラベル: 点数 } } }`。欄ラベルは解答欄と同じ（a/b/c・機器①・① など）。
+- `server/plan.json` … 本番までの学習計画（Git 管理外）。`{ createdAt, examDate, goals, tips, days: [{ date, hours, toggle?: { flag, label, hours, note }, tasks: [{ id, type: solve|redo|text, round, need, pid, qids, text, note, when?, unless? }] }], extra, flags: { フラグ: true }, checks: { タスクid: true }, memo: { 日付: 文 } }`。toggle は日ごとの切り替えスイッチ（例：休日出勤）で、flag が立つと when のタスクが出て unless のタスクが消える。画面は `apps/plan.html`。採点は createdAt 以降の分だけ数え、solve は全設問を need 回（既定1。2周目は2）採点、redo は指定設問を採点すると自動で済になる。計画を組み替えるときは checks・memo を消さない。`解答記録/_学習計画.md` は方針のメモ。
 - 問題データ … `apps/work/r*_pm*_q*.js`（`id` は `r7_pm1_q1` の形式、設問は `questions[].id`）。
 
 ## Skill（このリポジトリ用）
@@ -22,7 +23,8 @@ Claude Code のメモリ（~/.claude）はマシンごとで SSD に乗らない
 | `apps/js/work-app.js` | 画面ロジック。`Store`（履歴：localStorage＋/history）、`Haiten`（配点：別キー＋/haiten）、採点、記録・サマリーの書き出し |
 | `apps/js/work-shape.js` | 解答例の書式から解答欄（欄の分け方）を決める純粋関数。画面と検証ツールで共用 |
 | `apps/css/work.css` | ワーク演習のスタイル |
-| `server/relay.js` | 中継サーバ。静的配信、`/grade`（Claude で採点）、`/history`、`/haiten`、`/record`（解答記録/ への書き出し） |
+| `apps/plan.html`・`apps/js/plan-app.js`・`apps/css/plan.css` | 学習計画（ローカル専用）。履歴・配点は読むだけで、保存は `/plan` のみ。`work.html?p=<問題id>` でその問題を直接開く |
+| `server/relay.js` | 中継サーバ。静的配信、`/grade`（Claude で採点）、`/history`、`/haiten`、`/plan`（学習計画。ファイル更新時刻を版にし、古い版での上書きは 409）、`/record`（解答記録/ への書き出し） |
 | `apps/tools/work-check.js` | 整合性チェック（解答欄の分割・配点・履歴）。`--fields <問題id>` で欄の単位を表示 |
 | `apps/tools/haiten-set.js` | 配点の一括登録（欄ラベルを検証し、rev を進めて保存） |
 

@@ -47,6 +47,9 @@ const server = http.createServer(async (req, res) => {
     // 配点予想（履歴とは別ファイル haiten.json）
     if (req.method === 'GET' && req.url === '/haiten') return void readHaiten(res);
     if ((req.method === 'PUT' || req.method === 'POST') && req.url === '/haiten') return void (await writeHaiten(req, res));
+    // 学習計画（予定・チェック・メモ。plan.json）
+    if (req.method === 'GET' && req.url === '/plan') return void readPlan(res);
+    if ((req.method === 'PUT' || req.method === 'POST') && req.url === '/plan') return void (await writePlan(req, res));
     // 解答記録（Markdown）を解答記録/ フォルダへ書き出す
     if ((req.method === 'POST' || req.method === 'PUT') && req.url === '/record') return void (await writeRecord(req, res));
     if (req.method === 'GET') return serveStatic(req, res);
@@ -60,6 +63,7 @@ server.listen(PORT, () => {
   console.log(`\nネスペ ワーク演習サーバ起動`);
   console.log(`  学習サイト : http://localhost:${PORT}/apps/index.html`);
   console.log(`  ワーク演習 : http://localhost:${PORT}/apps/work.html`);
+  console.log(`  学習計画   : http://localhost:${PORT}/apps/plan.html`);
   console.log(`  採点モデル : ${MODEL}`);
   console.log(`  APIキー    : ${API_KEY ? '設定済み' : '未設定（ANTHROPIC_API_KEY を設定してください）'}\n`);
 });
@@ -171,6 +175,29 @@ async function writeHaiten(req, res) {
   fs.writeFile(HAITEN_FILE, JSON.stringify(body, null, 2) + '\n', 'utf8', err => {
     if (err) return send(res, 500, { error: String(err.message || err) });
     send(res, 200, { ok: true });
+  });
+}
+
+// ---- /plan（学習計画の保存ファイル。履歴・配点とは別管理） ------------------
+// 中身は予定（Claude Code が作る）と、利用者のチェック・メモ。ファイルの更新時刻を版として返し、
+// 書き込み時に読んだ時点の版（baseVersion）と食い違えば拒否する。開きっぱなしのタブが、
+// Claude Code やもう一方のマシンが書き換えた新しい計画を潰さないため。
+const PLAN_FILE = path.join(__dirname, 'plan.json');
+const planVersion = () => { try { return fs.statSync(PLAN_FILE).mtimeMs; } catch (_) { return 0; } };
+function readPlan(res) {
+  fs.readFile(PLAN_FILE, 'utf8', (err, txt) => {
+    if (err) return send(res, 200, { version: 0, plan: null }); // まだ無い
+    try { return send(res, 200, { version: planVersion(), plan: JSON.parse(txt) }); }
+    catch (e) { return send(res, 500, { error: `plan.json を読めません：${e.message}` }); }
+  });
+}
+async function writePlan(req, res) {
+  const body = await readJson(req);
+  if (!body || !body.plan || typeof body.plan !== 'object') return send(res, 400, { error: 'plan が必要です。' });
+  if (Number(body.baseVersion) !== planVersion()) return send(res, 409, { error: '計画ファイルが別の場所で更新されています。ページを再読み込みしてください。' });
+  fs.writeFile(PLAN_FILE, JSON.stringify(body.plan, null, 2) + '\n', 'utf8', err => {
+    if (err) return send(res, 500, { error: String(err.message || err) });
+    send(res, 200, { ok: true, version: planVersion() });
   });
 }
 

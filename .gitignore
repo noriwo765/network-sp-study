@@ -4,6 +4,8 @@ server/.env
 
 # 学習履歴（端末ローカルの個人データ。サイズも大きいので追跡しない）
 server/history.json
+# 学習計画（予定・チェック・メモ。個人データ）
+server/plan.json
 # 配点予想（server/haiten.json）は消えないよう Git 管理する（.gitignore しない）
 
 # 解答記録（採点のたびに自動生成される個人の解答・採点。README だけ追跡）

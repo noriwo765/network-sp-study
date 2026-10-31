@@ -924,5 +924,6 @@
   // ---- 起動 ----------------------------------------------------------
   renderPicker();
   checkServer();
-  startupSync();
+  // work.html?p=<問題id> で開かれたら（学習計画ページからのリンク）、履歴の同期後にその問題を開く
+  startupSync().then(() => { const id = new URLSearchParams(location.search).get('p'); if (id) openProblem(id); });
 })();
