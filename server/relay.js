@@ -290,7 +290,8 @@ function serveStatic(req, res) {
   if (!filePath.startsWith(ROOT)) return res.writeHead(403).end('Forbidden'); // ディレクトリ外アクセス防止
   fs.readFile(filePath, (err, buf) => {
     if (err) return res.writeHead(404).end('Not Found');
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(filePath).toLowerCase()] || 'application/octet-stream' });
+    // no-cache：ブラウザに毎回確認させる（画面の JS を直したのに古いファイルが使われる、を防ぐ）
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(filePath).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
     res.end(buf);
   });
 }
