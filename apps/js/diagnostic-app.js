@@ -13,7 +13,7 @@
     const KEY = 'nespe-diagnostic-v1';
     let data = {};
     try { data = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (_) {}
-    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (_) {} };
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (_) {} if (window.ProgressSync) ProgressSync.changed(); };
     return {
       get: id => data[id] || null,
       set(id, v) { if (v) data[id] = v; else delete data[id]; save(); },

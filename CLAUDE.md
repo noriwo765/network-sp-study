@@ -11,6 +11,8 @@ Claude Code のメモリ（~/.claude）はマシンごとで SSD に乗らない
 - `server/haiten.json` … 配点予想。`{ rev, haiten: { '<問題id>:<設問id>': 点数 | { 欄ラベル: 点数 } } }`。欄ラベルは解答欄と同じ（a/b/c・機器①・① など）。
 - `server/plan.json` … 本番までの学習計画（Git 管理外）。`{ createdAt, examDate, goals, tips, days: [{ date, hours, toggle?: { flag, label, hours, note }, tasks: [{ id, type: solve|redo|text, round, need, pid, qids, text, note, when?, unless? }] }], extra, flags: { フラグ: true }, checks: { タスクid: true }, memo: { 日付: 文 } }`。toggle は日ごとの切り替えスイッチ（例：休日出勤）で、flag が立つと when のタスクが出て unless のタスクが消える。画面は `apps/plan.html`。採点は createdAt 以降の分だけ数え、solve は全設問を need 回（既定1。2周目は2）採点、redo は指定設問を採点すると自動で済になる。計画を組み替えるときは checks・memo を消さない。`解答記録/_学習計画.md` は方針のメモ。
 - `server/estimate.json` … 想定合格率の AI 判定結果（Git 管理外）。`{ at, rate, pm1, pm2, summary, reasons, actions, basis }`。判定材料は各設問の最終の採点結果で、未回答は0点。学習状況画面のボタンで判定し、`_学習状況.md` にも載る。
+- `server/progress.json` … 単語カード・一問一答・理解度チェック・診断の記録（Git 管理外）。`{ at, data: { localStorage のキー: 値 } }`。中継サーバで開いたとき `apps/js/progress-sync.js` が自動で保存・復元する（at が新しい方を採用。初回だけは両方を合わせる）。スマホ（GitHub Pages）はトップページの「書き出す／読み込む」で手動バックアップ。
+- 苦手ジャンル … `flashcards/qa_weak.js`（一問一答。`weak / src / miss`）と `flashcards/terms.js` の `weak: true` の用語。ワーク演習の失点から作る。`qa.html?weak=1`・`terms.html?weak=1` で絞り込み。
 - 問題データ … `apps/work/r*_pm*_q*.js`（`id` は `r7_pm1_q1` の形式、設問は `questions[].id`）。
 
 ## Skill（このリポジトリ用）
@@ -25,7 +27,7 @@ Claude Code のメモリ（~/.claude）はマシンごとで SSD に乗らない
 | `apps/js/work-shape.js` | 解答例の書式から解答欄（欄の分け方）と欄ごとの字数上限（`fieldLimits`）を決める純粋関数。画面と検証ツールで共用 |
 | `apps/css/work.css` | ワーク演習のスタイル |
 | `apps/plan.html`・`apps/js/plan-app.js`・`apps/css/plan.css` | 学習計画（ローカル専用）。履歴・配点は読むだけで、保存は `/plan` のみ。`work.html?p=<問題id>` でその問題を直接開く |
-| `server/relay.js` | 中継サーバ。静的配信、`/grade`（Claude で採点）、`/history`、`/haiten`、`/plan`（学習計画。ファイル更新時刻を版にし、古い版での上書きは 409）、`/estimate`（想定合格率の AI 判定。GET で前回の結果）、`/record`（解答記録/ への書き出し） |
+| `server/relay.js` | 中継サーバ。静的配信、`/progress`（暗記系の学習記録。古い at での上書きは 409）、`/grade`（Claude で採点）、`/history`、`/haiten`、`/plan`（学習計画。ファイル更新時刻を版にし、古い版での上書きは 409）、`/estimate`（想定合格率の AI 判定。GET で前回の結果）、`/record`（解答記録/ への書き出し） |
 | `apps/tools/work-check.js` | 整合性チェック（解答欄の分割・配点・履歴）。`--fields <問題id>` で欄の単位を表示 |
 | `apps/tools/haiten-set.js` | 配点の一括登録（欄ラベルを検証し、rev を進めて保存） |
 

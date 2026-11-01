@@ -11,19 +11,22 @@
     const KEY = 'nespe-qa-v1';
     let d = {};
     try { d = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (_) {}
-    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (_) {} };
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (_) {} if (window.ProgressSync) ProgressSync.changed(); };
     return { isKnown: c => !!d[c.id], setKnown(c, k) { if (k) d[c.id] = 1; else delete d[c.id]; save(); } };
   })();
 
   let ch = 'all', view = 'card', deck = [], idx = 0;
 
-  const inScope = () => CARDS.filter(c => inChapter(ch, c));
+  // 苦手（weak: ワーク演習で失点した論点。flashcards/qa_weak.js）だけに絞る。qa.html?weak=1 で最初から絞る
+  if (new URLSearchParams(location.search).has('weak')) $('only-weak').checked = true;
+  const pool = () => $('only-weak').checked ? CARDS.filter(c => c.weak) : CARDS;
+  const inScope = () => pool().filter(c => inChapter(ch, c));
   const knownCount = list => list.filter(c => QA.isKnown(c)).length;
   const sceneLink = c => c.scene
     ? `<a class="anime-link" href="packet-flow.html#${encodeURIComponent(c.scene)}" target="_blank" rel="noopener">▶ 関連アニメを見る</a>` : '';
 
   const chips = chapterChips($('chapters'), {
-    label: no => { const l = CARDS.filter(c => inChapter(no, c)); return `${knownCount(l)}/${l.length}`; },
+    label: no => { const l = pool().filter(c => inChapter(no, c)); return `${knownCount(l)}/${l.length}`; },
     onSelect: no => { ch = no; view === 'quiz' ? buildQuiz() : buildDeck(); },
   });
 
@@ -56,9 +59,11 @@
     }
     const c = deck[idx];
     $('pos').textContent = `${idx + 1} / ${deck.length}`;
-    $('flash-ch').textContent = `Ch.${c.ch} ${chTitle(c.ch)}　${c.theme || ''}${QA.isKnown(c) ? '　✓ 覚えた' : ''}`;
+    $('flash-ch').textContent = `Ch.${c.ch} ${chTitle(c.ch)}　${c.theme || ''}${c.weak ? '　★苦手' : ''}${QA.isKnown(c) ? '　✓ 覚えた' : ''}`;
     $('flash-q').textContent = c.q;
     $('flash-a').textContent = c.a;
+    $('flash-miss').textContent = c.miss ? `前回のつまずき（${c.src}）：${c.miss}` : '';
+    $('flash-miss').hidden = !c.miss;
     $('flash-kaisetsu').textContent = c.kaisetsu || '';
     $('flash-kaisetsu').hidden = !c.kaisetsu;
     $('flash-yasashii').textContent = c.yasashii || '';
@@ -90,6 +95,7 @@
   $('again-all').addEventListener('click', () => buildDeck(false));
   $('again-unknown').addEventListener('click', () => buildDeck(true));
   $('only-unknown').addEventListener('change', () => view === 'quiz' ? buildQuiz() : buildDeck());
+  $('only-weak').addEventListener('change', () => view === 'quiz' ? buildQuiz() : buildDeck());
   $('shuffle').addEventListener('change', () => buildDeck());
 
   let touch = null;
@@ -163,6 +169,7 @@
     $('q-explain').innerHTML = `
       <p class="verdict ${pos === correctPos ? 'ok' : 'ng'}">${pos === correctPos ? '正解' : '不正解'}</p>
       <p><strong>${escapeHtml(c.a)}</strong></p>
+      ${c.miss ? `<p class="miss">前回のつまずき（${escapeHtml(c.src)}）：${escapeHtml(c.miss)}</p>` : ''}
       ${c.yasashii ? `<p class="yasashii">${escapeHtml(c.yasashii)}</p>` : ''}
       ${c.oboe ? `<p class="oboe">覚え方：${escapeHtml(c.oboe)}</p>` : ''}
       ${c.scene ? `<p class="scene-link">${sceneLink(c)}</p>` : ''}`;
@@ -179,7 +186,7 @@
     const q = $('search').value.trim().toLowerCase();
     let list = inScope();
     if ($('only-unknown').checked) list = list.filter(c => !QA.isKnown(c));
-    if (q) list = list.filter(c => `${c.q} ${c.a} ${c.kaisetsu || ''} ${c.yasashii || ''} ${c.oboe || ''}`.toLowerCase().includes(q));
+    if (q) list = list.filter(c => `${c.q} ${c.a} ${c.miss || ''} ${c.src || ''} ${c.kaisetsu || ''} ${c.yasashii || ''} ${c.oboe || ''}`.toLowerCase().includes(q));
     $('pos').textContent = `${list.length} 件`;
     $('list').innerHTML = list.map(c => {
       const known = QA.isKnown(c);
@@ -188,6 +195,7 @@
           <button class="btn small" data-id="${escapeHtml(c.id)}">${known ? '✓ 覚えた' : 'まだ'}</button>
         </h4>
         <p><strong>${escapeHtml(c.a)}</strong></p>
+        ${c.miss ? `<p class="note">前回のつまずき（${escapeHtml(c.src)}）：${escapeHtml(c.miss)}</p>` : ''}
         ${c.yasashii ? `<p class="note">やさしく言うと：${escapeHtml(c.yasashii)}</p>` : ''}
         ${c.oboe ? `<p class="note">覚え方：${escapeHtml(c.oboe)}</p>` : ''}
         <p class="muted">Ch.${c.ch} ${escapeHtml(chTitle(c.ch))}${c.scene ? `　<a class="anime-link" href="packet-flow.html#${encodeURIComponent(c.scene)}">▶ アニメ</a>` : ''}</p>

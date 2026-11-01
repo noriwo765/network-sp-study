@@ -9,12 +9,15 @@
   let idx = 0;
   let flipped = false;
 
-  const inScope = () => TERMS.filter(t => inChapter(ch, t));
+  // 苦手（weak: ワーク演習で失点した論点の用語）だけに絞る。terms.html?weak=1 で最初から絞る
+  if (new URLSearchParams(location.search).has('weak')) $('only-weak').checked = true;
+  const pool = () => $('only-weak').checked ? TERMS.filter(t => t.weak) : TERMS;
+  const inScope = () => pool().filter(t => inChapter(ch, t));
   const knownCount = list => list.filter(t => Progress.isKnown(t)).length;
 
   const chips = chapterChips($('chapters'), {
     label: no => {
-      const list = TERMS.filter(t => inChapter(no, t));
+      const list = pool().filter(t => inChapter(no, t));
       return `${knownCount(list)}/${list.length}`;
     },
     onSelect: no => { ch = no; buildDeck(); },
@@ -51,7 +54,7 @@
     const t = deck[idx];
     flipped = false;
     $('pos').textContent = `${idx + 1} / ${deck.length}`;
-    $('flash-ch').textContent = `Ch.${t.ch} ${chTitle(t.ch)}${Progress.isKnown(t) ? '　✓ 覚えた' : ''}`;
+    $('flash-ch').textContent = `Ch.${t.ch} ${chTitle(t.ch)}${t.weak ? '　★苦手' : ''}${Progress.isKnown(t) ? '　✓ 覚えた' : ''}`;
     $('flash-term').textContent = t.term;
     $('flash-desc').textContent = t.desc;
     $('flash-note').textContent = t.note || '';
@@ -81,6 +84,7 @@
   $('again-all').addEventListener('click', () => buildDeck(false));
   $('again-unknown').addEventListener('click', () => buildDeck(true));
   $('only-unknown').addEventListener('change', () => buildDeck());
+  $('only-weak').addEventListener('change', () => buildDeck());
   $('shuffle').addEventListener('change', () => buildDeck());
 
   // カードの左右スワイプ：右 = 覚えた、左 = まだ

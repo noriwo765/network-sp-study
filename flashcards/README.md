@@ -6,12 +6,13 @@
 |---------|------|
 | [terms.js](terms.js) | 用語データ（全19章）→ [単語カード](../apps/terms.html) |
 | [compare.js](compare.js) | 紛らわしい用語の比較表 → [紛らわしい用語の比較](../apps/compare.html) |
+| [qa_*.js](.) | 午後Ⅰ 一問一答。[qa_weak.js](qa_weak.js) はワーク演習で失点した論点（weak / src / miss 付き）→ [一問一答](../apps/qa.html)（[苦手だけ](../apps/qa.html?weak=1)） |
 | [ports.js](ports.js) | ポート番号と、IPプロトコル番号・マルチキャストアドレス・ICMPタイプなど → [ポート番号](../apps/ports.html) |
 
 ## データ形式
 ```js
 // terms.js
-{ ch: 本の章番号, term: '用語', desc: '意味', note: '補足・試験での狙われどころ（省略可）' }
+{ ch: 本の章番号, term: '用語', desc: '意味', note: '補足・試験での狙われどころ（省略可）', weak: true（苦手ジャンル。省略可） }
 // compare.js
 { ch, title: '見出し', point: '見分けるポイント', head: ['', '用語1', '用語2'], rows: [['観点', '値1', '値2']] }
 // ports.js

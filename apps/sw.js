@@ -5,7 +5,7 @@
 //   （更新内容は「次に開いたとき」に反映される）
 // - ファイルを追加・削除したら FILES を直し、VERSION を上げる（tools/check.js が漏れを検出する）
 
-const VERSION = 'nespe-v10';
+const VERSION = 'nespe-v11';
 
 const FILES = [
   './',
@@ -37,6 +37,7 @@ const FILES = [
   './js/pwa.js',
   './js/qa-app.js',
   './js/study.js',
+  './js/progress-sync.js',
   './js/terms-app.js',
   './js/scenarios/arp-spoof.js',
   './js/scenarios/basic.js',
@@ -77,6 +78,7 @@ const FILES = [
   '../flashcards/qa_tcpip.js',
   '../flashcards/qa_security.js',
   '../flashcards/qa_apps.js',
+  '../flashcards/qa_weak.js',
 ];
 
 self.addEventListener('install', event => {

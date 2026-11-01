@@ -12,6 +12,7 @@ const Progress = (() => {
 
   const save = () => {
     try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* 同上 */ }
+    if (window.ProgressSync) ProgressSync.changed();
   };
 
   return {

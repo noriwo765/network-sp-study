@@ -246,7 +246,17 @@ input[type="search"] {
 .yasashii::before { content: "やさしく言うと　"; font-weight: 700; color: var(--ok); }
 .explain-box .yasashii { margin: 6px 0; }
 .oboe { margin: 8px 0; font-size: .92rem; color: #92400e; background: #fef3c7; padding: 6px 10px; border-radius: 8px; }
+.miss { margin: 8px 0; padding: 8px 10px; background: var(--ng-bg); border-radius: 8px; font-size: .92rem; }
 @media (prefers-color-scheme: dark) { .oboe { color: #fbbf24; background: #3a300f; } }
 .scene-link { margin: 8px 0 0; }
 .anime-link { font-size: .9rem; color: var(--accent); text-decoration: none; font-weight: 600; }
 .anime-link:hover { text-decoration: underline; }
+
+/* トップページ：①〜⑤の区分とバックアップ */
+.menu-group { margin-top: 24px; }
+.menu-group .group-title { margin: 0 0 6px; font-size: 1rem; }
+.menu-group .menu { margin-top: 8px; }
+.menu .local-only { margin-top: 6px; font-size: 0.8rem; }
+.backup-status { margin: 8px 0; font-size: 0.9rem; }
+.backup-status.warn { color: var(--ng); font-weight: 600; }
+label.btn { display: inline-block; }

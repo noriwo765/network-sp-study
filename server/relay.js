@@ -53,6 +53,9 @@ const server = http.createServer(async (req, res) => {
     // 学習計画（予定・チェック・メモ。plan.json）
     if (req.method === 'GET' && req.url === '/plan') return void readPlan(res);
     if ((req.method === 'PUT' || req.method === 'POST') && req.url === '/plan') return void (await writePlan(req, res));
+    // 単語カード・一問一答・理解度チェック・診断の記録（progress.json）
+    if (req.method === 'GET' && req.url === '/progress') return void readProgress(res);
+    if ((req.method === 'PUT' || req.method === 'POST') && req.url === '/progress') return void (await writeProgress(req, res));
     // 解答記録（Markdown）を解答記録/ フォルダへ書き出す
     if ((req.method === 'POST' || req.method === 'PUT') && req.url === '/record') return void (await writeRecord(req, res));
     if (req.method === 'GET') return serveStatic(req, res);
@@ -253,6 +256,28 @@ async function writePlan(req, res) {
   fs.writeFile(PLAN_FILE, JSON.stringify(body.plan, null, 2) + '\n', 'utf8', err => {
     if (err) return send(res, 500, { error: String(err.message || err) });
     send(res, 200, { ok: true, version: planVersion() });
+  });
+}
+
+// ---- /progress（暗記系の学習記録。履歴・配点・計画とは別管理） -----------------
+// 中身は { at: 最終更新時刻, data: { localStorage のキー: 値 } }。ブラウザの localStorage は
+// サイトデータの削除などで消えることがあるので、ここに控えを置く。古い at での上書きは拒否する
+// （開きっぱなしのタブや、記録が消えたばかりのブラウザが、新しいファイルを潰さないため）。
+const PROGRESS_FILE = path.join(__dirname, 'progress.json');
+const progressAt = () => { try { return Number(JSON.parse(fs.readFileSync(PROGRESS_FILE, 'utf8')).at) || 0; } catch (_) { return 0; } };
+function readProgress(res) {
+  fs.readFile(PROGRESS_FILE, 'utf8', (err, txt) => {
+    if (err) return send(res, 200, { at: 0, data: {} }); // まだ無い
+    try { return send(res, 200, JSON.parse(txt)); } catch (_) { return send(res, 200, { at: 0, data: {} }); }
+  });
+}
+async function writeProgress(req, res) {
+  const body = await readJson(req);
+  if (!body || !body.data || typeof body.data !== 'object') return send(res, 400, { error: 'data が必要です。' });
+  if ((Number(body.at) || 0) < progressAt()) return send(res, 409, { error: 'ファイル側の記録の方が新しいため上書きしませんでした。ページを再読み込みしてください。' });
+  fs.writeFile(PROGRESS_FILE, JSON.stringify(body) + '\n', 'utf8', err => {
+    if (err) return send(res, 500, { error: String(err.message || err) });
+    send(res, 200, { ok: true });
   });
 }
 

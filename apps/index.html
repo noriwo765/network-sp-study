@@ -16,66 +16,159 @@
 <body>
   <header>
     <h1>ネスペ学習</h1>
-    <p class="sub">本の章に沿って、読む → アニメーションで確認 → 単語と理解度チェックで定着。</p>
+    <p class="sub">計画を確認 → 単語・一問一答で覚える → 苦手をつぶす → 午後問題で演習。</p>
   </header>
 
-  <nav class="menu">
-    <a href="terms.html">
-      <h2>単語カード</h2>
-      <p>用語をカードで覚える。タップで意味、「覚えた／まだ」で仕分け。一覧と検索も。</p>
-      <p class="stat" id="stat-terms"></p>
-    </a>
-    <a href="compare.html">
-      <h2>紛らわしい用語の比較</h2>
-      <p>IDS/IPS/WAF、POP3/IMAP、AH/ESP など、似ている用語を表で比べる。隠して自己テストも。</p>
-    </a>
-    <a href="ports.html">
-      <h2>ポート番号</h2>
-      <p>ウェルノウンポートを中心に一覧・検索。IPプロトコル番号などの紛らわしい番号と、4択の暗記テスト。</p>
-    </a>
-    <a href="check.html">
-      <h2>理解度チェック</h2>
-      <p>章ごとの4択問題。解説付き。間違えた問題だけの復習も。</p>
-      <p class="stat" id="stat-checks"></p>
-    </a>
-    <a href="diagnostic.html">
-      <h2>重点3ジャンル診断テスト</h2>
-      <p>IPヘッダ／ルーティング／セキュリティ 各10問（記述）。解答を見て〇△×で自己採点し、弱点ジャンルを把握。</p>
-    </a>
-    <a href="qa.html">
-      <h2>午後Ⅰ 一問一答</h2>
-      <p>記述のキーになる論点をカードで。答え＋身近な（Web開発の）たとえ＋覚え方。関連アニメにも飛べる（全81問）。</p>
-    </a>
-    <a href="work.html">
-      <h2>ワーク演習（AI採点）</h2>
-      <p>直近3年の午後問題（記述式）を解いて、Claude に採点してもらう。判定・加点要素・不足点・模範解答との差分を表示。<br><small>※ローカルの中継サーバ（<code>node server/relay.js</code>）が必要。</small></p>
-    </a>
-    <a href="plan.html">
-      <h2>学習計画（本番まで）</h2>
-      <p>本番までの日ごとの予定。ワーク演習で採点した問題は自動で「済」になり、達成数・遅れ・得点率が見える。<br><small>※ローカルの中継サーバ（<code>node server/relay.js</code>）が必要。</small></p>
-    </a>
-    <a href="packet-flow.html">
-      <h2>アニメーション</h2>
-      <p>構成図の上をパケットが流れ、ホップごとのフレームの中身を確認する（全29本）。</p>
-    </a>
-    <a href="drills.html">
-      <h2>計算ドリル</h2>
-      <p>サブネット計算・ロンゲストマッチ・経路集約・フラグメント計算をランダム出題。</p>
-    </a>
-  </nav>
+  <section class="menu-group">
+    <h2 class="group-title">① 学習計画</h2>
+    <nav class="menu">
+      <a href="plan.html">
+        <h2>学習計画（本番まで）</h2>
+        <p>本番までの日ごとの予定。ワーク演習で採点した問題は自動で「済」になり、達成数・遅れ・得点率が見える。</p>
+        <p class="local-only">※ローカルの中継サーバ（ワーク演習を起動）で開いたときだけ使えます。</p>
+      </a>
+    </nav>
+  </section>
 
-  <p class="muted">学習記録はこの端末のブラウザに保存されます（端末間では共有されません）。</p>
+  <section class="menu-group">
+    <h2 class="group-title">② 単語帳／一問一答</h2>
+    <nav class="menu">
+      <a href="terms.html">
+        <h2>単語カード</h2>
+        <p>用語をカードで覚える。タップで意味、「覚えた／まだ」で仕分け。一覧と検索も。</p>
+        <p class="stat" id="stat-terms"></p>
+      </a>
+      <a href="qa.html">
+        <h2>午後Ⅰ 一問一答</h2>
+        <p>記述のキーになる論点をカードと4択で。答え＋身近な（Web開発の）たとえ＋覚え方。関連アニメにも飛べる。</p>
+        <p class="stat" id="stat-qa"></p>
+      </a>
+      <a href="compare.html">
+        <h2>紛らわしい用語の比較</h2>
+        <p>IDS/IPS/WAF、POP3/IMAP、AH/ESP など、似ている用語を表で比べる。隠して自己テストも。</p>
+      </a>
+      <a href="ports.html">
+        <h2>ポート番号</h2>
+        <p>ウェルノウンポートを中心に一覧・検索。IPプロトコル番号などの紛らわしい番号と、4択の暗記テスト。</p>
+      </a>
+      <a href="check.html">
+        <h2>理解度チェック</h2>
+        <p>章ごとの4択問題。解説付き。間違えた問題だけの復習も。</p>
+        <p class="stat" id="stat-checks"></p>
+      </a>
+    </nav>
+  </section>
+
+  <section class="menu-group">
+    <h2 class="group-title">③ 苦手ジャンル</h2>
+    <p class="muted">ワーク演習で失点した論点から作成（ルーティング・IPv6・VPN/SD-WAN・プロキシ/ログ・LB/NAPT）。</p>
+    <nav class="menu">
+      <a href="terms.html?weak=1">
+        <h2>苦手の単語カード</h2>
+        <p>失点した論点に出てくる用語だけ。NDP・SLAAC・LSA のタイプ・as-override・BFD など。</p>
+        <p class="stat" id="stat-weak-terms"></p>
+      </a>
+      <a href="qa.html?weak=1">
+        <h2>苦手の一問一答</h2>
+        <p>失点した論点だけをカードと4択で。答えの下に、前回のつまずきと出典の設問が出る。</p>
+        <p class="stat" id="stat-weak-qa"></p>
+      </a>
+    </nav>
+  </section>
+
+  <section class="menu-group">
+    <h2 class="group-title">④ 演習／ワーク</h2>
+    <nav class="menu">
+      <a href="work.html">
+        <h2>ワーク演習（AI採点）</h2>
+        <p>直近の午後問題（記述式）を解いて、Claude に採点してもらう。判定・加点要素・不足点・模範解答との差分を表示。</p>
+        <p class="local-only">※ローカルの中継サーバ（ワーク演習を起動）で開いたときだけ使えます。</p>
+      </a>
+    </nav>
+  </section>
+
+  <section class="menu-group">
+    <h2 class="group-title">⑤ その他</h2>
+    <nav class="menu">
+      <a href="packet-flow.html">
+        <h2>アニメーション</h2>
+        <p>構成図の上をパケットが流れ、ホップごとのフレームの中身を確認する（全29本）。</p>
+      </a>
+      <a href="drills.html">
+        <h2>計算ドリル</h2>
+        <p>サブネット計算・ロンゲストマッチ・経路集約・フラグメント計算をランダム出題。</p>
+      </a>
+      <a href="diagnostic.html">
+        <h2>重点3ジャンル診断テスト</h2>
+        <p>IPヘッダ／ルーティング／セキュリティ 各10問（記述）。解答を見て〇△×で自己採点し、弱点ジャンルを把握。</p>
+      </a>
+    </nav>
+  </section>
+
+  <section class="menu-group backup">
+    <h2 class="group-title">学習記録のバックアップ</h2>
+    <p class="muted">単語カード・一問一答・理解度チェック・診断の「覚えた／正誤」は、このブラウザに保存されます。サイトデータの削除などで消えることがあるので控えを取っておけます。ワーク演習と学習計画の記録はサーバのファイルに保存されるので対象外です。</p>
+    <p class="backup-status" id="backup-status"></p>
+    <div class="mode-row">
+      <button class="btn primary" id="backup-export">ファイルに書き出す</button>
+      <label class="btn" for="backup-import">ファイルから読み込む</label>
+      <input type="file" id="backup-import" accept=".json,application/json" hidden>
+    </div>
+  </section>
 
   <script src="js/book.js"></script>
   <script src="../flashcards/terms.js"></script>
   <script src="../quizzes/check.js"></script>
+  <script src="../flashcards/qa_routing.js"></script>
+  <script src="../flashcards/qa_tcpip.js"></script>
+  <script src="../flashcards/qa_security.js"></script>
+  <script src="../flashcards/qa_apps.js"></script>
+  <script src="../flashcards/qa_weak.js"></script>
+  <script src="js/progress-sync.js"></script>
   <script src="js/study.js"></script>
   <script>
-    const known = TERMS.filter(t => Progress.isKnown(t)).length;
-    document.getElementById('stat-terms').textContent = `覚えた ${known} / ${TERMS.length} 語`;
+    const $ = id => document.getElementById(id);
+    const termKnown = list => `覚えた ${list.filter(t => Progress.isKnown(t)).length} / ${list.length} 語`;
+    $('stat-terms').textContent = termKnown(TERMS);
+    $('stat-weak-terms').textContent = termKnown(TERMS.filter(t => t.weak));
+
+    // 一問一答の「覚えた」は qa-app.js と同じキー（カード id ごと）
+    let qaKnown = {};
+    try { qaKnown = JSON.parse(localStorage.getItem('nespe-qa-v1')) || {}; } catch (_) {}
+    const qaStat = list => `覚えた ${list.filter(c => qaKnown[c.id]).length} / ${list.length} 問`;
+    $('stat-qa').textContent = qaStat(QA_CARDS);
+    $('stat-weak-qa').textContent = qaStat(QA_CARDS.filter(c => c.weak));
+
     const ok = CHECKS.filter(q => Progress.check(q.id).last === true).length;
     const done = CHECKS.filter(q => Progress.check(q.id).last !== null).length;
-    document.getElementById('stat-checks').textContent = `正解 ${ok} / ${CHECKS.length} 問（解答済 ${done} 問）`;
+    $('stat-checks').textContent = `正解 ${ok} / ${CHECKS.length} 問（解答済 ${done} 問）`;
+
+    // ローカル（中継サーバ）で開いたときは学習計画・ワーク演習の注記を出さない
+    if (ProgressSync.hasServer) document.querySelectorAll('.local-only').forEach(el => el.remove());
+
+    // バックアップの状態
+    function showBackup() {
+      const at = ProgressSync.lastBackup();
+      const days = at ? Math.floor((Date.now() - at) / 86400000) : null;
+      const last = at ? `最後に書き出したのは ${new Date(at).toLocaleDateString('ja-JP')}（${days === 0 ? '今日' : `${days}日前`}）。` : 'まだ書き出していません。';
+      const auto = ProgressSync.hasServer
+        ? 'この画面はサーバ経由なので、server/progress.json にも自動で保存しています。'
+        : 'スマホでは、ときどき書き出しておくと安心です（ホーム画面に追加して使うと消えにくくなります）。';
+      $('backup-status').textContent = `${last}${auto}`;
+      $('backup-status').classList.toggle('warn', !ProgressSync.hasServer && (days === null || days >= 7));
+    }
+    showBackup();
+    $('backup-export').addEventListener('click', () => { ProgressSync.exportFile(); showBackup(); });
+    $('backup-import').addEventListener('change', async e => {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if (!file || !confirm(`「${file.name}」の記録で、このブラウザの記録を置き換えます。よろしいですか？`)) return;
+      try {
+        const json = await ProgressSync.importFile(file);
+        alert(`${new Date(json.at).toLocaleString('ja-JP')} に書き出した記録を読み込みました。`);
+        location.reload();
+      } catch (err) { alert(`読み込めませんでした：${err.message}`); }
+    });
   </script>
   <script src="js/pwa.js"></script>
 </body>
