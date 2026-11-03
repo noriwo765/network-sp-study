@@ -23,6 +23,7 @@ const path = require('path');
 loadDotEnv(path.join(__dirname, '.env')); // server/.env があれば読む（任意）
 
 const PORT = Number(process.env.PORT || 8787);
+const HOST = '127.0.0.1'; // この PC からの接続だけを受ける（同じネットワークの他の機器には見せない）
 const ROOT = path.resolve(__dirname, '..'); // リポジトリ直下を配信
 const API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-5-5';
@@ -65,7 +66,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, HOST, () => {
   console.log(`\nネスペ ワーク演習サーバ起動`);
   console.log(`  学習サイト : http://localhost:${PORT}/apps/index.html`);
   console.log(`  ワーク演習 : http://localhost:${PORT}/apps/work.html`);
@@ -308,11 +309,19 @@ async function writeRecord(req, res) {
 }
 
 // ---- 補助 ---------------------------------------------------------------
+// 配信しないパス：server/（APIキー・学習記録）と、. で始まるもの（.git・.git-local・.env）。
+// 大文字小文字の違いや末尾のドット・空白は、Windows では同じファイルとして開けるので揃えて比べる。
+function isPrivatePath(filePath) {
+  const parts = path.relative(ROOT, filePath).split(/[\\/]/).map(s => s.toLowerCase().replace(/[. ]+$/, ''));
+  return parts[0] === 'server' || parts.some(s => s === '' || s.startsWith('.'));
+}
+
 function serveStatic(req, res) {
   const urlPath = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   let rel = urlPath === '/' ? '/apps/index.html' : urlPath;
   const filePath = path.join(ROOT, path.normalize(rel));
   if (!filePath.startsWith(ROOT)) return res.writeHead(403).end('Forbidden'); // ディレクトリ外アクセス防止
+  if (isPrivatePath(filePath)) return res.writeHead(403).end('Forbidden');
   fs.readFile(filePath, (err, buf) => {
     if (err) return res.writeHead(404).end('Not Found');
     // no-cache：ブラウザに毎回確認させる（画面の JS を直したのに古いファイルが使われる、を防ぐ）
