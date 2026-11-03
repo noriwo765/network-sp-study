@@ -32,3 +32,6 @@ apps/work/figs/
 apps/work/_pages.js
 apps/work/r*_pm*_q*.js
 tmp/*
+
+# ローカル専用リポジトリ（学習記録と過去問データ。絶対に公開しない）
+.git-local/

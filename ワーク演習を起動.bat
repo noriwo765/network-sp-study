@@ -5,6 +5,11 @@ title Nespe Work Server
 rem Use UTF-8 so the server's Japanese log is shown correctly
 chcp 65001 >nul
 
+rem Save study records to the local-only repository (startup continues even if this fails)
+if exist ".git-local\save.sh" (
+  where git >nul 2>nul && git local-save || echo [Notice] Could not save study records.
+)
+
 rem Check Node.js
 where node >nul 2>nul
 if errorlevel 1 (

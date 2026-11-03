@@ -52,6 +52,14 @@ Claude Code のメモリ（~/.claude）はマシンごとで SSD に乗らない
 - `history.json` を直接編集するときは、**ワーク演習のサーバを止め、ブラウザのタブも閉じてから**行う（起動中はブラウザ側が書き戻すため）。
 - 改行コードは `.gitattributes` で固定している（全体 LF、`.bat` のみ CRLF）。Windows と Mac で同じ作業ツリーを共有しているので変えないこと。
 
+## ローカル専用リポジトリ（`.git-local`）
+公開用の `.git` とは別に、同じフォルダで2つ目のリポジトリを使っている。リモートはなく、公開しない。SSD ごと持ち運ぶ。
+- 管理するもの：`server/` の `history.json`・`plan.json`・`progress.json`・`estimate.json`、`解答記録/`、過去問データ（`apps/work/pages/`・`figs/`・`_pages.js`・`r*_pm*_q*.js`）。`server/.env` は入れない。
+- `git local-save [メッセージ]` … 上の一式を保存する。起動スクリプトが起動のたびに実行するので、前回の学習ぶんは次の起動時に記録される。
+- `git local <コマンド>` … 例：`git local log`、`git local diff HEAD~1 --stat`。別名の定義は `.git/config` にある（`git --git-dir=.git-local --work-tree=. <コマンド>` と同じ）。
+- 保存する一覧は `.git-local/save.sh` にある。公開用の `.gitignore` が優先されるため、新しいファイルは `git local add` では入らない。一覧に足して `git local-save` を使う。
+- 戻すときは、サーバを止めてブラウザのタブも閉じてから `git local restore --source=<コミット> -- server/history.json` のようにする。
+
 ## 進め方（利用者の好み）
 - 方針が分かれるときは、選択肢と推奨を示して確認してから作る（過去に意図とずれたことがある）。
 - 学習面では**達成感**を大事にしている。数字で「できたこと」を見せる。

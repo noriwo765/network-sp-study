@@ -12,6 +12,11 @@ cd "$(dirname "$0")" || exit 1
 # Homebrew / 標準のインストール先を PATH に足す（Finder 起動時に node が見つからない対策）
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
+# 学習記録をローカル専用リポジトリへ保存（失敗しても起動は続ける）
+if [ -f ".git-local/save.sh" ] && command -v git >/dev/null 2>&1; then
+  git local-save || echo "[注意] 学習記録の保存に失敗しました。"
+fi
+
 URL="http://localhost:8787/apps/work.html"
 
 # Node.js チェック
