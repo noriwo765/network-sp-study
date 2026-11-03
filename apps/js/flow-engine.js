@@ -2,7 +2,7 @@
 //
 // シナリオ定義（js/scenarios/*.js で SCENARIOS.push する）:
 // {
-//   id, title, subtitle, chapter（BOOK.chapters の no）, viewBox?,
+//   id（EXAMS の id と同じ。1問1シナリオ）, title, subtitle, viewBox?,
 //   nodes: { id: { x, y, name, kind: 'pc'|'sw'|'rt'|'sv'|'fw'|'cloud', lines: [], linesAbove?, badgeBelow? } },
 //   links: [{ a, b, pa?, pb?, net?, ldx?, ldy?, cost? }],
 //   steps: [{
@@ -23,7 +23,7 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const SCENARIOS = [];
 
-// シナリオ一覧の並び（縦軸）は js/book.js の BOOK（本の章立て）
+// シナリオ一覧の並び（縦軸）は js/book.js の EXAMS（過去問）。年度→問題の順に選ぶ
 
 // ヘッダ図のレイアウト（1行 = 32ビット）。step.diagram = [{ title, kind, values: { k: 値 }, note? }]
 // def は values で省略したときの既定値
@@ -117,7 +117,7 @@ const FlowApp = (() => {
       if (l.pb) { const p = toward(B, A, 56); svg.appendChild(el('text', { x: p.x, y: p.y - 6, class: 'port' }, l.pb)); }
       if (l.net) svg.appendChild(el('text', { x: mx + (l.ldx || 0), y: my + (l.ldy ?? 20), class: 'net' }, l.net));
       if (l.cost !== undefined) {
-        svg.appendChild(el('circle', { cx: mx, cy: my, r: 12, class: 'cost-bg' }));
+        svg.appendChild(el('circle', { cx: mx, cy: my, r: Math.max(12, String(l.cost).length * 5), class: 'cost-bg' }));
         svg.appendChild(el('text', { x: mx, y: my + 4, class: 'cost' }, l.cost));
       }
       svg.appendChild(el('text', { x: mx, y: my + 6, class: 'xmark', 'data-a': l.a, 'data-b': l.b }, '✕'));
@@ -362,10 +362,10 @@ const FlowApp = (() => {
     $('play').textContent = '▶ 自動再生';
     $('scn-title').textContent = scn.title;
     $('scn-sub').textContent = scn.subtitle;
-    const ch = BOOK.chapters.find(c => c.no === scn.chapter);
-    $('scn-syl').textContent = ch ? `本書 Chapter ${ch.no}　${ch.title}` : '';
+    const exam = examOf(scn);
+    $('scn-syl').textContent = `${exam.short} ${exam.title}（設定を変えたモデルで再現。問題そのものではありません）`;
     document.title = `${scn.title} | ネットワーク・アニメーション`;
-    renderChapter(scn.chapter);
+    renderYear(exam.year);
 
     const tl = $('timeline');
     tl.replaceChildren();
@@ -379,22 +379,23 @@ const FlowApp = (() => {
     go(step);
   }
 
-  // 「#napt/3」形式。旧形式「#4」はパケットの旅のステップとして扱う
+  // 「#r7_pm1_q1/3」形式
   function parseHash() {
     const h = location.hash.slice(1);
-    if (/^\d+$/.test(h)) return ['basic', +h];
     const [id, step] = h.split('/');
     return [id, parseInt(step, 10) || 0];
   }
 
-  // 章ボタンの強調と、その章のシナリオボタンを表示する
-  function renderChapter(no) {
-    document.querySelectorAll('#chapters button').forEach(b => b.classList.toggle('active', +b.dataset.no === no));
+  const examOf = s => EXAMS.find(e => e.id === s.id) || {};
+
+  // 年度ボタンの強調と、その年度の問題ボタンを表示する
+  function renderYear(year) {
+    document.querySelectorAll('#chapters button').forEach(b => b.classList.toggle('active', b.dataset.year === year));
     const box = $('scenarios');
     box.replaceChildren();
-    SCENARIOS.filter(s => s.chapter === no).forEach(s => {
+    SCENARIOS.filter(s => examOf(s).year === year).forEach(s => {
       const b = document.createElement('button');
-      b.textContent = s.title;
+      b.textContent = `${examOf(s).short.slice(year.length)} ${examOf(s).title}`;
       b.classList.toggle('active', s === scn);
       b.addEventListener('click', () => loadScenario(s.id));
       box.appendChild(b);
@@ -404,11 +405,11 @@ const FlowApp = (() => {
 
   function start() {
     svg = $('topo');
-    for (const ch of BOOK.chapters) {
-      const first = SCENARIOS.find(s => s.chapter === ch.no);
+    for (const { year, yearLabel } of EXAMS.filter((e, i, a) => a.findIndex(x => x.year === e.year) === i)) {
+      const first = SCENARIOS.find(s => examOf(s).year === year);
       const b = document.createElement('button');
-      b.dataset.no = ch.no;
-      b.innerHTML = `<span class="ch-no">${ch.no}</span>${ch.title}`;
+      b.dataset.year = year;
+      b.textContent = yearLabel;
       b.disabled = !first;
       if (first) b.addEventListener('click', () => loadScenario(first.id));
       $('chapters').appendChild(b);

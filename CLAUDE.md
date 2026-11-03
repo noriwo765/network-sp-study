@@ -12,7 +12,8 @@ Claude Code のメモリ（~/.claude）はマシンごとで SSD に乗らない
 - `server/plan.json` … 本番までの学習計画（Git 管理外）。`{ createdAt, examDate, goals, tips, days: [{ date, hours, toggle?: { flag, label, hours, note }, tasks: [{ id, type: solve|redo|text, round, need, pid, qids, text, note, when?, unless? }] }], extra, flags: { フラグ: true }, checks: { タスクid: true }, memo: { 日付: 文 } }`。toggle は日ごとの切り替えスイッチ（例：休日出勤）で、flag が立つと when のタスクが出て unless のタスクが消える。画面は `apps/plan.html`。採点は createdAt 以降の分だけ数え、solve は全設問を need 回（既定1。2周目は2）採点、redo は指定設問を採点すると自動で済になる。計画を組み替えるときは checks・memo を消さない。`解答記録/_学習計画.md` は方針のメモ。
 - `server/estimate.json` … 想定合格率の AI 判定結果（Git 管理外）。`{ at, rate, pm1, pm2, summary, reasons, actions, basis }`。判定材料は各設問の最終の採点結果で、未回答は0点。学習状況画面のボタンで判定し、`_学習状況.md` にも載る。
 - `server/progress.json` … 単語カード・一問一答・理解度チェック・診断の記録（Git 管理外）。`{ at, data: { localStorage のキー: 値 } }`。中継サーバで開いたとき `apps/js/progress-sync.js` が自動で保存・復元する（at が新しい方を採用。初回だけは両方を合わせる）。スマホ（GitHub Pages）はトップページの「書き出す／読み込む」で手動バックアップ。
-- 苦手ジャンル … `flashcards/qa_weak.js`（一問一答。`weak / src / miss`）と `flashcards/terms.js` の `weak: true` の用語。ワーク演習の失点から作る。`qa.html?weak=1`・`terms.html?weak=1` で絞り込み。
+- 苦手ジャンル … `flashcards/qa_weak.js`（一問一答。`weak / src / miss`、`theme` がジャンル）と `flashcards/terms.js` の `weak: true` の用語。ワーク演習の失点から作る。`qa.html?weak=1`・`terms.html?weak=1` で絞り込み。
+- 過去問ベースの教材 … `flashcards/qa_<問題id>.js`（一問一答）と `apps/js/scenarios/<問題id>.js`（アニメ）。どちらも公開対象なので問題文・解答例・図を写さず、会社名やアドレスなどの設定も変える。問題の一覧は `apps/js/book.js` の `EXAMS`。
 - 問題データ … `apps/work/r*_pm*_q*.js`（`id` は `r7_pm1_q1` の形式、設問は `questions[].id`）。
 
 ## Skill（このリポジトリ用）
@@ -34,7 +35,7 @@ Claude Code のメモリ（~/.claude）はマシンごとで SSD に乗らない
 解答欄の分け方（`work-shape.js`）：解答例が「ラベル：値　ラベル：値」→ラベル付きの複数欄、「ラベル：①X　②Y」「①X　②Y」→丸数字ごとの欄、「・X　・Y」→設問文が複数答えさせている（二つ/それぞれ/全て…）ときだけ番号付きの複数欄（そうでなければ別解の列挙なので1欄）、それ以外→1欄。「（順不同）」などの注記は欄にしない。
 
 ## 変更したら確認すること
-- `node apps/tools/work-check.js`（解答欄・配点・履歴）、ほかの教材は `node apps/tools/check.js`。JS は `node --check <file>`。
+- `node apps/tools/work-check.js`（解答欄・配点・履歴）、ほかの教材は `node apps/tools/check.js`。JS は `node --check <file>`。過去問ベースの教材は `node apps/tools/past-check.js`（問題文と20字以上一致したら NG）。
 - `server/relay.js` を変えたら**サーバの再起動が必要**（ユーザーに伝える）。画面側（apps/）の変更はブラウザの再読み込みで反映される。
 - 解答欄の分け方を変えたら `work-check.js` の件数（ラベル付き・箇条書き・1欄）と「要確認」を前後で比べる。1欄が正しいと確認した設問は `KNOWN_SINGLE` に理由つきで追加する。
 

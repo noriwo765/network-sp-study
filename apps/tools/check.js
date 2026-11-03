@@ -2,6 +2,7 @@
 //
 // - アニメーションの全シナリオ：存在しないノード・リンクの参照、表の列数、図からのはみ出し、章番号
 // - 単語集（flashcards/terms.js）・理解度チェック（quizzes/check.js）のデータ
+// - 過去問の一問一答（flashcards/qa_*.js）のカード
 // - sw.js の FILES：実在しないファイル、キャッシュ漏れ
 const fs = require('fs');
 const path = require('path');
@@ -15,20 +16,21 @@ const bad = msg => { errors++; console.log('NG', msg); };
 
 const html = fs.readFileSync(path.join(APP, 'packet-flow.html'), 'utf8');
 const scripts = [...html.matchAll(/<script src="(js\/[^"]+)"/g)].map(m => m[1]).filter(s => !s.endsWith('pwa.js') && !s.endsWith('gate.js'));
-const code = scripts.map(s => fs.readFileSync(path.join(APP, s), 'utf8')).join('\n')
-  + '\n;globalThis.__out = { SCENARIOS, BOOK, HEADER_LAYOUTS };';
+for (const s of scripts) if (!fs.existsSync(path.join(APP, s))) bad(`packet-flow.html の読み込み先がない: ${s}`);
+const code = scripts.filter(s => fs.existsSync(path.join(APP, s))).map(s => fs.readFileSync(path.join(APP, s), 'utf8')).join('\n')
+  + '\n;globalThis.__out = { SCENARIOS, BOOK, EXAMS, HEADER_LAYOUTS };';
 const ctx = {};
 vm.runInNewContext(code, ctx);
-const { SCENARIOS, BOOK, HEADER_LAYOUTS } = ctx.__out;
+const { SCENARIOS, BOOK, EXAMS, HEADER_LAYOUTS } = ctx.__out;
 
-const onDisk = fs.readdirSync(path.join(APP, 'js/scenarios')).map(f => `js/scenarios/${f}`);
+const onDisk = fs.readdirSync(path.join(APP, 'js/scenarios')).filter(f => !f.startsWith('._')).map(f => `js/scenarios/${f}`);
 for (const f of onDisk) if (!scripts.includes(f)) bad(`packet-flow.html に読み込まれていない: ${f}`);
 
 const ids = new Set();
 for (const s of SCENARIOS) {
   if (ids.has(s.id)) bad(`id の重複: ${s.id}`);
   ids.add(s.id);
-  if (!BOOK.chapters.some(c => c.no === s.chapter)) bad(`${s.id}: 章番号が不正 ${s.chapter}`);
+  if (!EXAMS.some(e => e.id === s.id)) bad(`${s.id}: EXAMS にない id`);
   const width = s.viewBox ? Number(s.viewBox.split(' ')[2]) : 810;
   const has = (a, b) => s.links.some(l => (l.a === a && l.b === b) || (l.a === b && l.b === a));
   for (const l of s.links) if (!s.nodes[l.a] || !s.nodes[l.b]) bad(`${s.id}: リンクのノードがない ${l.a}-${l.b}`);
@@ -62,8 +64,8 @@ for (const s of SCENARIOS) {
     }
   });
 }
-const empty = BOOK.chapters.filter(c => !SCENARIOS.some(s => s.chapter === c.no));
-console.log(`シナリオ ${SCENARIOS.length} 本 / シナリオのない章: ${empty.map(c => c.no).join(', ') || 'なし'}`);
+const empty = EXAMS.filter(e => !SCENARIOS.some(s => s.id === e.id));
+console.log(`シナリオ ${SCENARIOS.length} 本 / シナリオのない問題: ${empty.map(e => e.id).join(', ') || 'なし'}`);
 
 // ---- 単語集・理解度チェック --------------------------------------------
 
@@ -121,6 +123,33 @@ console.log(`比較 ${COMPARES.length} 件 / ポート ${PORTS.length} 件 / そ
 
 const noData = BOOK.chapters.filter(c => !TERMS.some(t => t.ch === c.no) || !CHECKS.some(q => q.ch === c.no));
 console.log(`単語 ${TERMS.length} 語 / 問題 ${CHECKS.length} 問 / データのない章: ${noData.map(c => c.no).join(', ') || 'なし'}`);
+
+// ---- 一問一答 ----------------------------------------------------------
+
+const qaHtml = fs.readFileSync(path.join(APP, 'qa.html'), 'utf8');
+const qaFiles = [...qaHtml.matchAll(/<script src="(\.\.\/flashcards\/qa_[^"]+)"/g)].map(m => m[1]);
+for (const f of qaFiles) if (!fs.existsSync(path.join(APP, f))) bad(`qa.html の読み込み先がない: ${f}`);
+const qaBox = { window: {} };
+vm.runInNewContext(qaFiles.filter(f => fs.existsSync(path.join(APP, f))).map(f => fs.readFileSync(path.join(APP, f), 'utf8')).join('\n'), qaBox);
+const QA_CARDS = qaBox.window.QA_CARDS || [];
+const qaIds = new Set();
+for (const c of QA_CARDS) {
+  if (qaIds.has(c.id)) bad(`一問一答 id の重複: ${c.id}`);
+  qaIds.add(c.id);
+  const tag = `一問一答 ${c.id}`;
+  if (!c.q || !c.a || !c.theme || !c.src) bad(`${tag}: q / a / theme / src がない`);
+  if (!EXAMS.some(e => e.id === c.exam)) bad(`${tag}: exam が不正 ${c.exam}`);
+  if (c.scene) {
+    const [sid, step] = c.scene.split('/');
+    const sc = SCENARIOS.find(s => s.id === sid);
+    if (sc ? step !== undefined && !sc.steps[Number(step)] : !empty.some(e => e.id === sid)) bad(`${tag}: scene が不正 ${c.scene}`);
+  }
+  if (c.weak && !c.miss) bad(`${tag}: 苦手カードに miss がない`);
+  if (!Array.isArray(c.choices) || c.choices.length !== 4 || new Set(c.choices).size !== 4) bad(`${tag}: 選択肢が4つでない・重複している`);
+  if (!(c.answer >= 0 && c.answer < 4)) bad(`${tag}: answer が範囲外`);
+}
+const noCards = EXAMS.filter(e => !QA_CARDS.some(c => c.exam === e.id && !c.weak));
+console.log(`一問一答 過去問 ${QA_CARDS.filter(c => !c.weak).length} 問 / 苦手 ${QA_CARDS.filter(c => c.weak).length} 問 / カードのない問題: ${noCards.map(e => e.id).join(', ') || 'なし'}`);
 
 // ---- Service Worker のキャッシュ対象 ------------------------------------
 

@@ -23,3 +23,27 @@ const BOOK = {
     { no: 19, title: 'ネットワーク管理' },
   ],
 };
+
+// 過去問（一問一答とアニメーションの縦軸）。id はワーク演習の問題 id と同じ
+const EXAMS = [
+  { id: 'r7_pm1_q1', year: 'R7', yearLabel: '令和7年', short: 'R7午後Ⅰ問1', title: 'ルータの更改' },
+  { id: 'r7_pm1_q2', year: 'R7', yearLabel: '令和7年', short: 'R7午後Ⅰ問2', title: 'ネットワークの改善' },
+  { id: 'r7_pm1_q3', year: 'R7', yearLabel: '令和7年', short: 'R7午後Ⅰ問3', title: 'セキュアWebゲートウェイの導入' },
+  { id: 'r7_pm2_q1', year: 'R7', yearLabel: '令和7年', short: 'R7午後Ⅱ問1', title: '社内ネットワークのIPv6対応' },
+  { id: 'r7_pm2_q2', year: 'R7', yearLabel: '令和7年', short: 'R7午後Ⅱ問2', title: 'IoTシステムの設計' },
+  { id: 'r6_pm1_q1', year: 'R6', yearLabel: '令和6年', short: 'R6午後Ⅰ問1', title: 'コンテンツ配信ネットワーク' },
+  { id: 'r6_pm1_q2', year: 'R6', yearLabel: '令和6年', short: 'R6午後Ⅰ問2', title: 'SD-WANによる拠点接続' },
+  { id: 'r6_pm1_q3', year: 'R6', yearLabel: '令和6年', short: 'R6午後Ⅰ問3', title: 'ローカルブレイクアウトによる負荷軽減' },
+  { id: 'r6_pm2_q1', year: 'R6', yearLabel: '令和6年', short: 'R6午後Ⅱ問1', title: 'データセンターのネットワークの検討' },
+  { id: 'r6_pm2_q2', year: 'R6', yearLabel: '令和6年', short: 'R6午後Ⅱ問2', title: '電子メールを用いた製品サポート' },
+  { id: 'r5_pm1_q1', year: 'R5', yearLabel: '令和5年', short: 'R5午後Ⅰ問1', title: 'Webシステムの更改' },
+  { id: 'r5_pm1_q2', year: 'R5', yearLabel: '令和5年', short: 'R5午後Ⅰ問2', title: 'IPマルチキャストによる映像配信の導入' },
+  { id: 'r5_pm1_q3', year: 'R5', yearLabel: '令和5年', short: 'R5午後Ⅰ問3', title: '高速無線LANの導入' },
+  { id: 'r5_pm2_q1', year: 'R5', yearLabel: '令和5年', short: 'R5午後Ⅱ問1', title: 'マルチクラウド利用による可用性向上' },
+  { id: 'r5_pm2_q2', year: 'R5', yearLabel: '令和5年', short: 'R5午後Ⅱ問2', title: 'ECサーバの増強' },
+  { id: 'r4_pm1_q1', year: 'R4', yearLabel: '令和4年', short: 'R4午後Ⅰ問1', title: 'ネットワークの更改' },
+  { id: 'r4_pm1_q2', year: 'R4', yearLabel: '令和4年', short: 'R4午後Ⅰ問2', title: 'セキュアゲートウェイサービスの導入' },
+  { id: 'r4_pm1_q3', year: 'R4', yearLabel: '令和4年', short: 'R4午後Ⅰ問3', title: 'シングルサインオンの導入' },
+  { id: 'r4_pm2_q1', year: 'R4', yearLabel: '令和4年', short: 'R4午後Ⅱ問1', title: 'テレワーク環境の導入' },
+  { id: 'r4_pm2_q2', year: 'R4', yearLabel: '令和4年', short: 'R4午後Ⅱ問2', title: '仮想化技術の導入' },
+];

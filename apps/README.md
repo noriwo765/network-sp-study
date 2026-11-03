@@ -9,7 +9,8 @@
 | ports.html | ポート番号（データ：[flashcards/ports.js](../flashcards/ports.js)）。一覧・検索、その他の番号、4択の暗記テスト |
 | check.html | 理解度チェック（データ：[quizzes/check.js](../quizzes/check.js)）。章ごとの4択、正答率の記録、間違えた問題の復習 |
 | work.html | ワーク演習（AI採点）。直近3年の午後問題（記述式）を解き、Claude が採点。データ：[work/](work/)。**[中継サーバ](../server/)が必要** |
-| packet-flow.html | アニメーション |
+| packet-flow.html | アニメーション。令和4〜7年の午後20問の構成を題材にした20本 |
+| qa.html | 過去問 一問一答（データ：[flashcards/qa_*.js](../flashcards/)）。カード・4択・一覧、苦手ジャンルでの絞り込み |
 | drills.html | 計算ドリル |
 
 学習記録（覚えた単語・正誤）はその端末のブラウザ（localStorage）に保存される。
@@ -47,31 +48,9 @@ node server/relay.js      # http://localhost:8787/apps/work.html を開く
 
 構成図の上をパケットが動き、ステップごとにフレームの中身・各種テーブルを表示する。IPv4 / TCP / UDP は RFC 風の 32 ビット幅ヘッダ図でも表示し、前のパケットから変わったフィールドを点滅で示す。予想モード（値を隠してクリックで答え合わせ）あり。
 
-並び（縦軸）は学習に使う本（［左門式ネスペ塾］ネスペ「ワークブック」）の章立てに合わせている。章ごとの対応と進捗は [学習計画](../docs/学習計画.md) を参照。
+題材は令和4〜7年の午後問題20問で、1問につき1本。上部のボタンで年度と問題を選ぶ。どれも会社名・機器名・アドレスなどの設定を変えたモデルで、問題文や図は写していない。
 
-| 章 | シナリオ |
-|----|---------|
-| 1 LANとIPアドレス | VLAN |
-| 2 LANの冗長化 | STP |
-| 3 MACアドレスとARP | パケットの旅、ARPスプーフィング |
-| 4 DHCP | DHCP |
-| 5 DNS | DNS |
-| 6 TCPとHTTP、DoS攻撃 | TCP、3ウェイハンドシェイク、ヘッダの書き換え、IPフラグメント、DoS攻撃 |
-| 7 メール | 電子メール |
-| 8 ファイアウォール、IPS、WAF | ステートフルFW、NAPT |
-| 9 無線LAN | 802.1X |
-| 10 音声とVoIP | VoIP（SIP/RTP） |
-| 11 ルーティング | OSPF、BGP、traceroute |
-| 12 VRRP | VRRP |
-| 13 WAN | IP-VPN（MPLS） |
-| 14 負荷分散装置 | 負荷分散装置 |
-| 15 IPsecとGRE | IPsec VPN、GRE over IPsec |
-| 16 SDN | SDN（OpenFlow）、VXLAN |
-| 17 セキュリティ | TLS 1.3 |
-| 18 プロキシサーバ | プロキシサーバ |
-| 19 ネットワーク管理 | SNMP |
-
-URL末尾に `#bgp/4` のように付けると、そのシナリオ・ステップから開く。
+URL末尾に `#r7_pm1_q1/4` のように付けると、そのシナリオ・ステップから開く。
 
 ## 構成
 ```
@@ -89,12 +68,13 @@ apps/
 ├── sw.js               … オフライン対応（Service Worker）
 ├── icons/              … アプリのアイコン
 ├── tools/check.js      … データ整合性チェック
+├── tools/past-check.js … 過去問の文章を写していないかの検査（ローカル専用）
 ├── css/
 │   ├── style.css       … 共通の見た目（ライト/ダーク対応）
 │   ├── flow.css        … アニメーション用
 │   └── study.css       … メニュー・単語カード・理解度チェック用
 └── js/
-    ├── book.js         … 本の章立て（全アプリの縦軸）
+    ├── book.js         … 本の章立て（単語カードなどの縦軸）と過去問一覧 EXAMS（一問一答・アニメの縦軸）
     ├── study.js        … 学習記録の保存・章ボタン（単語カード・理解度チェック共通）
     ├── terms-app.js    … 単語カード
     ├── check-app.js    … 理解度チェック
@@ -110,7 +90,8 @@ apps/
 ```
 
 ## シナリオの追加方法
-`js/scenarios/` にファイルを作って `SCENARIOS.push({...})`（`chapter` に本の章番号）し、`packet-flow.html` に `<script>` を1行追加する。
+`js/scenarios/<問題id>.js` を作って `SCENARIOS.push({...})`（`id` は `js/book.js` の `EXAMS` の id と同じ）し、`packet-flow.html` と `sw.js` に1行ずつ追加する。
+過去問の文章を写さないよう、`node apps/tools/past-check.js <問題id>` で確認する。
 シナリオの書式は `js/flow-engine.js` 冒頭のコメントを参照。
 
 ## ドリルの追加方法

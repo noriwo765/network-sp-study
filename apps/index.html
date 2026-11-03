@@ -39,8 +39,8 @@
         <p class="stat" id="stat-terms"></p>
       </a>
       <a href="qa.html">
-        <h2>午後Ⅰ 一問一答</h2>
-        <p>記述のキーになる論点をカードと4択で。答え＋身近な（Web開発の）たとえ＋覚え方。関連アニメにも飛べる。</p>
+        <h2>過去問 一問一答</h2>
+        <p>令和4〜7年の午後20問の場面で、記述の核になる判断をカードと4択で。答え＋理由＋覚え方。その問題のアニメにも飛べる。</p>
         <p class="stat" id="stat-qa"></p>
       </a>
       <a href="compare.html">
@@ -61,16 +61,16 @@
 
   <section class="menu-group">
     <h2 class="group-title">③ 苦手ジャンル</h2>
-    <p class="muted">ワーク演習で失点した論点から作成（ルーティング・IPv6・VPN/SD-WAN・プロキシ/ログ・LB/NAPT）。</p>
+    <p class="muted">ワーク演習で失点した103設問から作成（OSPF・BGP・IPv6・VXLAN/EVPN・TLS・IoT など12ジャンル）。</p>
     <nav class="menu">
       <a href="terms.html?weak=1">
         <h2>苦手の単語カード</h2>
-        <p>失点した論点に出てくる用語だけ。NDP・SLAAC・LSA のタイプ・as-override・BFD など。</p>
+        <p>失点した論点に出てくる用語だけ。NDP・SLAAC・EVPN・ALPN・CoAP など。</p>
         <p class="stat" id="stat-weak-terms"></p>
       </a>
       <a href="qa.html?weak=1">
         <h2>苦手の一問一答</h2>
-        <p>失点した論点だけをカードと4択で。答えの下に、前回のつまずきと出典の設問が出る。</p>
+        <p>失点した論点だけをカードと4択で。ジャンルで絞り込める。答えの下に、前回のつまずきが出る。</p>
         <p class="stat" id="stat-weak-qa"></p>
       </a>
     </nav>
@@ -92,7 +92,7 @@
     <nav class="menu">
       <a href="packet-flow.html">
         <h2>アニメーション</h2>
-        <p>構成図の上をパケットが流れ、ホップごとのフレームの中身を確認する（全29本）。</p>
+        <p>令和4〜7年の午後20問の構成を題材に、パケットの流れと各機器の動きをステップで確認する（全20本）。</p>
       </a>
       <a href="drills.html">
         <h2>計算ドリル</h2>
@@ -119,10 +119,26 @@
   <script src="js/book.js"></script>
   <script src="../flashcards/terms.js"></script>
   <script src="../quizzes/check.js"></script>
-  <script src="../flashcards/qa_routing.js"></script>
-  <script src="../flashcards/qa_tcpip.js"></script>
-  <script src="../flashcards/qa_security.js"></script>
-  <script src="../flashcards/qa_apps.js"></script>
+  <script src="../flashcards/qa_r7_pm1_q1.js"></script>
+  <script src="../flashcards/qa_r7_pm1_q2.js"></script>
+  <script src="../flashcards/qa_r7_pm1_q3.js"></script>
+  <script src="../flashcards/qa_r7_pm2_q1.js"></script>
+  <script src="../flashcards/qa_r7_pm2_q2.js"></script>
+  <script src="../flashcards/qa_r6_pm1_q1.js"></script>
+  <script src="../flashcards/qa_r6_pm1_q2.js"></script>
+  <script src="../flashcards/qa_r6_pm1_q3.js"></script>
+  <script src="../flashcards/qa_r6_pm2_q1.js"></script>
+  <script src="../flashcards/qa_r6_pm2_q2.js"></script>
+  <script src="../flashcards/qa_r5_pm1_q1.js"></script>
+  <script src="../flashcards/qa_r5_pm1_q2.js"></script>
+  <script src="../flashcards/qa_r5_pm1_q3.js"></script>
+  <script src="../flashcards/qa_r5_pm2_q1.js"></script>
+  <script src="../flashcards/qa_r5_pm2_q2.js"></script>
+  <script src="../flashcards/qa_r4_pm1_q1.js"></script>
+  <script src="../flashcards/qa_r4_pm1_q2.js"></script>
+  <script src="../flashcards/qa_r4_pm1_q3.js"></script>
+  <script src="../flashcards/qa_r4_pm2_q1.js"></script>
+  <script src="../flashcards/qa_r4_pm2_q2.js"></script>
   <script src="../flashcards/qa_weak.js"></script>
   <script src="js/progress-sync.js"></script>
   <script src="js/study.js"></script>
@@ -136,7 +152,7 @@
     let qaKnown = {};
     try { qaKnown = JSON.parse(localStorage.getItem('nespe-qa-v1')) || {}; } catch (_) {}
     const qaStat = list => `覚えた ${list.filter(c => qaKnown[c.id]).length} / ${list.length} 問`;
-    $('stat-qa').textContent = qaStat(QA_CARDS);
+    $('stat-qa').textContent = qaStat(QA_CARDS.filter(c => !c.weak));
     $('stat-weak-qa').textContent = qaStat(QA_CARDS.filter(c => c.weak));
 
     const ok = CHECKS.filter(q => Progress.check(q.id).last === true).length;

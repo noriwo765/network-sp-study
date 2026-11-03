@@ -1,6 +1,7 @@
 // 単語カード・理解度チェック共通
 // - Progress：学習記録。この端末のブラウザ（localStorage）に保存する。使えない環境でも動作は続ける
 // - chapterChips：「すべて」＋本の章ボタン
+// - keyChips：「すべて」＋任意の項目ボタン（過去問・ジャンルなど）
 
 const Progress = (() => {
   const KEY = 'nespe-progress-v1';
@@ -73,6 +74,36 @@ function chapterChips(container, { label, onSelect }) {
     const b = e.target.closest('button');
     if (!b) return;
     active = b.dataset.no === 'all' ? 'all' : Number(b.dataset.no);
+    render();
+    onSelect(active);
+  });
+
+  render();
+  return { refresh: render, get active() { return active; } };
+}
+
+// items() は [{ key, tag?, title }] を返す。表示のたびに呼ぶので、項目を切り替えられる
+function keyChips(container, { items, label, onSelect }) {
+  let active = 'all';
+
+  function render() {
+    const list = items();
+    if (active !== 'all' && !list.some(c => c.key === active)) active = 'all';
+    container.innerHTML = [{ key: 'all', title: 'すべて' }, ...list].map(c => `
+      <button data-key="${escapeHtml(c.key)}" class="${c.key === active ? 'active' : ''}">
+        <span class="ch-label">${c.tag ? `<b>${escapeHtml(c.tag)}</b>` : ''}${escapeHtml(c.title)}</span>
+        <small>${label(c.key)}</small>
+      </button>`).join('');
+    const btn = container.querySelector('button.active');
+    if (btn && container.scrollWidth > container.clientWidth) {
+      container.scrollLeft = btn.offsetLeft - container.clientWidth / 2 + btn.offsetWidth / 2;
+    }
+  }
+
+  container.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    active = b.dataset.key;
     render();
     onSelect(active);
   });

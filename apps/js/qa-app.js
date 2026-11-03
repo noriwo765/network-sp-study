@@ -1,8 +1,9 @@
-// 午後Ⅰ 一問一答（データは flashcards/qa_*.js の QA_CARDS）
-// 3つの使い方：カード（表=問い/裏=答え＋2種のたとえ＋覚え方＋アニメ）／4択（選んで回答）／一覧・検索
+// 過去問 一問一答（データは flashcards/qa_*.js の QA_CARDS）
+// 3つの使い方：カード（表=問い/裏=答え＋理由＋覚え方＋アニメ）／4択（選んで回答）／一覧・検索
 (() => {
   const $ = id => document.getElementById(id);
-  const chTitle = no => (BOOK.chapters.find(c => c.no === no) || {}).title || '';
+  const examOf = c => EXAMS.find(e => e.id === c.exam) || {};
+  const heading = c => `${c.src || examOf(c).short || ''} ${examOf(c).title || ''}　${c.theme || ''}`;
   const CARDS = window.QA_CARDS || [];
   const KEYS = ['ア', 'イ', 'ウ', 'エ'];
 
@@ -15,19 +16,26 @@
     return { isKnown: c => !!d[c.id], setKnown(c, k) { if (k) d[c.id] = 1; else delete d[c.id]; save(); } };
   })();
 
-  let ch = 'all', view = 'card', deck = [], idx = 0;
+  let scope = 'all', view = 'card', deck = [], idx = 0;
 
   // 苦手（weak: ワーク演習で失点した論点。flashcards/qa_weak.js）だけに絞る。qa.html?weak=1 で最初から絞る
   if (new URLSearchParams(location.search).has('weak')) $('only-weak').checked = true;
-  const pool = () => $('only-weak').checked ? CARDS.filter(c => c.weak) : CARDS;
-  const inScope = () => pool().filter(c => inChapter(ch, c));
+  const weakMode = () => $('only-weak').checked;
+  const pool = () => CARDS.filter(c => !!c.weak === weakMode());
+  // 絞り込みの軸：通常は過去問ごと、苦手はジャンル（theme）ごと
+  const keyOf = c => weakMode() ? c.theme : c.exam;
+  const inKey = (key, c) => key === 'all' || keyOf(c) === key;
+  const inScope = () => pool().filter(c => inKey(scope, c));
   const knownCount = list => list.filter(c => QA.isKnown(c)).length;
   const sceneLink = c => c.scene
-    ? `<a class="anime-link" href="packet-flow.html#${encodeURIComponent(c.scene)}" target="_blank" rel="noopener">▶ 関連アニメを見る</a>` : '';
+    ? `<a class="anime-link" href="packet-flow.html#${encodeURI(c.scene)}" target="_blank" rel="noopener">▶ 関連アニメを見る</a>` : '';
 
-  const chips = chapterChips($('chapters'), {
-    label: no => { const l = pool().filter(c => inChapter(no, c)); return `${knownCount(l)}/${l.length}`; },
-    onSelect: no => { ch = no; view === 'quiz' ? buildQuiz() : buildDeck(); },
+  const chips = keyChips($('chapters'), {
+    items: () => weakMode()
+      ? [...new Set(pool().map(c => c.theme))].map(t => ({ key: t, title: t }))
+      : EXAMS.map(e => ({ key: e.id, tag: e.short, title: e.title })),
+    label: key => { const l = pool().filter(c => inKey(key, c)); return `${knownCount(l)}/${l.length}`; },
+    onSelect: key => { scope = key; view === 'quiz' ? buildQuiz() : buildDeck(); },
   });
 
   // ---- カード --------------------------------------------------------
@@ -59,15 +67,13 @@
     }
     const c = deck[idx];
     $('pos').textContent = `${idx + 1} / ${deck.length}`;
-    $('flash-ch').textContent = `Ch.${c.ch} ${chTitle(c.ch)}　${c.theme || ''}${c.weak ? '　★苦手' : ''}${QA.isKnown(c) ? '　✓ 覚えた' : ''}`;
+    $('flash-ch').textContent = `${heading(c)}${c.weak ? '　★苦手' : ''}${QA.isKnown(c) ? '　✓ 覚えた' : ''}`;
     $('flash-q').textContent = c.q;
     $('flash-a').textContent = c.a;
-    $('flash-miss').textContent = c.miss ? `前回のつまずき（${c.src}）：${c.miss}` : '';
+    $('flash-miss').textContent = c.miss ? `前回のつまずき：${c.miss}` : '';
     $('flash-miss').hidden = !c.miss;
     $('flash-kaisetsu').textContent = c.kaisetsu || '';
     $('flash-kaisetsu').hidden = !c.kaisetsu;
-    $('flash-yasashii').textContent = c.yasashii || '';
-    $('flash-yasashii').hidden = !c.yasashii;
     $('flash-oboe').textContent = c.oboe ? `覚え方：${c.oboe}` : '';
     $('flash-oboe').hidden = !c.oboe;
     $('flash-scene').innerHTML = sceneLink(c);
@@ -95,7 +101,7 @@
   $('again-all').addEventListener('click', () => buildDeck(false));
   $('again-unknown').addEventListener('click', () => buildDeck(true));
   $('only-unknown').addEventListener('change', () => view === 'quiz' ? buildQuiz() : buildDeck());
-  $('only-weak').addEventListener('change', () => view === 'quiz' ? buildQuiz() : buildDeck());
+  $('only-weak').addEventListener('change', () => { scope = 'all'; chips.refresh(); if (view === 'quiz') buildQuiz(); else if (view === 'list') render(); else buildDeck(); });
   $('shuffle').addEventListener('change', () => buildDeck());
 
   let touch = null;
@@ -144,7 +150,7 @@
     const c = qDeck[qIdx];
     qAnswered = false;
     $('q-pos').textContent = `${qIdx + 1} / ${qDeck.length}`;
-    $('q-ch').textContent = `Ch.${c.ch} ${chTitle(c.ch)}　${c.theme || ''}`;
+    $('q-ch').textContent = heading(c);
     $('q-q').textContent = c.q;
     // 選択肢をシャッフルして表示（正解の表示位置を記録）
     qOrder = shuffled(c.choices.map((t, i) => ({ t, i })));
@@ -169,8 +175,8 @@
     $('q-explain').innerHTML = `
       <p class="verdict ${pos === correctPos ? 'ok' : 'ng'}">${pos === correctPos ? '正解' : '不正解'}</p>
       <p><strong>${escapeHtml(c.a)}</strong></p>
-      ${c.miss ? `<p class="miss">前回のつまずき（${escapeHtml(c.src)}）：${escapeHtml(c.miss)}</p>` : ''}
-      ${c.yasashii ? `<p class="yasashii">${escapeHtml(c.yasashii)}</p>` : ''}
+      ${c.miss ? `<p class="miss">前回のつまずき：${escapeHtml(c.miss)}</p>` : ''}
+      ${c.kaisetsu ? `<p class="kaisetsu">${escapeHtml(c.kaisetsu)}</p>` : ''}
       ${c.oboe ? `<p class="oboe">覚え方：${escapeHtml(c.oboe)}</p>` : ''}
       ${c.scene ? `<p class="scene-link">${sceneLink(c)}</p>` : ''}`;
     $('q-score').textContent = `正解 ${qScore} / ${qDeck.length}`;
@@ -186,7 +192,7 @@
     const q = $('search').value.trim().toLowerCase();
     let list = inScope();
     if ($('only-unknown').checked) list = list.filter(c => !QA.isKnown(c));
-    if (q) list = list.filter(c => `${c.q} ${c.a} ${c.miss || ''} ${c.src || ''} ${c.kaisetsu || ''} ${c.yasashii || ''} ${c.oboe || ''}`.toLowerCase().includes(q));
+    if (q) list = list.filter(c => `${c.q} ${c.a} ${c.miss || ''} ${c.src || ''} ${c.kaisetsu || ''} ${c.oboe || ''} ${c.theme || ''}`.toLowerCase().includes(q));
     $('pos').textContent = `${list.length} 件`;
     $('list').innerHTML = list.map(c => {
       const known = QA.isKnown(c);
@@ -195,10 +201,10 @@
           <button class="btn small" data-id="${escapeHtml(c.id)}">${known ? '✓ 覚えた' : 'まだ'}</button>
         </h4>
         <p><strong>${escapeHtml(c.a)}</strong></p>
-        ${c.miss ? `<p class="note">前回のつまずき（${escapeHtml(c.src)}）：${escapeHtml(c.miss)}</p>` : ''}
-        ${c.yasashii ? `<p class="note">やさしく言うと：${escapeHtml(c.yasashii)}</p>` : ''}
+        ${c.miss ? `<p class="note">前回のつまずき：${escapeHtml(c.miss)}</p>` : ''}
+        ${c.kaisetsu ? `<p class="note">${escapeHtml(c.kaisetsu)}</p>` : ''}
         ${c.oboe ? `<p class="note">覚え方：${escapeHtml(c.oboe)}</p>` : ''}
-        <p class="muted">Ch.${c.ch} ${escapeHtml(chTitle(c.ch))}${c.scene ? `　<a class="anime-link" href="packet-flow.html#${encodeURIComponent(c.scene)}">▶ アニメ</a>` : ''}</p>
+        <p class="muted">${escapeHtml(heading(c))}${c.scene ? `　<a class="anime-link" href="packet-flow.html#${encodeURI(c.scene)}">▶ アニメ</a>` : ''}</p>
       </div>`;
     }).join('') || '<p class="muted">該当するカードがありません。</p>';
   }

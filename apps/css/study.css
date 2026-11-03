@@ -30,6 +30,7 @@
 .chips button.active { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .chips button.active small { color: var(--accent-text); }
 .chips .ch-no { min-width: 1.6em; font-weight: 700; text-align: right; font-family: ui-monospace, Consolas, monospace; }
+.chips .ch-label b { display: block; white-space: nowrap; }
 
 @media (max-width: 760px) {
   .chips { display: flex; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
