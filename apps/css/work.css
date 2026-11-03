@@ -98,6 +98,9 @@ details.passage-wrap > summary { cursor: pointer; font-weight: 600; padding: 4px
 .timer.over .t-clock { background: var(--ng-bg); color: var(--ng); }
 .timer.paused .t-clock { opacity: .55; }
 .timer .t-limit { font-size: .78rem; color: var(--muted); }
+.ai-badge { font-size: .72rem; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
+.ai-badge.warn { color: var(--ng); border-color: var(--ng); }
+body.solving #server-banner { display: none; }   /* 演習中はモデル情報のバナーを出さない（タイマー横のバッジに表示） */
 
 .cbt { display: flex; gap: 12px; align-items: stretch; }
 .cbt.swap { flex-direction: row-reverse; }        /* 左右入れ替え（デスクトップ） */
@@ -121,7 +124,10 @@ details.passage-wrap > summary { cursor: pointer; font-weight: 600; padding: 4px
 @media (min-width: 900px) {
   body.solving { max-width: none; }   /* 演習中は横幅いっぱいに表示 */
   body.solving #site-header { display: none; }
-  #solve.on { display: flex; flex-direction: column; height: calc(100vh - 20px); }
+  /* 画面の高さちょうどに収め、ページ全体のスクロールバーを出さない（スクロールは各ペインだけ） */
+  body.solving { height: 100vh; height: 100dvh; padding: 10px; overflow: hidden; display: flex; flex-direction: column; }
+  #solve.on { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+  #solve.on .exam-topbar { position: static; }
   #solve.on .cbt { flex: 1 1 auto; min-height: 0; }
   #solve.on .exam-pane, #solve.on .answer-pane { height: 100%; }
 }

@@ -118,10 +118,18 @@
         serverOk = true;
         banner.innerHTML = `<div class="banner">AI採点 利用可能（モデル：<code>${esc(j.model)}</code>）。</div>`;
       }
+      setAiBadge(serverOk, serverOk ? `AI採点：${j.model}` : 'APIキー未設定');
     } catch (_) {
       serverOk = false;
       banner.innerHTML = `<div class="banner warn">AI採点を使うには中継サーバが必要です。<code>node server/relay.js</code> を実行し <code>http://localhost:8787/apps/work.html</code> を開いてください（このアプリはローカル専用です）。</div>`;
+      setAiBadge(false, '中継サーバ未接続');
     }
+  }
+  // 演習画面ではバナーを隠し、タイマーの横に小さく出す
+  function setAiBadge(ok, text) {
+    const b = $('#ai-badge');
+    b.textContent = text; b.title = ok ? 'AI採点 利用可能' : 'AI採点は使えません（一覧画面の案内を参照）';
+    b.classList.toggle('warn', !ok); b.hidden = false;
   }
 
   // ---- 問題選択 ------------------------------------------------------
