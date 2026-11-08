@@ -10,6 +10,9 @@ server/plan.json
 server/estimate.json
 # 単語カード・一問一答・理解度チェック・診断の記録（個人データ）
 server/progress.json
+# ワーク演習のメモ・マーカー（問題×周ごと。個人データ）
+server/notes.json
+server/notes.json.tmp
 # 配点予想（server/haiten.json）は消えないよう Git 管理する（.gitignore しない）
 
 # 解答記録（採点のたびに自動生成される個人の解答・採点。README だけ追跡）

@@ -66,6 +66,62 @@
     };
   })();
 
+  // ---- メモ・マーカー（CBT のメモ機能。履歴とは別キー・別ファイル server/notes.json） ----
+  // 問題×周ごとに1項目：'<問題id>@<周の開始時刻>' = { pid, roundN, roundAt, at, text, marks }。
+  // 同期は項目ごとに at（最終編集時刻）の新しい方を残すマージで、丸ごと上書きはしない＝項目は消えない。
+  // リセット（次の周へ）で周の開始時刻が変わる → 新しい周は白紙、前の周のメモは残る（履歴画面・解答記録で見る）。
+  const Notes = (() => {
+    const KEY = 'nespe-work-notes-v1';
+    let map = {}, online = false, timer = null;
+    const dirty = new Set();
+    try { map = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (_) {}
+    const keep = () => { try { localStorage.setItem(KEY, JSON.stringify(map)); } catch (_) {} };
+    const newer = (a, b) => !b || (Number(a && a.at) || 0) > (Number(b.at) || 0);
+    function absorb(entries) {
+      let changed = false;
+      for (const [k, v] of Object.entries(entries || {})) if (v && typeof v.text === 'string' && newer(v, map[k])) { map[k] = v; changed = true; }
+      if (changed) keep();
+      return changed;
+    }
+    function push(keys) {
+      if (!online || !keys.length) return Promise.resolve(false);
+      const entries = {}; keys.forEach(k => { if (map[k]) entries[k] = map[k]; });
+      return fetch('/notes', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ entries }) })
+        .then(r => r.ok ? r.json() : null).then(j => { if (!j) { keys.forEach(k => dirty.add(k)); return false; } return true; })
+        .catch(() => { keys.forEach(k => dirty.add(k)); return false; }); // 失敗したら次の保存で送り直す
+    }
+    return {
+      key: (pid, roundAt) => `${pid}@${roundAt || 0}`,
+      get: k => map[k] || null,
+      set(k, entry) {
+        map[k] = { ...entry, at: Date.now() }; keep();
+        dirty.add(k); clearTimeout(timer); timer = setTimeout(() => this.flush(), 800);
+      },
+      flush() { clearTimeout(timer); const ks = [...dirty]; dirty.clear(); return push(ks); },
+      // その問題の全周ぶん（古い周から）
+      forProblem: pid => Object.entries(map).filter(([k]) => k.startsWith(pid + '@')).map(([, v]) => v).sort((a, b) => (a.roundAt || 0) - (b.roundAt || 0)),
+      raw: () => map,
+      // バックアップから：新しい方だけ取り込む（消さない）
+      mergeIn(entries) { absorb(entries); Object.keys(entries || {}).forEach(k => dirty.add(k)); return this.flush(); },
+      // 起動時：サーバのファイルと項目ごとに照合し、新しい方を両方に残す
+      async start() {
+        let j = null;
+        try { const r = await fetch('/notes', { cache: 'no-store' }); if (!r.ok) return; j = await r.json(); } catch (_) { return; }
+        online = true;
+        const server = (j && j.entries) || {};
+        absorb(server);
+        Object.keys(map).forEach(k => { if (newer(map[k], server[k])) dirty.add(k); });
+        return this.flush();
+      },
+      beacon() {
+        if (!online || !dirty.size) return;
+        const entries = {}; dirty.forEach(k => { if (map[k]) entries[k] = map[k]; });
+        try { navigator.sendBeacon('/notes', new Blob([JSON.stringify({ entries })], { type: 'application/json' })); dirty.clear(); } catch (_) {}
+      },
+    };
+  })();
+  const notesReady = Notes.start();
+
   // ---- 配点予想（履歴とは完全に別保存：別キー・別ファイル。履歴の上書きに巻き込まれない） ----
   // localStorage キー 'nespe-work-haiten-v1' と サーバの /haiten（server/haiten.json）に保存。
   // rev（最終編集時刻）を持ち、起動時はファイルの rev が新しければファイルの値を採用、そうでなければ
@@ -160,7 +216,8 @@
     const list = PROBLEMS.filter(p => (fYear === 'all' || p.year === fYear) && (fSec === 'all' || p.section === fSec));
     $('#prob-list').innerHTML = list.length ? list.map(p => {
       const done = Store.doneCount(p), total = p.questions.length;
-      const hasData = p.questions.some(q => { const s = Store.q(`${p.id}:${q.id}`); return (s.attempts && s.attempts.length) || (s.answer && s.answer.trim()); });
+      const hasData = p.questions.some(q => { const s = Store.q(`${p.id}:${q.id}`); return (s.attempts && s.attempts.length) || (s.answer && s.answer.trim()); })
+        || Notes.forProblem(p.id).some(e => (e.text || '').trim()); // メモだけ書いた問題も履歴で見られるように
       return `<div class="prob-item">
         <button class="prob-open" data-id="${p.id}">
           <span class="tag">${esc(p.yearLabel)}　${esc(p.sectionLabel)}　問${p.no}</span>
@@ -265,10 +322,22 @@
     applySwap();
     $('#exam-body').scrollTop = 0; $('#answer-pane').scrollTop = 0;
     window.scrollTo(0, 0);
+    bindTools(p);
     if (mode === 'reset') startNewRound(p);
     else if (mode !== 'continue' && hasProgress(p)) askRound(p); // 解答済み・途中の問題は「続きから／リセット」を選んでから始める
     else Timer.start(p);
   }
+  // メモ（CBT ツール）をこの問題・この周に結び付ける。周が変わると別の項目（＝白紙）になる
+  function bindTools(p) {
+    const r = Store.round(p.id), key = Notes.key(p.id, r.at);
+    window.WorkTools.setContext({
+      key, title: `${p.yearLabel} ${p.sectionLabel} 問${p.no}${r.n > 1 ? `（第${r.n}周）` : ''}`,
+      load: () => Notes.get(key), // 開くたびに保存先から最新を読む（開いた時点の内容を持ち続けない）
+      onChange: v => Notes.set(key, { pid: p.id, roundN: r.n, roundAt: r.at, text: v.text, marks: v.marks }),
+    });
+  }
+  // 起動直後にサーバのメモを読み終えたら、開いている問題のメモを最新にする
+  notesReady.then(() => { if (current) bindTools(current); });
   function setSolveTitle(p) {
     const n = Store.round(p.id).n;
     $('#s-title').textContent = `${p.yearLabel} ${p.sectionLabel} 問${p.no}　${p.title}${n > 1 ? `（第${n}周）` : ''}`;
@@ -300,8 +369,10 @@
   }
   function startNewRound(p) {
     Timer.stop(); // 先に止める（後から止めると、リセット前の経過時間が書き戻される）
+    Notes.flush();
     Store.newRound(p);
     setSolveTitle(p);
+    bindTools(p); // 新しい周のメモは白紙（前の周のメモは履歴に残る）
     $('#s-questions').innerHTML = p.questions.map(q => renderQuestion(p, q)).join('');
     bindQuestions(p);
     $('#grade-summary').innerHTML = '';
@@ -650,8 +721,27 @@
       <p class="muted trend-note">採点の間が30分以上あいたら別の回として集計。点数は今の配点予想に換算（配点を入れる前の10点満点の採点も比率で換算）。</p>
     </div>`;
   }
+  // 周ごとのメモ・マーカー（新しい周から）。白紙のまま終えた周は出さない
+  function memoHistoryHtml(p) {
+    // 採点せずにリセットすると周番号は変わらないので、同じ周の2つ目以降は「やり直し」と付けて区別する
+    const seen = {};
+    const list = Notes.forProblem(p.id).map(e => {
+      const n = e.roundN || 1, k = seen[n] = (seen[n] || 0) + 1;
+      return { ...e, label: `第${n}周${k > 1 ? `（やり直し${k - 1}）` : ''}` };
+    }).filter(e => (e.text || '').trim()).reverse();
+    if (!list.length) return '';
+    const { renderMarked, normalizeMarks } = window.WorkToolsPure;
+    return `<div class="hist-q hist-memo"><p class="prompt"><b>メモ</b><span class="limit">（周ごと。マーカーも残ります）</span></p>` +
+      list.map((e, i) => {
+        const marks = normalizeMarks(e.marks, e.text.length);
+        return `<details class="attempt"${i === 0 ? ' open' : ''}>
+          <summary>${e.label}のメモ<span class="hist-meta">${e.roundAt ? `${stamp(e.roundAt)} 開始・` : ''}最終更新 ${stamp(e.at)}・${e.text.length}字${marks.length ? `・マーカー ${marks.length}か所` : ''}</span></summary>
+          <div class="memo-view">${renderMarked(e.text, marks)}</div>
+        </details>`;
+      }).join('') + `</div>`;
+  }
   function renderHistory(p) {
-    $('#history-body').innerHTML = scoreTrendHtml(p) + p.questions.map(q => {
+    $('#history-body').innerHTML = scoreTrendHtml(p) + memoHistoryHtml(p) + p.questions.map(q => {
       const saved = Store.q(`${p.id}:${q.id}`);
       const attempts = saved.attempts || [];
       const draft = (saved.answer || '').trim();
@@ -990,6 +1080,7 @@
   $('#save-pause').addEventListener('click', async () => {
     if (!current) return;
     Timer.pause(); // 経過時間を確定して保存
+    Notes.flush();
     const btn = $('#save-pause'), label = btn.textContent;
     btn.disabled = true; btn.textContent = '保存中…';
     const ok = await saveRecord(current, { kind: '中断保存' });
@@ -1008,13 +1099,18 @@
   $('#to-list').addEventListener('click', e => {
     e.preventDefault();
     Timer.stop();
+    window.WorkTools.hideAll(); window.WorkTools.setContext(null); Notes.flush();
     document.body.classList.remove('solving');
     const solve = $('#solve'); solve.hidden = true; solve.classList.remove('on');
     $('#pick').hidden = false;
     renderPicker();
     window.scrollTo(0, 0);
   });
-  window.addEventListener('beforeunload', () => Timer.stop());
+  window.addEventListener('beforeunload', () => { Timer.stop(); Notes.beacon(); });
+  // CBT ツール（メモ・電卓）
+  window.WorkTools.attachButtons({ memo: $('#tool-memo'), calc: $('#tool-calc') });
+  $('#tool-memo').addEventListener('click', () => window.WorkTools.toggleMemo());
+  $('#tool-calc').addEventListener('click', () => window.WorkTools.toggleCalc());
 
   // ---- 学習履歴の持ち運び（マージ方式） ------------------------------
   // 履歴はブラウザ(localStorage)に保存されるが、それだけだと端末ごとに別管理になる。
@@ -1106,7 +1202,7 @@
   }
   // 手動：現在の履歴をファイルに書き出す（バックアップ／持ち運び用）
   function exportHistory() {
-    const blob = new Blob([JSON.stringify({ ...currentPayload(), haiten: Haiten.raw() }, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ ...currentPayload(), haiten: Haiten.raw(), notes: Notes.raw() }, null, 2)], { type: 'application/json' });
     const d = new Date(), p = n => String(n).padStart(2, '0');
     const name = `nespe-work-backup-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.json`;
     const a = document.createElement('a');
@@ -1127,6 +1223,7 @@
       Store.mergeIn(payload.data, true); // これで syncToServer も走り、サーバのファイルも更新される
       try { if (payload.swap != null) localStorage.setItem('nespe-work-swap', payload.swap); } catch (_) {}
       if (payload.haiten) { Haiten.mergeIn(payload.haiten); Haiten.flush(); } // 配点も復元（マージ）
+      if (payload.notes) Notes.mergeIn(payload.notes); // メモ・マーカーも復元（項目ごとに新しい方。消さない）
       note('復元しました。画面を更新します…');
       setTimeout(() => location.reload(), 900);
     };
@@ -1200,6 +1297,14 @@
       } else {
         L.push('_未入力・未採点_', '');
       }
+    }
+    // この周のメモ（マーカーを引いた箇所は色ごとに抜き出す）
+    const memo = Notes.get(Notes.key(p.id, Store.round(p.id).at));
+    if (memo && (memo.text || '').trim()) {
+      const { normalizeMarks, COLORS } = window.WorkToolsPure;
+      const marks = normalizeMarks(memo.marks, memo.text.length);
+      L.push('## メモ', '', quote(memo.text), '');
+      if (marks.length) L.push('**マーカー**：', '', ...marks.map(([a, b, c]) => `- ${COLORS[c]}：「${memo.text.slice(a, b).replace(/\s*\n\s*/g, ' ')}」`), '');
     }
     return L.join('\n');
   }

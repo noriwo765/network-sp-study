@@ -329,3 +329,98 @@ textarea.fld-input { resize: vertical; line-height: 1.6; }
 .est-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
 .est-stale { font-size: .8rem; color: #d97706; }
 @media (max-width: 640px) { .est-cols { grid-template-columns: 1fr; } }
+
+/* ===== CBT ツール（メモ・電卓。本番の試験アプリを再現した浮動ウィンドウ） ===== */
+.tool-btn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.tw {
+  --tw-bar: #1f3a6b; --tw-bar-text: #fff;
+  position: fixed; z-index: 1000; display: flex; flex-direction: column;
+  background: var(--surface); color: var(--text);
+  border: 1px solid #2b4a80; border-radius: 8px; box-shadow: 0 10px 28px rgba(0, 0, 0, .28);
+  font-size: .9rem; outline: none;
+}
+.tw[hidden] { display: none; }
+.tw-title {
+  display: flex; align-items: center; gap: 8px; padding: 5px 8px;
+  background: var(--tw-bar); color: var(--tw-bar-text); border-radius: 7px 7px 0 0;
+  cursor: move; user-select: none; touch-action: none;
+}
+.tw-name { flex: 1 1 auto; font-size: .82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tw-x { background: none; border: 0; color: inherit; font-size: 1.15rem; line-height: 1; cursor: pointer; padding: 0 2px; }
+.tw-check { display: inline-flex; align-items: center; gap: 4px; font-size: .8rem; cursor: pointer; white-space: nowrap; }
+
+/* 電卓 */
+.tw-calc { --k: 40px; width: calc(var(--k) * 4 + 30px); }
+.tw-calc[data-size="0"] { --k: 32px; font-size: .78rem; }
+.tw-calc[data-size="2"] { --k: 52px; font-size: 1.05rem; }
+.calc-size { display: inline-flex; gap: 2px; }
+.calc-size button { border: 1px solid rgba(255, 255, 255, .5); background: transparent; color: #fff; font-size: .72rem; padding: 0 5px; border-radius: 3px; cursor: pointer; }
+.calc-size button.on { background: #f5a524; border-color: #f5a524; color: #1b1b1b; }
+.calc-disp { margin: 8px 8px 6px; padding: 4px 8px; background: #fff; color: #111; border: 1px solid #9aa7bd; border-radius: 4px; text-align: right; }
+.calc-expr { min-height: 1.2em; font-size: .78em; color: #555; white-space: nowrap; overflow-x: auto; }
+.calc-val { font-size: 1.6em; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; overflow-x: auto; }
+.calc-val.preview { color: #777; }
+.calc-val.err { color: #c62828; font-size: 1em; padding: .35em 0; white-space: normal; }
+.calc-keys { display: grid; grid-template-columns: repeat(4, var(--k)); gap: 4px; padding: 0 8px 8px; justify-content: center; }
+.calc-keys button {
+  height: calc(var(--k) * .82); border: 0; border-radius: 4px; cursor: pointer;
+  background: #1f3a6b; color: #fff; font: inherit; font-size: 1.05em; font-variant-numeric: tabular-nums;
+}
+.calc-keys button.fn { background: #2f5596; }
+.calc-keys button.eq { grid-column: span 3; background: #f5a524; color: #1b1b1b; font-weight: 700; }
+.calc-keys button:hover { filter: brightness(1.15); }
+.calc-keys button:active, .calc-keys button.press { filter: brightness(.8); }
+.calc-hist { display: flex; flex-direction: column; padding: 0 8px 6px; }
+.calc-hist:empty { display: none; }
+.calc-hist button {
+  border: 0; border-top: 1px dashed var(--border); background: none; color: var(--muted); text-align: right;
+  font: inherit; font-size: .76em; padding: 3px 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.calc-hist button b { color: var(--text); }
+.calc-hist button:hover { background: var(--code-bg); }
+
+/* メモ */
+.tw-memo { min-width: 300px; min-height: 240px; resize: both; overflow: hidden; }
+.tw-memo.trans { opacity: .55; }
+.tw-memo.trans:focus-within { opacity: .7; }
+.memo-tools { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 5px 8px; border-bottom: 1px solid var(--border); }
+.memo-tools > button, .memo-search button {
+  display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--border); background: var(--bg); color: var(--text);
+  border-radius: 4px; font: inherit; font-size: .78rem; padding: 2px 7px; cursor: pointer;
+}
+.memo-sw { display: inline-flex; gap: 3px; margin: 0 6px; }
+.sw { width: 20px; height: 20px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, .3); cursor: pointer; padding: 0; }
+.sw-r { background: #e53935; } .sw-b { background: #1e40ff; } .sw-y { background: #f5a524; }
+.sw-w { background: #fff linear-gradient(to top right, transparent calc(50% - 1px), #e53935 calc(50% - 1px), #e53935 calc(50% + 1px), transparent calc(50% + 1px)); }
+.sw:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
+.memo-search { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-bottom: 1px solid var(--border); }
+.memo-search[hidden] { display: none; }
+.memo-search input { flex: 1 1 auto; min-width: 0; font: inherit; padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); }
+.ms-count { font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 3.5em; text-align: center; }
+/* 入力欄（透明）の下に、同じ文字組みの下敷きを置いてマーカーと罫線を描く */
+.memo-edit { --lh: 26px; --pad: 8px; position: relative; flex: 1 1 auto; min-height: 0; background: var(--surface); }
+.memo-back, .memo-ta {
+  position: absolute; inset: 0; margin: 0; border: 0;
+  font-family: inherit; font-size: 15px; line-height: var(--lh); letter-spacing: 0; tab-size: 4;
+  white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal;
+}
+.memo-back { overflow: hidden; pointer-events: none; }
+.memo-back-in {
+  min-height: 100%; color: transparent;
+  padding: var(--pad) calc(var(--pad) + var(--sb, 0px)) var(--pad) var(--pad);
+  background-image: linear-gradient(to bottom, transparent calc(var(--lh) - 1px), var(--border) calc(var(--lh) - 1px));
+  background-size: 100% var(--lh); background-origin: content-box; background-clip: content-box;
+}
+.memo-ta { padding: var(--pad); background: transparent; color: var(--text); resize: none; outline: none; overflow-y: auto; }
+.mk-r { background: rgba(229, 57, 53, .42); }
+.mk-b { background: rgba(30, 64, 255, .32); }
+.mk-y { background: rgba(245, 165, 36, .55); }
+.memo-back .hit { box-shadow: 0 0 0 2px #facc15; background-color: rgba(253, 224, 71, .55); }
+.memo-back .hit.cur { box-shadow: 0 0 0 2px #ea580c; background-color: rgba(251, 146, 60, .6); }
+.memo-foot { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 6px 10px; border-top: 1px solid var(--border); background: var(--code-bg); border-radius: 0 0 7px 7px; }
+.memo-hint { font-size: .78rem; color: var(--ng); }
+.memo-count { font-size: .76rem; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* 履歴画面のメモ */
+.memo-view { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; padding: 6px 2px; }
+.memo-view .mk-r, .memo-view .mk-b, .memo-view .mk-y { border-radius: 2px; }

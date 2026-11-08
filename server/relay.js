@@ -57,6 +57,9 @@ const server = http.createServer(async (req, res) => {
     // 単語カード・一問一答・理解度チェック・診断の記録（progress.json）
     if (req.method === 'GET' && req.url === '/progress') return void readProgress(res);
     if ((req.method === 'PUT' || req.method === 'POST') && req.url === '/progress') return void (await writeProgress(req, res));
+    // ワーク演習のメモ・マーカー（問題×周ごと。notes.json）
+    if (req.method === 'GET' && req.url === '/notes') return void readNotes(res);
+    if ((req.method === 'PUT' || req.method === 'POST') && req.url === '/notes') return void (await writeNotes(req, res));
     // 解答記録（Markdown）を解答記録/ フォルダへ書き出す
     if ((req.method === 'POST' || req.method === 'PUT') && req.url === '/record') return void (await writeRecord(req, res));
     if (req.method === 'GET') return serveStatic(req, res);
@@ -296,6 +299,46 @@ async function writeProgress(req, res) {
     if (err) return send(res, 500, { error: String(err.message || err) });
     send(res, 200, { ok: true });
   });
+}
+
+// ---- /notes（ワーク演習のメモ・マーカー。履歴・配点とは別管理） ---------------
+// 中身は { entries: { '<問題id>@<周の開始時刻>': { pid, roundN, roundAt, at, text, marks } } }。
+// 丸ごと上書きはしない。届いた項目ごとに at（最終編集時刻）を比べて新しい方だけ残し、項目は消さない。
+// これで、開きっぱなしのタブやもう一方のマシンが古い内容を送っても、ほかの周・問題のメモは消えない。
+const NOTES_FILE = path.join(__dirname, 'notes.json');
+function loadNotes() {
+  let txt;
+  try { txt = fs.readFileSync(NOTES_FILE, 'utf8'); } catch (e) { if (e.code === 'ENOENT') return {}; throw e; }
+  const j = JSON.parse(txt); // 壊れていたら例外 → 書き込みもしない（手で直せるよう、ファイルを残す）
+  return (j && typeof j.entries === 'object' && j.entries) || {};
+}
+function readNotes(res) {
+  try { send(res, 200, { entries: loadNotes() }); }
+  catch (e) { send(res, 500, { error: `notes.json を読めません：${e.message}` }); }
+}
+function validNote(k, v) {
+  return typeof k === 'string' && k.length <= 120 && v && typeof v === 'object' &&
+    typeof v.at === 'number' && typeof v.text === 'string' && v.text.length <= 20000 && Array.isArray(v.marks);
+}
+async function writeNotes(req, res) {
+  const body = await readJson(req);
+  if (!body || !body.entries || typeof body.entries !== 'object') return send(res, 400, { error: 'entries が必要です。' });
+  let all;
+  try { all = loadNotes(); } catch (e) { return send(res, 500, { error: `notes.json を読めないため保存しませんでした：${e.message}` }); }
+  const out = {};
+  let changed = false;
+  for (const [k, v] of Object.entries(body.entries)) {
+    if (!validNote(k, v)) continue;
+    if (!all[k] || (Number(all[k].at) || 0) < v.at) { all[k] = v; changed = true; }
+    out[k] = all[k]; // 送った項目の、マージ後の内容を返す（サーバ側の方が新しければそちら）
+  }
+  if (changed) {
+    // 一時ファイルに書いてから置き換える（書き込み中に止まっても、元のファイルが壊れない）
+    const tmp = NOTES_FILE + '.tmp';
+    try { fs.writeFileSync(tmp, JSON.stringify({ entries: all }) + '\n', 'utf8'); fs.renameSync(tmp, NOTES_FILE); }
+    catch (e) { return send(res, 500, { error: String(e.message || e) }); }
+  }
+  send(res, 200, { ok: true, entries: out });
 }
 
 // ---- /record（解答記録 Markdown の書き出し） ---------------------------
