@@ -35,3 +35,7 @@ tmp/*
 
 # ローカル専用リポジトリ（学習記録と過去問データ。絶対に公開しない）
 .git-local/
+
+参考資料/*
+# Anki 用の書き出しファイル（apps/tools/anki-export.js でいつでも作り直せる）
+flashcards/*.apkg

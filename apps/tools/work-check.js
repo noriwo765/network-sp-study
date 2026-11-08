@@ -81,6 +81,23 @@ for (const p of PROBLEMS) for (const q of p.questions) {
 }
 console.log(`解答欄: ${PROBLEMS.length}問 / ${count.labeled + count.bullets + count.single}設問（ラベル付き ${count.labeled}・箇条書き ${count.bullets}・1欄 ${count.single}）`);
 
+// ---- 分野（apps/js/work-genre.js） ----------------------------------------
+vm.runInContext(fs.readFileSync(path.join(ROOT, 'apps', 'js', 'work-genre.js'), 'utf8'), ctx);
+{
+  const genres = new Set(ctx.window.WORK_GENRES), map = ctx.window.WORK_GENRE || {};
+  const used = {};
+  for (const p of PROBLEMS) for (const q of p.questions) {
+    const g = (map[p.id] || {})[q.id];
+    if (!g) ng(`分野: ${p.id}:${q.id} に分野が無い`);
+    else if (!genres.has(g)) ng(`分野: ${p.id}:${q.id} の分野「${g}」が WORK_GENRES に無い`);
+    else used[g] = (used[g] || 0) + 1;
+  }
+  for (const [pid, qs] of Object.entries(map)) for (const qid of Object.keys(qs))
+    if (!shapeOf.has(`${pid}:${qid}`)) ng(`分野: 存在しない設問 ${pid}:${qid}`);
+  for (const g of genres) if (!used[g]) warn(`分野: 「${g}」の設問が無い`);
+  console.log(`分野: ${genres.size}分野（${Object.entries(used).map(([g, n]) => `${g} ${n}`).join('・')}）`);
+}
+
 // ---- 配点 ----------------------------------------------------------------
 const haitenPath = path.join(ROOT, 'server', 'haiten.json');
 if (fs.existsSync(haitenPath)) {

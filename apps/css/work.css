@@ -215,6 +215,44 @@ textarea.fld-input { resize: vertical; line-height: 1.6; }
 .prog-overall { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
 .prog-h { margin: 18px 0 8px; }
 .prog-list { display: flex; flex-direction: column; gap: 8px; }
+/* 得点率の横棒グラフ（分野別・問題別）。列：名前｜棒（60%に合格の目安の線）｜値 */
+.rate-chart { --rc-cols: 13rem minmax(120px, 1fr) 17rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); padding: 8px 12px 10px; }
+.rc-lead { margin: 4px 0 8px; }
+.rc-axis, .rc-row { display: grid; grid-template-columns: var(--rc-cols); gap: 10px; align-items: center; }
+.rc-axis { font-size: .72rem; color: var(--muted); height: 1.4em; padding: 0 4px; }
+.rc-scale { position: relative; height: 100%; }
+.rc-scale > span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+.rc-scale > span:first-child { transform: none; }
+.rc-scale > span:last-child { transform: translateX(-100%); }
+.rc-row { padding: 5px 4px; border-radius: 6px; }
+.rc-row:hover { background: var(--code-bg); }
+.rc-btn { width: 100%; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.rc-item > summary { list-style: none; cursor: pointer; }
+.rc-item > summary::-webkit-details-marker { display: none; }
+.rc-label { font-size: .88rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-label::before { content: '▸ '; color: var(--muted); }
+.rc-item[open] .rc-label::before { content: '▾ '; }
+.rc-btn .rc-label::before { content: none; }
+.rc-track { position: relative; height: 14px; background: var(--code-bg); border-radius: 4px; }
+.rc-track::after { content: ''; position: absolute; left: 60%; top: -4px; bottom: -4px; border-left: 2px dashed var(--muted); opacity: .7; }
+.rc-fill { display: block; height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; min-width: 2px; }
+.rc-fill.low { background: var(--rc-low, var(--ng)); }
+@media (prefers-color-scheme: dark) { .rate-chart { --rc-low: #e46767; } } /* 文字用の --ng は棒には明るすぎる */
+.rc-val { font-size: .82rem; color: var(--muted); display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; }
+.rc-val b { font-size: .95rem; color: var(--text); min-width: 2.6em; text-align: right; }
+.rc-val small { font-size: .74rem; }
+.rc-flag { font-size: .7rem; font-weight: 700; color: var(--ng); border: 1px solid currentColor; border-radius: 8px; padding: 0 6px; }
+.rc-qs { list-style: none; margin: 2px 0 8px; padding: 0 0 0 1.2em; display: grid; gap: 2px; }
+.rc-q { width: 100%; display: flex; justify-content: space-between; gap: 10px; border: 0; border-bottom: 1px dotted var(--border); background: none; color: var(--text); font: inherit; font-size: .82rem; padding: 3px 4px; cursor: pointer; text-align: left; }
+.rc-q:hover { background: var(--code-bg); }
+.rc-qv { color: var(--muted); white-space: nowrap; }
+.rc-qv.low { color: var(--ng); font-weight: 600; }
+.rc-note { font-size: .8rem; margin: 6px 0 0; }
+@media (max-width: 640px) { /* スマホ：名前／棒（全幅）／値 の3段 */
+  .rate-chart { --rc-cols: 1fr; }
+  .rc-row { gap: 3px; padding: 6px 4px; }
+  .rc-axis > span:not(.rc-scale) { display: none; }
+}
 .prog-item { text-align: left; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); padding: 10px 12px; cursor: pointer; font: inherit; }
 .prog-item:hover { border-color: var(--accent); }
 .pi-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

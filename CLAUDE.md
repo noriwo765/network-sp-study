@@ -26,11 +26,13 @@ Claude Code のメモリ（~/.claude）はマシンごとで SSD に乗らない
 | `apps/work.html` | 画面（問題一覧・演習・履歴・学習状況・配点設定のセクション） |
 | `apps/js/work-app.js` | 画面ロジック。`Store`（履歴：localStorage＋/history）、`Haiten`（配点：別キー＋/haiten）、採点、記録・サマリーの書き出し |
 | `apps/js/work-shape.js` | 解答例の書式から解答欄（欄の分け方）と欄ごとの字数上限（`fieldLimits`）を決める純粋関数。画面と検証ツールで共用 |
+| `apps/js/work-genre.js` | 設問→分野の対応（`WORK_GENRE[問題id][設問id]`、分野の一覧は `WORK_GENRES`）。学習状況の「分野別の得点率」と `_学習状況.md` の分野表で使う。問題を追加したら全設問ぶん足す（`work-check.js` が抜けを NG にする） |
 | `apps/css/work.css` | ワーク演習のスタイル |
 | `apps/plan.html`・`apps/js/plan-app.js`・`apps/css/plan.css` | 学習計画（ローカル専用）。履歴・配点は読むだけで、保存は `/plan` のみ。`work.html?p=<問題id>` でその問題を直接開く |
 | `server/relay.js` | 中継サーバ。静的配信、`/progress`（暗記系の学習記録。古い at での上書きは 409）、`/grade`（Claude で採点）、`/history`、`/haiten`、`/plan`（学習計画。ファイル更新時刻を版にし、古い版での上書きは 409）、`/estimate`（想定合格率の AI 判定。GET で前回の結果）、`/record`（解答記録/ への書き出し） |
 | `apps/tools/work-check.js` | 整合性チェック（解答欄の分割・配点・履歴）。`--fields <問題id>` で欄の単位を表示 |
 | `apps/tools/haiten-set.js` | 配点の一括登録（欄ラベルを検証し、rev を進めて保存） |
+| `apps/tools/anki-export.js` | 苦手ジャンルの一問一答を Anki 用の `.apkg` に書き出す（`node --experimental-sqlite apps/tools/anki-export.js`）。`qa_weak.js` を更新したら書き出し直す |
 
 解答欄の分け方（`work-shape.js`）：解答例が「ラベル：値　ラベル：値」→ラベル付きの複数欄、「ラベル：①X　②Y」「①X　②Y」→丸数字ごとの欄、「・X　・Y」→設問文が複数答えさせている（二つ/それぞれ/全て…）ときだけ番号付きの複数欄（そうでなければ別解の列挙なので1欄）、それ以外→1欄。「（順不同）」などの注記は欄にしない。
 

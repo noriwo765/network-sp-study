@@ -729,18 +729,78 @@
   $('#haiten-to-list').addEventListener('click', e => { e.preventDefault(); $('#haiten').hidden = true; $('#pick').hidden = false; renderPicker(); window.scrollTo(0, 0); });
 
   // ---- 学習状況（達成度ダッシュボード） ------------------------------
+  // 設問の最新の採点を、配点予想の満点に換算した点（配点を入れる前の10点満点の採点も比率で換算）。未採点は null
+  function latestScore(p, q) {
+    const at = Store.q(`${p.id}:${q.id}`).attempts || [];
+    const r = at.length ? at[at.length - 1].result || {} : null;
+    if (!r || typeof r.score !== 'number') return null;
+    const m0 = typeof r.scoreMax === 'number' && r.scoreMax > 0 ? r.scoreMax : 10, hm = Haiten.haiten(p.id, q.id);
+    return { v: hm ? r.score / m0 * hm : r.score, max: hm || m0 };
+  }
+  const r1 = v => Math.round(v * 10) / 10;
   function problemStats(p) {
     let graded = 0, score = 0, max = 0, rounds = 0, lastAt = 0;
     for (const q of p.questions) {
       const at = Store.q(`${p.id}:${q.id}`).attempts || [];
       if (!at.length) continue;
       graded++; rounds = Math.max(rounds, at.length);
-      const latest = at[at.length - 1], r = latest.result || {};
-      score += (typeof r.score === 'number' ? r.score : 0);
-      max += (Haiten.haiten(p.id, q.id) || (typeof r.scoreMax === 'number' ? r.scoreMax : 10));
+      const latest = at[at.length - 1], r = latest.result || {}, s = latestScore(p, q);
+      score += s ? s.v : 0;
+      max += s ? s.max : (Haiten.haiten(p.id, q.id) || (typeof r.scoreMax === 'number' ? r.scoreMax : 10));
       lastAt = Math.max(lastAt, latest.at || 0);
     }
-    return { graded, total: p.questions.length, score, max, rounds, lastAt, time: Store.timer(p.id) || 0 };
+    return { graded, total: p.questions.length, score: r1(score), max: r1(max), rounds, lastAt, time: Store.timer(p.id) || 0 };
+  }
+  // 分野ごとの得点率（分野の対応は apps/js/work-genre.js）。採点済みの設問の最新の点だけで計算する
+  function genreStats() {
+    const map = window.WORK_GENRE || {};
+    const by = new Map((window.WORK_GENRES || []).map(g => [g, { g, score: 0, max: 0, graded: 0, total: 0, items: [] }]));
+    for (const p of PROBLEMS) for (const q of p.questions) {
+      const x = by.get((map[p.id] || {})[q.id]); if (!x) continue;
+      const s = latestScore(p, q);
+      x.total++; x.items.push({ p, q, s });
+      if (s) { x.graded++; x.score += s.v; x.max += s.max; }
+    }
+    return [...by.values()].map(x => ({ ...x, pct: x.max ? Math.round(x.score / x.max * 100) : null }));
+  }
+  const PASS_PCT = 60;
+  // 得点率の横棒グラフの1行。60%（合格の目安）に線を引き、下回る行は「要対策」の色と文字で示す
+  function rateRow(label, pct, sub, tip) {
+    const low = pct < PASS_PCT;
+    return `<span class="rc-label">${esc(label)}</span>
+      <span class="rc-track" title="${esc(tip)}"><span class="rc-fill${low ? ' low' : ''}" style="width:${Math.max(0, Math.min(100, pct))}%"></span></span>
+      <span class="rc-val"><b>${pct}%</b>${low ? '<span class="rc-flag">要対策</span>' : ''}<small>${esc(sub)}</small></span>`;
+  }
+  const rateAxis = () => `<div class="rc-axis"><span></span><span class="rc-scale"><span style="left:0">0</span><span class="rc-pass" style="left:${PASS_PCT}%">合格 ${PASS_PCT}%</span><span style="left:100%">100%</span></span><span></span></div>`;
+  function genreChartHtml() {
+    const gs = genreStats();
+    const done = gs.filter(x => x.graded).sort((a, b) => a.pct - b.pct || b.graded - a.graded);
+    const rest = gs.filter(x => !x.graded);
+    if (!done.length) return '<p class="muted">採点すると、分野ごとの得点率がここに出ます。</p>';
+    const tag = p => `${p.year} ${p.sectionLabel} 問${p.no}`;
+    const rows = done.map(x => {
+      const items = x.items.slice().sort((a, b) => (a.s ? a.s.v / a.s.max : 2) - (b.s ? b.s.v / b.s.max : 2)).map(({ p, q, s }) => {
+        const pct = s ? Math.round(s.v / s.max * 100) : null;
+        return `<li><button class="rc-q" data-id="${p.id}"><span>${esc(tag(p))} ${esc(q.id)}</span>
+          <span class="rc-qv${pct != null && pct < PASS_PCT ? ' low' : ''}">${s ? `${r1(s.v)}/${r1(s.max)}点（${pct}%）` : '未採点'}</span></button></li>`;
+      }).join('');
+      const sub = `${r1(x.score)}/${r1(x.max)}点・採点 ${x.graded}/${x.total}設問`;
+      return `<details class="rc-item"><summary class="rc-row">${rateRow(x.g, x.pct, sub, `${x.g}：${x.pct}%（${sub}）`)}</summary><ul class="rc-qs">${items}</ul></details>`;
+    }).join('');
+    const weak = done.filter(x => x.pct < PASS_PCT);
+    const lead = weak.length ? `合格の目安（${PASS_PCT}%）に届いていない分野は <b>${weak.length}</b> 個。いちばん低いのは <b>${esc(done[0].g)}</b>（${done[0].pct}%）。`
+      : `採点した <b>${done.length}</b> 分野すべてで ${PASS_PCT}% 以上です。`;
+    return `<p class="rc-lead">${lead}</p><div class="rate-chart">${rateAxis()}${rows}</div>
+      ${rest.length ? `<p class="muted rc-note">まだ採点していない分野：${rest.map(x => esc(x.g)).join('・')}</p>` : ''}
+      <p class="muted rc-note">行をタップすると、その分野の設問と点数が出ます（設問をタップでその問題を開く）。採点した設問が少ない分野は、点数がぶれやすい点に注意。</p>`;
+  }
+  function problemChartHtml(rows) {
+    const done = rows.filter(x => x.s.graded && x.s.max).map(x => ({ ...x, pct: Math.round(x.s.score / x.s.max * 100) })).sort((a, b) => a.pct - b.pct);
+    if (!done.length) return '<p class="muted">採点すると、問題ごとの得点率がここに出ます。</p>';
+    return `<div class="rate-chart">${rateAxis()}${done.map(({ p, s, pct }) => {
+      const label = `${p.year} ${p.sectionLabel} 問${p.no} ${p.title}`, sub = `${s.score}/${s.max}点・採点 ${s.graded}/${s.total}設問`;
+      return `<button class="rc-row rc-btn" data-id="${p.id}">${rateRow(label, pct, sub, `${label}：${pct}%（${sub}）`)}</button>`;
+    }).join('')}</div>`;
   }
   const hhmm = sec => { sec = Math.floor(sec); const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60); return h ? `${h}時間${m}分` : `${m}分`; };
   const dayStamp = ts => { if (!ts) return '—'; const d = new Date(ts), z = n => String(n).padStart(2, '0'); return `${d.getFullYear()}/${z(d.getMonth() + 1)}/${z(d.getDate())}`; };
@@ -799,9 +859,14 @@
 
     $('#progress-body').innerHTML = `<p class="prog-cheer">${cheer}</p><div class="estimate" id="estimate-box"></div>${cards}${sections}
       <p class="prog-overall">全体の得点率 ${bar(pct)} <b>${pct}%</b>（採点済み設問の最新得点ベース）</p>
+      <h4 class="prog-h">分野別の得点率（低い順）</h4>${genreChartHtml()}
+      <h4 class="prog-h">問題ごとの得点率（低い順）</h4>${problemChartHtml(rows)}
       <h4 class="prog-h">問題ごとの状況</h4>${table}
       <p class="muted" style="font-size:.8rem">各行をタップするとその問題を開きます。得点率は配点設定があればそれを満点に、無ければAI採点の満点（目安10点）で計算します。</p>`;
-    $('#progress-body .prog-list').onclick = e => { const b = e.target.closest('.prog-item'); if (b) { $('#progress').hidden = true; openProblem(b.dataset.id); } };
+    $('#progress-body').onclick = e => {
+      const b = e.target.closest('.prog-item, .rc-btn, .rc-q');
+      if (b) { $('#progress').hidden = true; openProblem(b.dataset.id); }
+    };
     renderEstimate();
   }
   $('#open-progress').addEventListener('click', openProgress);
@@ -1140,6 +1205,12 @@
       const score = s.graded ? `${s.score}/${s.max}（${s.max ? Math.round(s.score / s.max * 100) : 0}%）` : '—';
       L.push(`| ${p.yearLabel} ${p.sectionLabel} 問${p.no} ${p.title} | ${s.graded}/${s.total} | ${score} | ${s.rounds || '—'} | ${dayStamp(s.lastAt)} |`);
     }
+    L.push('', '## 分野別の得点率（低い順・採点済み設問の最新得点）', '', '| 分野 | 得点率 | 得点 | 採点した設問 |', '|---|---|---|---|');
+    const gs = genreStats();
+    for (const x of gs.filter(x => x.graded).sort((a, b) => a.pct - b.pct))
+      L.push(`| ${x.g} | ${x.pct}%${x.pct < PASS_PCT ? '（要対策）' : ''} | ${r1(x.score)}/${r1(x.max)} | ${x.graded}/${x.total} |`);
+    const rest = gs.filter(x => !x.graded);
+    if (rest.length) L.push('', `- 未採点の分野：${rest.map(x => x.g).join('・')}`);
     if (estimate) {
       const e = estimate;
       L.push('', '## 想定合格率（AI判定・厳しめ）', '',
