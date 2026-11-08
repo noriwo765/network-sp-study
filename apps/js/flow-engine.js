@@ -179,12 +179,15 @@ const FlowApp = (() => {
   // ---- アニメーション --------------------------------------------------
 
   function animatePhase(phase, step, token) {
-    const pkts = phase.map(([, , opts = {}]) => {
+    const pkts = phase.map(([from, , opts = {}]) => {
       const kind = opts.kind || step.pkt || 'ip';
       const label = opts.label || step.label || PKT_LABEL[kind];
       // 全角文字は半角の約1.6倍の幅で見積もる
       const w = Math.max(40, [...label].reduce((sum, c) => sum + (c.charCodeAt(0) > 0xff ? 13 : 8), 0) + 14);
-      const g = el('g', { class: `pkt ${kind}` });
+      // 最初から出発点に置く。位置を決めずに追加すると、最初のフレームが描かれるまで
+      // 原点（図の左上）に一瞬表示される（中継点で次の区間に移るときに起きていた）
+      const A = scn.nodes[from];
+      const g = el('g', { class: `pkt ${kind}`, transform: `translate(${A.x},${A.y})` });
       g.appendChild(el('rect', { x: -w / 2, y: -11, width: w, height: 22, rx: 4 }));
       g.appendChild(el('text', { x: 0, y: 4 }, label));
       g.drop = !!opts.drop;
