@@ -208,12 +208,28 @@ function readHistory(res) {
     try { return send(res, 200, JSON.parse(txt)); } catch (_) { return send(res, 200, {}); }
   });
 }
+// 丸ごと上書きはしない。ファイル側の内容と合わせて保存する（apps/js/work-merge.js）。
+// 古い内容を持ったまま開きっぱなしのタブが保存しても、ファイルにある採点結果は消えない。
+// 応答の added は「送ってきた側に無かった採点・項目の数」。1以上なら画面が読み直す。
+const { mergeHistory } = require('../apps/js/work-merge.js');
 async function writeHistory(req, res) {
-  const body = await readJson(req);
-  fs.writeFile(HISTORY_FILE, JSON.stringify(body), 'utf8', err => {
-    if (err) return send(res, 500, { error: String(err.message || err) });
-    send(res, 200, { ok: true });
-  });
+  let body;
+  try { body = await readJson(req); } catch (_) { return send(res, 400, { error: 'JSON ではありません' }); }
+  if (!body || typeof body.data !== 'object' || !body.data) return send(res, 400, { error: 'data がありません' });
+  let file = null;
+  try { file = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8')); }
+  catch (e) {
+    if (e.code !== 'ENOENT') {
+      // 壊れたファイルは消さずに別名で残してから書く
+      try { fs.copyFileSync(HISTORY_FILE, `${HISTORY_FILE}.broken-${Date.now()}`); } catch (_) {}
+    }
+  }
+  const { data, added } = mergeHistory(file && file.data, body.data);
+  const savedAt = [file && file.savedAt, body.savedAt].filter(Boolean).sort().pop() || new Date().toISOString();
+  // 読む→合わせる→書くを同期で行い、同時に来た保存どうしで取りこぼさないようにする
+  try { fs.writeFileSync(HISTORY_FILE, JSON.stringify({ ...body, savedAt, data }), 'utf8'); }
+  catch (err) { return send(res, 500, { error: String(err.message || err) }); }
+  send(res, 200, { ok: true, added });
 }
 
 // ---- /haiten（配点予想の保存ファイル。履歴とは別管理） ------------------
@@ -332,9 +348,15 @@ function serveStatic(req, res) {
 
 function readJson(req) {
   return new Promise((resolve, reject) => {
-    let d = '';
-    req.on('data', c => { d += c; if (d.length > 2e7) req.destroy(); });
-    req.on('end', () => { try { resolve(d ? JSON.parse(d) : {}); } catch (e) { reject(e); } });
+    // 受信データは Buffer のまま集めてから最後に一度だけ UTF-8 に直す。
+    // 届いた塊ごとに文字列へ足すと、塊の境目で分かれた日本語の1文字が「�」に化ける（履歴の文字化けの原因だった）
+    const chunks = [];
+    let size = 0;
+    req.on('data', c => { chunks.push(c); size += c.length; if (size > 2e7) req.destroy(); });
+    req.on('end', () => {
+      const d = Buffer.concat(chunks).toString('utf8');
+      try { resolve(d ? JSON.parse(d) : {}); } catch (e) { reject(e); }
+    });
     req.on('error', reject);
   });
 }

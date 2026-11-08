@@ -54,6 +54,15 @@
       // バックアップ／復元用：保存データ全体の読み書き
       raw() { return data; },
       replaceAll(obj) { data = obj || {}; save(); },
+      // 他の保存先（サーバのファイル）の内容と合わせる。採点は消さずに足す（work-merge.js）。
+      // preferOther … 下書き・タイマーなどで相手側を優先するか（相手の方が新しいとき）
+      mergeIn(other, preferOther) {
+        const r = preferOther ? WorkMerge.mergeHistory(data, other) : WorkMerge.mergeHistory(other, data);
+        data = r.data; save();
+      },
+      // 別のタブが保存した内容を読み直す（開きっぱなしのタブが古い内容のまま保存しないように）
+      reloadLocal() { try { data = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (_) {} },
+      KEY,
     };
   })();
 
@@ -1007,12 +1016,12 @@
   });
   window.addEventListener('beforeunload', () => Timer.stop());
 
-  // ---- 学習履歴の持ち運び（完全上書き方式） --------------------------
+  // ---- 学習履歴の持ち運び（マージ方式） ------------------------------
   // 履歴はブラウザ(localStorage)に保存されるが、それだけだと端末ごとに別管理になる。
-  // ローカルサーバ経由のときは server/history.json にも自動保存し、起動時に自動で
-  // 読み込む（＝起動時インポート）。ファイルが正で、この端末の履歴を丸ごと上書きする。
-  // Windows ⇄ Mac で引き継ぐには、この history.json（または書き出したバックアップ）を
-  // もう一方へコピーするだけ。手動の書き出し／復元も「完全上書き」で用意する。
+  // ローカルサーバ経由のときは server/history.json にも自動保存し、起動時に自動で読み込む。
+  // どちらも丸ごと上書きはせず、work-merge.js で合わせる：採点は消さずに足し、周回は新しい方、
+  // 下書き・タイマーは新しい方。サーバも保存のたびにファイルの内容と合わせる。
+  // （以前は丸ごと上書きで、開きっぱなしの古いタブが保存して採点結果が消えた）
   const localSavedAt = () => { try { return Number(localStorage.getItem('nespe-work-at')) || 0; } catch (_) { return 0; } };
   function currentPayload() {
     let swap = '0'; try { swap = localStorage.getItem('nespe-work-swap') || '0'; } catch (_) {}
@@ -1022,19 +1031,38 @@
   }
   // 使用中：save() から呼ばれ、少し待ってからサーバのファイルへ書き戻す（まとめ書き）
   let putTimer = null;
+  // サーバはファイルの内容と合わせて保存する。こちらに無い採点がファイルにあった（added>0）ときは
+  // 読み直して取り込む（別のブラウザ・別のマシンで採点した分）
+  function putHistory() {
+    return fetch('/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(currentPayload()) })
+      .then(r => r.ok ? r.json().then(j => { if (j && j.added > 0) pullFromServer(); return true; }) : false)
+      .catch(() => false);
+  }
+  async function pullFromServer() {
+    try {
+      const r = await fetch('/history', { cache: 'no-store' }); if (!r.ok) return;
+      const payload = await r.json();
+      if (payload && payload.data) Store.mergeIn(payload.data, false); // 下書き・タイマーはこのタブの方を残す
+      if (!current) renderPicker();
+    } catch (_) {}
+  }
   function syncToServer() {
     if (!serverHist) return;
     clearTimeout(putTimer);
-    putTimer = setTimeout(() => {
-      fetch('/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(currentPayload()) }).catch(() => {});
-    }, 800);
+    putTimer = setTimeout(putHistory, 800);
   }
   // 明示保存：デバウンスを待たず、いますぐサーバのファイルへ確定保存する
   function flushToServer() {
     if (!serverHist) return Promise.resolve(false);
     clearTimeout(putTimer);
-    return fetch('/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(currentPayload()) }).then(r => r.ok).catch(() => false);
+    return putHistory();
   }
+  // 同じブラウザの別のタブが保存したら、このタブの手元の内容も読み直す
+  window.addEventListener('storage', e => {
+    if (e.key !== Store.KEY) return;
+    Store.reloadLocal();
+    if (!current) renderPicker();
+  });
   // 起動時：サーバのファイルとこの端末を照合し、「新しい方」を残す（更新時刻で判定）。
   // こうすることで、ローカルの方が新しい（例：直前に入れた配点）のにファイルで上書き
   // して消す、という事故を防ぐ。端末間の持ち運びも「新しいファイルが勝つ」で成立する。
@@ -1047,16 +1075,17 @@
     const localKeys = Object.keys(Store.raw()).length;
     const fileAt = (payload && payload.savedAt) ? Date.parse(payload.savedAt) || 0 : 0;
     const localAt = localSavedAt();
+    // 丸ごと置き換えずに合わせる（採点はどちらにあるものも残す）。下書き・タイマーなどは新しい方を優先
     const fileWins = fileKeys && (localKeys === 0 || fileAt > localAt);
-    if (fileWins) {
-      Store.replaceAll(payload.data); // ファイルの方が新しい（または端末が空）→ファイルを採用
-      try { if (payload.swap != null) localStorage.setItem('nespe-work-swap', payload.swap); } catch (_) {}
-      swapped = payload.swap === '1';
-      note(`サーバの履歴を読み込みました（${new Date(fileAt || Date.now()).toLocaleString()} 時点・項目 ${fileKeys} 件）。`);
+    if (fileKeys) {
+      Store.mergeIn(payload.data, fileWins); // save() からサーバへも書き戻される
+      if (fileWins) {
+        try { if (payload.swap != null) localStorage.setItem('nespe-work-swap', payload.swap); } catch (_) {}
+        swapped = payload.swap === '1';
+      }
+      note(`サーバの履歴と合わせました（ファイル ${new Date(fileAt || Date.now()).toLocaleString()} 時点・項目 ${fileKeys} 件）。`);
     } else if (localKeys) {
-      // この端末の方が新しい（または同点）→ 端末を残し、ファイルへ反映（ローカルの取りこぼし防止）
-      fetch('/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(currentPayload()) }).catch(() => {});
-      if (fileKeys) note('この端末の方が新しいため、端末の内容を保持してサーバへ反映しました。');
+      putHistory(); // ファイルが空 → この端末の内容を書き出す
     }
     await loadHaiten(); // 配点は履歴とは別に、サーバの別ファイルからマージ読み込み
     await loadEstimate(); // 想定合格率（前回の AI 判定）
@@ -1086,7 +1115,7 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     note(`「${name}」を書き出しました。`);
   }
-  // 手動：ファイルを読み込み、この端末の履歴を丸ごと置き換える（完全上書き）
+  // 手動：ファイルを読み込み、この端末の履歴と合わせる（採点は消さずに足し、下書き・タイマーはファイルの内容にする）
   function importHistory(file) {
     const reader = new FileReader();
     reader.onload = () => {
@@ -1094,8 +1123,8 @@
       try { payload = JSON.parse(reader.result); } catch (_) { return note('ファイルを読めませんでした（JSON ではありません）。', true); }
       if (!payload || payload.app !== BACKUP_TAG || !payload.data) return note('このアプリのバックアップファイルではありません。', true);
       const n = Object.keys(payload.data).length;
-      if (!confirm(`復元します。\n\nこの端末の今の履歴は、ファイルの内容で完全に置き換えられます（上書き）。\n読み込む項目：${n} 件\n\nよろしいですか？`)) return;
-      Store.replaceAll(payload.data); // これで syncToServer も走り、サーバのファイルも更新される
+      if (!confirm(`復元します。\n\nファイルの採点結果を、この端末の履歴に足します（今ある採点は消えません）。\n下書き・タイマー・周回はファイルの内容を優先します。\n読み込む項目：${n} 件\n\nよろしいですか？`)) return;
+      Store.mergeIn(payload.data, true); // これで syncToServer も走り、サーバのファイルも更新される
       try { if (payload.swap != null) localStorage.setItem('nespe-work-swap', payload.swap); } catch (_) {}
       if (payload.haiten) { Haiten.mergeIn(payload.haiten); Haiten.flush(); } // 配点も復元（マージ）
       note('復元しました。画面を更新します…');
