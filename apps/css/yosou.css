@@ -80,3 +80,26 @@ figure.yd svg { display: block; width: 100%; min-width: 420px; height: auto; max
 .ys-others div { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; }
 .ys-others b { margin-right: 6px; }
 .ys-others span { color: var(--muted); font-size: 0.85rem; }
+
+/* ---- 略語・用語 ---- */
+.ys-abbr { width: 100%; border-collapse: collapse; font-size: 0.84rem; background: var(--surface); }
+.ys-abbr th, .ys-abbr td { border: 1px solid var(--border); padding: 4px 8px; text-align: left; vertical-align: top; }
+.ys-abbr th { background: var(--code-bg); }
+.ys-abbr td:first-child { font-weight: 700; color: var(--accent); }
+.ys-abbr td:nth-child(2) { color: var(--muted); font-size: 0.78rem; overflow-wrap: anywhere; }
+@media (max-width: 520px) {
+  .ys-abbr tr { display: grid; grid-template-columns: 1fr; border-bottom: 1px solid var(--border); }
+  .ys-abbr tr:first-child { display: none; }
+  .ys-abbr td { border: 0; padding: 2px 8px; }
+  .ys-abbr td:first-child { padding-top: 6px; }
+  .ys-abbr td:last-child { padding-bottom: 6px; }
+}
+
+/* ---- 知っておくべきキーワード（カードの中） ---- */
+.ys-kws { margin: 0; display: grid; gap: 2px; font-size: 0.86rem; }
+.ys-kws div { display: grid; grid-template-columns: minmax(0, 11em) minmax(0, 1fr); gap: 2px 12px; padding: 4px 8px; border-radius: 6px; background: var(--bg); }
+.ys-kws dt { font-weight: 700; color: var(--accent); }
+.ys-kws dd { margin: 0; }
+@media (max-width: 520px) {
+  .ys-kws div { grid-template-columns: 1fr; }
+}

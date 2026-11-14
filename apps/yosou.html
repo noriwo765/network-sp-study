@@ -28,7 +28,7 @@
   <header>
     <p class="back"><a href="index.html">← メニュー</a></p>
     <h1>予想テーマ（時事ネタ）</h1>
-    <p class="sub">本番 2026年11月15日。R4〜R7 でまだ出ていない、最近話題の技術を11個。朝は上の「一覧」だけ眺めれば十分です。</p>
+    <p class="sub">本番 2026年11月15日。R4〜R7 でまだ出ていない、最近話題の技術を11個。朝は上の「一覧」だけ眺めれば十分です。分からない略語は<a href="#abbr">略語・用語</a>へ。</p>
     <ul class="fc-stats">
       <li><b id="ys-count">0</b>/ 11 テーマを読んだ</li>
     </ul>
@@ -49,6 +49,7 @@
     <a href="#t-passkey">パスキー</a>
     <a href="#t-rpki">RPKI</a>
     <a href="#t-aidc">AI DC</a>
+    <a href="#abbr">略語</a>
     <a href="#others">名前だけ</a>
   </div>
 
@@ -117,6 +118,16 @@
           <text x="10" y="162" class="s">UDP/443 を使う → FW が UDP/443 を通さないとブラウザは TCP（HTTP/2）に戻る</text>
         </svg>
       </figure>
+      <h4>知っておくべきキーワード</h4>
+      <dl class="ys-kws">
+        <div><dt>UDP/443</dt><dd>QUIC の通り道。FW・プロキシで許可しないと TCP（HTTP/2）に戻る</dd></div>
+        <div><dt>TLS 1.3 を内蔵</dt><dd>暗号化の握手を接続と同時に済ませる → 1往復で通信を始められる</dd></div>
+        <div><dt>0-RTT</dt><dd>2回目以降は最初のパケットでデータを送れる（リプレイ攻撃に注意）</dd></div>
+        <div><dt>コネクション ID</dt><dd>IP アドレス・ポートが変わっても同じ接続とみなす → 回線の切替に強い</dd></div>
+        <div><dt>HoL ブロッキング</dt><dd>TCP は1つの損失で全ストリームが待つ。QUIC はストリームごとに再送</dd></div>
+        <div><dt>Alt-Svc</dt><dd>HTTP/2 の応答で「HTTP/3 も使える」と知らせるヘッダ</dd></div>
+        <div><dt>ヘッダまで暗号化</dt><dd>中継機器から中身が見えない → 可視化・制御がしにくい</dd></div>
+      </dl>
       <h4>ネスペならこう問われる</h4>
       <ol class="ys-q">
         <li>HTTP/3 に対応したのに、社内の利用者だけ HTTP/2 で通信していた。FW の設定で考えられる原因は？
@@ -126,7 +137,6 @@
         <li>HTTP/2（TCP）と比べて、パケットが1個失われたときの影響が小さい理由は？
           <details><summary>解答例</summary><p>TCP では1つの損失で全ストリームが待たされる（HoL ブロッキング）が、QUIC はストリームごとに再送を管理するので、他のストリームは止まらない。</p></details></li>
       </ol>
-      <p class="ys-kw"><code>UDP/443</code><code>TLS 1.3 を内蔵</code><code>0-RTT</code><code>コネクション ID</code><code>HoL ブロッキング</code><code>Alt-Svc</code><code>ヘッダまで暗号化（中継機器から見えない）</code></p>
     </article>
 
     <!-- ================= 証明書 ================= -->
@@ -151,6 +161,15 @@
           <text x="20" y="241" class="s">DNS-01：TXT レコードで証明（ワイルドカード・社内サーバも可）</text>
         </svg>
       </figure>
+      <h4>知っておくべきキーワード</h4>
+      <dl class="ys-kws">
+        <div><dt>最長有効期間</dt><dd>398日 → 200日（2026/3〜）→ 100日（2027/3〜）→ 47日（2029/3〜）</dd></div>
+        <div><dt>ACME</dt><dd>証明書の申込み・ドメインの検証・発行・更新を自動化するプロトコル</dd></div>
+        <div><dt>HTTP-01</dt><dd>CA が 80 番で /.well-known/acme-challenge/ のファイルを取りに来る</dd></div>
+        <div><dt>DNS-01</dt><dd>_acme-challenge の TXT レコードで証明。ワイルドカード・社内サーバはこちら</dd></div>
+        <div><dt>TLS 終端</dt><dd>LB やプロキシで TLS をほどく構成。証明書はその機器に入れる</dd></div>
+        <div><dt>失効・OCSP</dt><dd>漏えいした証明書を無効にする仕組み。短期化は「失効に頼らない」方向</dd></div>
+      </dl>
       <h4>ネスペならこう問われる</h4>
       <ol class="ys-q">
         <li>有効期間の短縮に対して、運用面で必要な対策は？
@@ -162,12 +181,11 @@
         <li>負荷分散装置で TLS を終端している構成で、更新を忘れがちな機器は？
           <details><summary>解答例</summary><p>負荷分散装置（サーバではなく、TLS を終端している機器の証明書を更新する必要がある）。</p></details></li>
       </ol>
-      <p class="ys-kw"><code>ACME</code><code>HTTP-01（80番）</code><code>DNS-01（TXT）</code><code>ワイルドカード</code><code>TLS 終端</code><code>OCSP ステープリング</code><code>証明書の失効</code></p>
     </article>
 
     <!-- ================= ZTNA ================= -->
     <article class="ys-card" id="t-ztna">
-      <div class="ys-head"><span class="ys-rank s">◎</span><h3>VPN 装置の脆弱性 → ZTNA</h3><label class="ys-read"><input type="checkbox" data-id="ztna">読んだ</label></div>
+      <div class="ys-head"><span class="ys-rank s">◎</span><h3>VPN 装置の脆弱性 → ZTNA（Zero Trust Network Access）</h3><label class="ys-read"><input type="checkbox" data-id="ztna">読んだ</label></div>
       <p class="ys-one">VPN は「入れたら社内LAN全体」。ZTNA は「人・端末を毎回確認して、許可したアプリだけ」。</p>
       <p class="ys-why"><b>なぜ今</b>　警察庁の集計では、ランサムウェアの侵入経路の約8割が VPN 機器とリモートデスクトップ。2025年も国内の大手企業でランサムウェアによる業務停止が相次いだ。</p>
       <figure class="yd">
@@ -194,6 +212,15 @@
           <text x="238" y="222" class="s">コネクタは社内から外向きに接続</text>
         </svg>
       </figure>
+      <h4>知っておくべきキーワード</h4>
+      <dl class="ys-kws">
+        <div><dt>ゼロトラスト</dt><dd>社内・社外で区別せず、アクセスのたびに確かめる考え方</dd></div>
+        <div><dt>ZTNA</dt><dd>アプリ単位でつなぐリモートアクセス。VPN の置き換え</dd></div>
+        <div><dt>IdP・多要素認証</dt><dd>利用者の確認。パスワード＋スマホの承認など2つ以上の要素で</dd></div>
+        <div><dt>端末の状態確認</dt><dd>OS の更新・EDR の稼働・会社の管理端末か、を接続の条件にする</dd></div>
+        <div><dt>コネクタ</dt><dd>社内に置き、クラウドへ外向きに接続 → インターネットに公開するポートが要らない</dd></div>
+        <div><dt>最小権限・マイクロセグメンテーション</dt><dd>必要な相手とだけ通信させ、乗っ取られたときの広がりを抑える</dd></div>
+      </dl>
       <h4>ネスペならこう問われる</h4>
       <ol class="ys-q">
         <li>VPN 装置が攻撃の入口になりやすい理由は？
@@ -205,7 +232,6 @@
         <li>接続のたびに端末の何を確認する？
           <details><summary>解答例</summary><p>OS の更新プログラムの適用状況、EDR（ウイルス対策）が動いているか、会社が管理している端末か、など。条件を満たさない端末は接続させない。</p></details></li>
       </ol>
-      <p class="ys-kw"><code>ゼロトラスト</code><code>ZTNA</code><code>IdP・多要素認証</code><code>端末の状態確認</code><code>最小権限</code><code>マイクロセグメンテーション</code><code>EDR</code></p>
       <p class="ys-link">関連：R4午後Ⅰ問2・R7午後Ⅰ問3（SWG）、R4午後Ⅰ問3（SSO）</p>
     </article>
 
@@ -232,6 +258,16 @@
           <text x="10" y="184" class="s tn">注意：自社サーバの IP アドレスが知られていると、CDN を通さず直接狙われる</text>
         </svg>
       </figure>
+      <h4>知っておくべきキーワード</h4>
+      <dl class="ys-kws">
+        <div><dt>ボットネット</dt><dd>乗っ取られた IoT 機器などの集団。攻撃の発信元になる</dd></div>
+        <div><dt>スクラビング</dt><dd>通信を引き込んで攻撃だけを取り除く専門のセンター・サービス</dd></div>
+        <div><dt>CDN・WAF</dt><dd>手前で大量の通信を受け止め、オリジンサーバを隠す・守る</dd></div>
+        <div><dt>Anycast</dt><dd>同じアドレスを多拠点から広告し、攻撃を各拠点に分散させる</dd></div>
+        <div><dt>RTBH</dt><dd>攻撃対象の宛先への通信を上流で全部捨てる（そのサービスは止まる）</dd></div>
+        <div><dt>リフレクション（増幅）攻撃</dt><dd>送信元を標的に偽装し、DNS などの大きな応答を標的へ送らせる</dd></div>
+        <div><dt>SYN cookie</dt><dd>SYN Flood を受けても、接続待ちの表を使い切らないようにする工夫</dd></div>
+      </dl>
       <h4>ネスペならこう問われる</h4>
       <ol class="ys-q">
         <li>CDN を導入したのに、Web サーバへの攻撃が止まらなかった。考えられる原因と対策は？
@@ -243,7 +279,6 @@
         <li>RTBH（宛先のアドレスへの通信を上流で捨てる）の欠点は？
           <details><summary>解答例</summary><p>攻撃の通信だけでなく正常な通信も捨てるので、攻撃対象のサービスは止まってしまう（他のサービスは守れる）。</p></details></li>
       </ol>
-      <p class="ys-kw"><code>スクラビング</code><code>CDN・WAF</code><code>Anycast</code><code>RTBH</code><code>SYN cookie</code><code>レート制限</code><code>DNS 水責め攻撃</code><code>リフレクション（増幅）攻撃</code></p>
       <p class="ys-link">関連：R6午後Ⅰ問1（CDN）</p>
     </article>
 
@@ -263,6 +298,15 @@
           <rect x="95" y="156" width="250" height="32" rx="6" class="bo"/><text x="220" y="177" class="c">A と B を合成 → セッション鍵</text>
         </svg>
       </figure>
+      <h4>知っておくべきキーワード</h4>
+      <dl class="ys-kws">
+        <div><dt>ML-KEM</dt><dd>鍵交換に使う PQC（旧名 Kyber）。米国の標準 FIPS 203</dd></div>
+        <div><dt>ML-DSA</dt><dd>署名に使う PQC（旧名 Dilithium）。FIPS 204</dd></div>
+        <div><dt>ハイブリッド鍵交換</dt><dd>従来方式と PQC の両方で鍵を作り、合成して使う</dd></div>
+        <div><dt>X25519MLKEM768</dt><dd>主要なブラウザが TLS で使っているハイブリッド方式の名前</dd></div>
+        <div><dt>Harvest Now, Decrypt Later</dt><dd>今のうちに盗聴・保存し、量子計算機ができたら解読する</dd></div>
+        <div><dt>クリプトアジリティ</dt><dd>暗号方式を差し替えやすく作っておくこと</dd></div>
+      </dl>
       <h4>ネスペならこう問われる</h4>
       <ol class="ys-q">
         <li>量子コンピュータの実用化はまだ先なのに、今から対応する理由は？
@@ -272,7 +316,6 @@
         <li>PQC を有効にしたら、古いプロキシ経由の TLS 接続だけ失敗した。考えられる原因は？
           <details><summary>解答例</summary><p>ClientHello が大きくなって複数の TCP セグメントに分かれ、中継機器がそれを正しく処理できなかった。</p></details></li>
       </ol>
-      <p class="ys-kw"><code>ML-KEM（鍵カプセル化）</code><code>ML-DSA（署名）</code><code>ハイブリッド鍵交換</code><code>X25519MLKEM768</code><code>Harvest Now, Decrypt Later</code><code>クリプトアジリティ</code></p>
     </article>
 
     <!-- ================= ECH ================= -->
@@ -296,6 +339,15 @@
           <text x="120" y="191" class="ta">内側の SNI：本当の宛先（暗号化）</text>
         </svg>
       </figure>
+      <h4>知っておくべきキーワード</h4>
+      <dl class="ys-kws">
+        <div><dt>HTTPS レコード（SVCB）</dt><dd>対応プロトコル・IP アドレスのヒント・ECH の鍵を DNS で配るレコード</dd></div>
+        <div><dt>alpn=h3</dt><dd>HTTP/3 に対応しているという印</dd></div>
+        <div><dt>SNI</dt><dd>TLS の最初に平文で送る接続先のドメイン名。フィルタリングに使われてきた</dd></div>
+        <div><dt>ECH</dt><dd>ClientHello を暗号化。外から見えるのは CDN などの共通の名前だけ</dd></div>
+        <div><dt>DoH・DoT</dt><dd>DNS の問い合わせ自体を暗号化する（443番・853番）</dd></div>
+        <div><dt>TLS インスペクション</dt><dd>プロキシで TLS を復号して検査する。ECH への対策の一つ</dd></div>
+      </dl>
       <h4>ネスペならこう問われる</h4>
       <ol class="ys-q">
         <li>HTTPS レコードを使うと、初回の接続から HTTP/3 を使える理由は？
@@ -305,7 +357,6 @@
         <li>ECH の暗号化に使う公開鍵は、どうやってクライアントに配られる？
           <details><summary>解答例</summary><p>DNS の HTTPS レコード（ech パラメータ）で配られる。</p></details></li>
       </ol>
-      <p class="ys-kw"><code>SVCB／HTTPS レコード</code><code>alpn</code><code>ECH</code><code>SNI</code><code>DoH（443）</code><code>DoT（853）</code><code>TLS インスペクション</code></p>
     </article>
 
     <!-- ================= Wi-Fi 7 ================= -->
@@ -324,6 +375,16 @@
           <text x="220" y="164" class="c s">6GHz 帯は WPA3（または OWE）が必須</text>
         </svg>
       </figure>
+      <h4>知っておくべきキーワード</h4>
+      <dl class="ys-kws">
+        <div><dt>802.11be</dt><dd>Wi-Fi 7 の規格名（Wi-Fi 6／6E は 802.11ax）</dd></div>
+        <div><dt>MLO</dt><dd>2.4／5／6GHz 帯の複数のリンクを同時に使う</dd></div>
+        <div><dt>320MHz 幅</dt><dd>6GHz 帯で使える最大のチャネル幅（Wi-Fi 6 は 160MHz）</dd></div>
+        <div><dt>4096QAM</dt><dd>1回に12ビット送る変調（Wi-Fi 6 の 1024QAM は10ビット）</dd></div>
+        <div><dt>プリアンブルパンクチャリング</dt><dd>チャネルの一部に干渉があっても、そこだけ避けて広い幅を使う</dd></div>
+        <div><dt>WPA3・PMF</dt><dd>6GHz 帯では必須。WPA2 だけの端末は 6GHz 帯につながらない</dd></div>
+        <div><dt>Wi-Fi 8（802.11bn）</dt><dd>次の世代。速度より信頼性・低遅延を重視</dd></div>
+      </dl>
       <h4>ネスペならこう問われる</h4>
       <ol class="ys-q">
         <li>MLO によって可用性が上がる理由は？
@@ -333,7 +394,6 @@
         <li>WPA2 にしか対応していない端末が 6GHz 帯の SSID に接続できない理由は？
           <details><summary>解答例</summary><p>6GHz 帯では WPA3（または OWE）と PMF が必須だから。</p></details></li>
       </ol>
-      <p class="ys-kw"><code>802.11be</code><code>MLO</code><code>320MHz 幅</code><code>4096QAM</code><code>プリアンブルパンクチャリング</code><code>WPA3・PMF</code><code>Wi-Fi 8（802.11bn）</code></p>
       <p class="ys-link">関連：R5午後Ⅰ問3（高速無線LAN）</p>
     </article>
 
@@ -357,6 +417,15 @@
           <text x="220" y="196" class="c s">VPN は拠点側から張る（NAT トラバーサル：UDP/4500）</text>
         </svg>
       </figure>
+      <h4>知っておくべきキーワード</h4>
+      <dl class="ys-kws">
+        <div><dt>低軌道（LEO）衛星</dt><dd>高度が低く、遅延は数十 ms。地上の回線と経路がまったく違う</dd></div>
+        <div><dt>CGNAT</dt><dd>事業者側でまとめて変換する NAT。外から着信できない</dd></div>
+        <div><dt>NAT トラバーサル</dt><dd>IPsec の ESP を UDP/4500 に包んで NAT を越える</dd></div>
+        <div><dt>フローティングスタティック</dt><dd>優先度を低くしておく予備の静的経路。主経路が消えたときだけ使う</dd></div>
+        <div><dt>IP SLA・トラッキング</dt><dd>宛先への到達性を監視し、届かなくなったら経路を切り替える</dd></div>
+        <div><dt>BCP</dt><dd>災害時も業務を続けるための計画。経路の違う予備回線を用意する</dd></div>
+      </dl>
       <h4>ネスペならこう問われる</h4>
       <ol class="ys-q">
         <li>衛星回線では、本社から拠点へ VPN の接続を開始できない理由は？
@@ -366,7 +435,6 @@
         <li>主回線の障害時に、自動で衛星回線に切り替えるには？
           <details><summary>解答例</summary><p>主回線の先への到達性を監視し、断を検知したら主回線の経路を消して、優先度の低い静的経路（衛星回線向け）を使わせる。</p></details></li>
       </ol>
-      <p class="ys-kw"><code>低軌道（LEO）衛星</code><code>CGNAT</code><code>NAT トラバーサル（UDP/4500）</code><code>フローティングスタティック</code><code>IP SLA・トラッキング</code><code>BCP</code></p>
     </article>
 
     <!-- ================= パスキー ================= -->
@@ -384,6 +452,15 @@
           <line x1="142" y1="120" x2="298" y2="138" class="ln dash"/><text x="220" y="160" class="c tn">鍵が使われない ×</text>
         </svg>
       </figure>
+      <h4>知っておくべきキーワード</h4>
+      <dl class="ys-kws">
+        <div><dt>FIDO2</dt><dd>WebAuthn（ブラウザ⇔サイト）と CTAP（端末⇔認証器）からなる規格</dd></div>
+        <div><dt>公開鍵暗号</dt><dd>サイトには公開鍵だけを置き、秘密鍵は端末から出さない</dd></div>
+        <div><dt>オリジンの検証</dt><dd>鍵がドメインに紐づく → 偽サイトのドメインでは使われない</dd></div>
+        <div><dt>チャレンジレスポンス</dt><dd>サイトが毎回違う乱数を送り、端末が秘密鍵で署名して返す</dd></div>
+        <div><dt>リプレイ攻撃</dt><dd>過去の認証データの使い回し。毎回違うチャレンジで防ぐ</dd></div>
+        <div><dt>AitM フィッシング</dt><dd>偽サイトが本物へ中継してワンタイムパスワードまで奪う。パスキーなら防げる</dd></div>
+      </dl>
       <h4>ネスペならこう問われる</h4>
       <ol class="ys-q">
         <li>パスキーがフィッシングに強い理由は？
@@ -393,7 +470,6 @@
         <li>サーバが毎回違うチャレンジを送る理由は？
           <details><summary>解答例</summary><p>以前の署名を使い回すリプレイ攻撃を防ぐため。</p></details></li>
       </ol>
-      <p class="ys-kw"><code>FIDO2</code><code>WebAuthn</code><code>公開鍵暗号</code><code>オリジンの検証</code><code>チャレンジレスポンス</code><code>リプレイ攻撃</code><code>AitM フィッシング</code></p>
       <p class="ys-link">関連：R4午後Ⅰ問3（SSO）</p>
     </article>
 
@@ -414,6 +490,16 @@
           <line x1="130" y1="152" x2="178" y2="114" class="ln" marker-end="url(#mn)"/><text x="10" y="196" class="tn">Invalid → 経路を捨てる（ハイジャックを防ぐ）</text>
         </svg>
       </figure>
+      <h4>知っておくべきキーワード</h4>
+      <dl class="ys-kws">
+        <div><dt>RPKI</dt><dd>IP アドレス・AS 番号の持ち主を証明する仕組み</dd></div>
+        <div><dt>ROA</dt><dd>「このプレフィックスはこの AS が広告してよい」という証明（最大の長さも書く）</dd></div>
+        <div><dt>ROV</dt><dd>受け取った経路を ROA と照合すること</dd></div>
+        <div><dt>Valid／Invalid／NotFound</dt><dd>一致／矛盾（捨てる）／ROA が無い（通常は受け入れる）</dd></div>
+        <div><dt>経路ハイジャック</dt><dd>他人のアドレスを広告して通信を奪う</dd></div>
+        <div><dt>ルートリーク</dt><dd>広告してはいけない相手に経路を流してしまう</dd></div>
+        <div><dt>ASPA</dt><dd>上流の AS を登録し、経路の途中の偽装・漏えいを見つける</dd></div>
+      </dl>
       <h4>ネスペならこう問われる</h4>
       <ol class="ys-q">
         <li>ROA に登録する情報は？
@@ -423,7 +509,6 @@
         <li>攻撃者が正規の AS 番号を起点に見せかけて広告すると、ROV では防げない理由は？
           <details><summary>解答例</summary><p>ROV は起点の AS 番号しか検証せず、AS_PATH の途中の経路が正しいかは検証しないから。</p></details></li>
       </ol>
-      <p class="ys-kw"><code>RPKI</code><code>ROA</code><code>ROV</code><code>Valid／Invalid／NotFound</code><code>経路ハイジャック</code><code>ルートリーク</code><code>ASPA</code></p>
     </article>
 
     <!-- ================= AI DC ================= -->
@@ -445,6 +530,16 @@
           <text x="220" y="178" class="c s">③ CNP を返す → 送信側が速度を落とす（DCQCN）</text>
         </svg>
       </figure>
+      <h4>知っておくべきキーワード</h4>
+      <dl class="ys-kws">
+        <div><dt>RDMA</dt><dd>CPU を通さず、相手のメモリへ直接読み書きする</dd></div>
+        <div><dt>RoCEv2</dt><dd>RDMA を UDP/4791 で運ぶ → ルータを越えられる</dd></div>
+        <div><dt>PFC（802.1Qbb）</dt><dd>優先度ごとに一時停止フレームを送り、バッファあふれによる損失を防ぐ</dd></div>
+        <div><dt>ECN・CNP・DCQCN</dt><dd>スイッチが混雑の印 → 受信側が通知 → 送信側が速度を落とす</dd></div>
+        <div><dt>スパインリーフ・ECMP</dt><dd>どのサーバ間も同じホップ数。等コストの経路に分散する</dd></div>
+        <div><dt>エレファントフロー</dt><dd>大容量で長く続くフロー。ECMP の偏りの原因になる</dd></div>
+        <div><dt>Ultra Ethernet</dt><dd>AI 向けの新しいイーサネット仕様（2025年に 1.0）</dd></div>
+      </dl>
       <h4>ネスペならこう問われる</h4>
       <ol class="ys-q">
         <li>RoCEv2 が、ルータを越えて通信できる理由は？
@@ -454,9 +549,120 @@
         <li>PFC だけに頼らず ECN も使う理由は？
           <details><summary>解答例</summary><p>PFC の一時停止が上流へ連鎖すると、無関係な通信まで止まる（デッドロックや HoL ブロッキング）ため、ECN で早めに送信側の速度を落とす。</p></details></li>
       </ol>
-      <p class="ys-kw"><code>RDMA</code><code>RoCEv2（UDP/4791）</code><code>PFC（802.1Qbb）</code><code>ECN</code><code>DCQCN</code><code>スパインリーフ・ECMP</code><code>エレファントフロー</code><code>Ultra Ethernet</code></p>
       <p class="ys-link">関連：R6午後Ⅱ問1（データセンター・スパインリーフ）</p>
     </article>
+  </section>
+
+  <!-- ================= 略語・用語 ================= -->
+  <section id="abbr" class="fc-sec">
+    <h2>略語・用語の意味</h2>
+    <p class="muted">このページに出てくる略語を、元の英語と日本語の言い方で。読み方が決まっているものは（ ）に。</p>
+
+    <h3>QUIC・証明書</h3>
+    <table class="ys-abbr">
+      <tr><th>略語</th><th>元の英語</th><th>日本語でいうと</th></tr>
+      <tr><td>QUIC（クイック）</td><td>元は Quick UDP Internet Connections</td><td>UDP の上で動く通信プロトコル。標準化後は略語ではなく固有名詞扱い</td></tr>
+      <tr><td>RTT・0-RTT</td><td>Round Trip Time</td><td>往復の時間。0-RTT は往復を待たずに最初からデータを送ること</td></tr>
+      <tr><td>HoL ブロッキング</td><td>Head-of-Line blocking</td><td>先頭のパケットが詰まると、後ろも全部待たされること</td></tr>
+      <tr><td>Alt-Svc</td><td>Alternative Services</td><td>「別の方式（HTTP/3 など）でも接続できる」と知らせる HTTP ヘッダ</td></tr>
+      <tr><td>ACME（アクミー）</td><td>Automatic Certificate Management Environment</td><td>証明書の取得・更新を自動で行うプロトコル</td></tr>
+      <tr><td>CA／CA/B フォーラム</td><td>Certification Authority／CA/Browser Forum</td><td>認証局／認証局とブラウザ事業者が証明書のルールを決める団体</td></tr>
+      <tr><td>OCSP</td><td>Online Certificate Status Protocol</td><td>証明書が失効していないかをその場で問い合わせる仕組み</td></tr>
+    </table>
+
+    <h3>ゼロトラスト・DDoS</h3>
+    <table class="ys-abbr">
+      <tr><th>略語</th><th>元の英語</th><th>日本語でいうと</th></tr>
+      <tr><td>ZTNA</td><td>Zero Trust Network Access</td><td>ゼロトラストネットワークアクセス。人と端末を毎回確かめ、許可したアプリにだけつなぐ</td></tr>
+      <tr><td>IdP</td><td>Identity Provider</td><td>ID プロバイダ。利用者の認証を引き受けるサービス</td></tr>
+      <tr><td>MFA</td><td>Multi-Factor Authentication</td><td>多要素認証（知識・所持・生体のうち2つ以上）</td></tr>
+      <tr><td>EDR</td><td>Endpoint Detection and Response</td><td>端末の不審な動きを検知して対処するソフト</td></tr>
+      <tr><td>NAC</td><td>Network Access Control</td><td>検疫ネットワーク。条件を満たさない端末をつながせない</td></tr>
+      <tr><td>SASE（サシー）・SWG</td><td>Secure Access Service Edge・Secure Web Gateway</td><td>ネットワークとセキュリティ機能をまとめたクラウドサービス・Web アクセスを検査するプロキシ</td></tr>
+      <tr><td>DDoS</td><td>Distributed Denial of Service</td><td>分散型サービス妨害攻撃。多数の機器から一斉に通信を送る</td></tr>
+      <tr><td>CDN・WAF</td><td>Content Delivery Network・Web Application Firewall</td><td>コンテンツ配信網・Web アプリへの攻撃を防ぐ FW</td></tr>
+      <tr><td>Anycast（エニーキャスト）</td><td>—</td><td>同じ IP アドレスを複数の拠点から広告し、一番近い拠点につながる方式</td></tr>
+      <tr><td>RTBH</td><td>Remotely Triggered Black Hole</td><td>遠隔の指示で、特定の宛先への通信を上流で捨てる方式</td></tr>
+      <tr><td>スクラビング</td><td>scrubbing（洗浄）</td><td>通信を「洗って」攻撃だけを取り除くこと</td></tr>
+    </table>
+
+    <h3>耐量子計算機暗号</h3>
+    <table class="ys-abbr">
+      <tr><th>略語</th><th>元の英語</th><th>日本語でいうと</th></tr>
+      <tr><td>PQC</td><td>Post-Quantum Cryptography</td><td>耐量子計算機暗号（ポスト量子暗号）</td></tr>
+      <tr><td>NIST（ニスト）</td><td>National Institute of Standards and Technology</td><td>米国国立標準技術研究所。暗号の標準を決める</td></tr>
+      <tr><td>ML-KEM</td><td>Module-Lattice-Based Key-Encapsulation Mechanism</td><td>格子暗号を使った鍵カプセル化方式（旧名 Kyber）。鍵交換に使う</td></tr>
+      <tr><td>ML-DSA</td><td>Module-Lattice-Based Digital Signature Algorithm</td><td>格子暗号を使った署名方式（旧名 Dilithium）</td></tr>
+      <tr><td>X25519</td><td>—</td><td>楕円曲線を使った従来の鍵交換（ECDHE の一種）</td></tr>
+      <tr><td>HNDL</td><td>Harvest Now, Decrypt Later</td><td>今のうちに盗聴して保存し、将来解読する攻撃</td></tr>
+      <tr><td>クリプトアジリティ</td><td>crypto agility</td><td>暗号方式を素早く切り替えられるようにしておくこと</td></tr>
+    </table>
+
+    <h3>DNS・TLS</h3>
+    <table class="ys-abbr">
+      <tr><th>略語</th><th>元の英語</th><th>日本語でいうと</th></tr>
+      <tr><td>SVCB／HTTPS レコード</td><td>Service Binding</td><td>接続方法（対応プロトコル・鍵など）を DNS で知らせるレコード。HTTPS 用が HTTPS レコード</td></tr>
+      <tr><td>ALPN</td><td>Application-Layer Protocol Negotiation</td><td>TLS で使うアプリのプロトコル（h2・h3）を決める仕組み</td></tr>
+      <tr><td>SNI</td><td>Server Name Indication</td><td>TLS の最初に、接続したいドメイン名を平文で伝える欄</td></tr>
+      <tr><td>ECH</td><td>Encrypted Client Hello</td><td>ClientHello（SNI を含む）を暗号化する仕組み</td></tr>
+      <tr><td>DoH・DoT</td><td>DNS over HTTPS・DNS over TLS</td><td>DNS の問い合わせを暗号化する方式（443番・853番）</td></tr>
+      <tr><td>TLS インスペクション</td><td>—</td><td>プロキシなどで TLS を一度復号し、中身を検査すること</td></tr>
+    </table>
+
+    <h3>Wi-Fi 7</h3>
+    <table class="ys-abbr">
+      <tr><th>略語</th><th>元の英語</th><th>日本語でいうと</th></tr>
+      <tr><td>MLO</td><td>Multi-Link Operation</td><td>マルチリンクオペレーション。複数の周波数帯を同時に使う</td></tr>
+      <tr><td>MLD（無線LAN）</td><td>Multi-Link Device</td><td>MLO に対応した機器。<b>IPv6 の MLD（Multicast Listener Discovery）とは別物</b></td></tr>
+      <tr><td>4096QAM</td><td>Quadrature Amplitude Modulation</td><td>直交振幅変調。4096 通りで、1回に12ビット送る</td></tr>
+      <tr><td>プリアンブルパンクチャリング</td><td>preamble puncturing</td><td>チャネルの一部に干渉があっても、そこだけ除いて残りの幅を使う</td></tr>
+      <tr><td>WPA3・SAE</td><td>Wi-Fi Protected Access 3・Simultaneous Authentication of Equals</td><td>無線LAN の暗号化規格・WPA3 のパスワード認証方式</td></tr>
+      <tr><td>OWE</td><td>Opportunistic Wireless Encryption</td><td>拡張オープン（Enhanced Open）。パスワード無しの SSID でも暗号化する</td></tr>
+      <tr><td>PMF</td><td>Protected Management Frames</td><td>管理フレームの保護（802.11w）。切断フレームの偽造を防ぐ</td></tr>
+    </table>
+
+    <h3>衛星回線・パスキー</h3>
+    <table class="ys-abbr">
+      <tr><th>略語</th><th>元の英語</th><th>日本語でいうと</th></tr>
+      <tr><td>LEO</td><td>Low Earth Orbit</td><td>低軌道（高度 2,000km 以下）。静止衛星より遅延が小さい</td></tr>
+      <tr><td>CGNAT</td><td>Carrier-Grade NAT</td><td>キャリアグレード NAT。事業者側で多数の利用者をまとめて変換する NAT</td></tr>
+      <tr><td>NAT-T</td><td>NAT Traversal</td><td>NAT トラバーサル。IPsec の ESP を UDP/4500 に包んで NAT を通す</td></tr>
+      <tr><td>IP SLA・トラッキング</td><td>Service Level Agreement</td><td>宛先への到達性を定期的に確かめ、結果で経路を切り替える機能</td></tr>
+      <tr><td>フローティングスタティック</td><td>floating static route</td><td>優先度を低くしておく予備の静的経路。主経路が消えたときだけ使われる</td></tr>
+      <tr><td>BCP</td><td>Business Continuity Plan</td><td>事業継続計画</td></tr>
+      <tr><td>FIDO2（ファイドツー）</td><td>Fast IDentity Online</td><td>パスワードを使わない認証の規格。WebAuthn と CTAP からなる</td></tr>
+      <tr><td>WebAuthn</td><td>Web Authentication</td><td>ブラウザから公開鍵で認証するための API</td></tr>
+      <tr><td>AitM</td><td>Adversary-in-the-Middle</td><td>中間者攻撃。偽サイトが本物とのやり取りを中継してログイン情報を奪う</td></tr>
+    </table>
+
+    <h3>RPKI・AI データセンター</h3>
+    <table class="ys-abbr">
+      <tr><th>略語</th><th>元の英語</th><th>日本語でいうと</th></tr>
+      <tr><td>RPKI</td><td>Resource Public Key Infrastructure</td><td>リソース公開鍵基盤。IP アドレスや AS 番号の持ち主を証明する</td></tr>
+      <tr><td>ROA</td><td>Route Origin Authorization</td><td>経路の起点 AS を認可する証明（このアドレスはこの AS が広告してよい）</td></tr>
+      <tr><td>ROV</td><td>Route Origin Validation</td><td>経路の起点の検証。ROA と照らして Valid／Invalid／NotFound を判定</td></tr>
+      <tr><td>RTR</td><td>RPKI to Router</td><td>検証結果をルータに配るプロトコル</td></tr>
+      <tr><td>ASPA</td><td>Autonomous System Provider Authorization</td><td>上流のプロバイダ AS を登録し、経路の偽装やルートリークを見つける</td></tr>
+      <tr><td>ルートリーク</td><td>route leak</td><td>経路漏えい。広告してはいけない相手に経路を流してしまうこと</td></tr>
+      <tr><td>RDMA</td><td>Remote Direct Memory Access</td><td>CPU を通さず、相手のメモリへ直接データを読み書きする</td></tr>
+      <tr><td>RoCEv2（ロッキー）</td><td>RDMA over Converged Ethernet version 2</td><td>RDMA を UDP/IP（4791番）で運ぶ方式</td></tr>
+      <tr><td>PFC</td><td>Priority-based Flow Control</td><td>優先度別フロー制御（802.1Qbb）。優先度ごとに一時停止を送る</td></tr>
+      <tr><td>ECN・CNP</td><td>Explicit Congestion Notification・Congestion Notification Packet</td><td>明示的輻輳通知（IP ヘッダの印）・受信側が送信側へ返す輻輳通知</td></tr>
+      <tr><td>DCQCN</td><td>Data Center Quantized Congestion Notification</td><td>ECN と CNP で送信速度を下げる輻輳制御</td></tr>
+      <tr><td>ECMP</td><td>Equal-Cost Multi-Path</td><td>等コストマルチパス。コストが同じ経路に分散する</td></tr>
+      <tr><td>エレファントフロー</td><td>elephant flow</td><td>大容量で長く続くフロー（象）。短いフローはマウスフロー</td></tr>
+      <tr><td>UEC</td><td>Ultra Ethernet Consortium</td><td>AI・HPC 向けのイーサネット規格（Ultra Ethernet）を作る団体</td></tr>
+    </table>
+
+    <h3>名前だけ知っておくもの</h3>
+    <table class="ys-abbr">
+      <tr><th>略語</th><th>元の英語</th><th>日本語でいうと</th></tr>
+      <tr><td>DMARC（ディーマーク）</td><td>Domain-based Message Authentication, Reporting and Conformance</td><td>SPF・DKIM の結果をもとに、なりすましメールの扱いを宣言する仕組み</td></tr>
+      <tr><td>SPF・DKIM</td><td>Sender Policy Framework・DomainKeys Identified Mail</td><td>送信元 IP で確かめる送信ドメイン認証・電子署名で確かめる送信ドメイン認証</td></tr>
+      <tr><td>SRv6</td><td>Segment Routing over IPv6</td><td>IPv6 ヘッダに経路の指示を書いて転送するセグメントルーティング</td></tr>
+      <tr><td>IOWN APN</td><td>Innovative Optical and Wireless Network／All-Photonics Network</td><td>NTT の構想（アイオン）と、その全光ネットワーク</td></tr>
+      <tr><td>MACsec</td><td>MAC Security（IEEE 802.1AE）</td><td>イーサネットのフレームを隣の機器との間で暗号化する</td></tr>
+    </table>
   </section>
 
   <!-- ================= 名前だけ ================= -->
