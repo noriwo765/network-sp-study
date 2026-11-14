@@ -13,6 +13,9 @@ server/progress.json
 # ワーク演習のメモ・マーカー（問題×周ごと。個人データ）
 server/notes.json
 server/notes.json.tmp
+# 苦手ジャンル復習の解答・採点（演習の履歴とは別。個人データ）
+server/review.json
+server/review.json.tmp
 # 配点予想（server/haiten.json）は消えないよう Git 管理する（.gitignore しない）
 
 # 解答記録（採点のたびに自動生成される個人の解答・採点。README だけ追跡）

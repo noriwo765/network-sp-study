@@ -122,6 +122,70 @@
   })();
   const notesReady = Notes.start();
 
+  // ---- 苦手ジャンル復習の記録（演習の履歴とは別保存：別キー・別ファイル server/review.json） ----
+  // 形は演習の履歴と同じ { '<問題id>:<設問id>': { answer, attempts } } で、合わせ方も同じ mergeHistory
+  // （採点は消さずに足す）。演習の得点率・周回・想定合格率・_学習状況.md には入れない。
+  const Review = (() => {
+    const KEY = 'nespe-work-review-v1', AT_KEY = 'nespe-work-review-at';
+    let data = {}, online = false, timer = null;
+    try { data = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (_) {}
+    const localAt = () => { try { return Number(localStorage.getItem(AT_KEY)) || 0; } catch (_) { return 0; } };
+    const keep = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); localStorage.setItem(AT_KEY, String(Date.now())); } catch (_) {} };
+    const payload = () => ({ app: 'nespe-work-review', savedAt: new Date(localAt() || Date.now()).toISOString(), data });
+    const merge = (base, top) => WorkMerge.mergeHistory(base, top).data;
+    // サーバはファイルの内容と合わせて保存する。こちらに無い採点がファイルにあったら読み直す
+    const put = () => fetch('/review', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload()) })
+      .then(r => r.ok ? r.json() : null).then(j => { if (j && j.added > 0) pull(); return !!j; }).catch(() => false);
+    async function pull() {
+      try { const r = await fetch('/review', { cache: 'no-store' }); if (!r.ok) return; const j = await r.json(); if (j && j.data) { data = merge(j.data, data); keep(); } } catch (_) {}
+    }
+    const save = () => { keep(); if (online) { clearTimeout(timer); timer = setTimeout(put, 800); } };
+    return {
+      KEY,
+      q(key) { return data[key] || { answer: '', attempts: [] }; },
+      attempts(pid, qid) { return this.q(`${pid}:${qid}`).attempts || []; },
+      setDraft(key, answer) { const q = this.q(key); q.answer = answer; data[key] = q; save(); },
+      addAttempt(key, a) { const q = this.q(key); q.attempts = q.attempts || []; q.attempts.push(a); data[key] = q; save(); },
+      raw: () => data,
+      mergeIn(other) { data = merge(data, other); save(); },
+      reloadLocal() { try { data = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (_) {} },
+      // 起動時：サーバのファイルと合わせる（下書きは保存時刻の新しい方。採点はどちらのものも残す）
+      async start() {
+        let j = null;
+        try { const r = await fetch('/review', { cache: 'no-store' }); if (!r.ok) return; j = await r.json(); } catch (_) { return; }
+        online = true;
+        const file = (j && j.data) || {}, fileAt = Date.parse(j && j.savedAt) || 0;
+        const merged = fileAt > localAt() ? merge(data, file) : merge(file, data);
+        const changed = JSON.stringify(merged) !== JSON.stringify(data);
+        data = merged;
+        if (changed) keep();
+        if (JSON.stringify(merged) !== JSON.stringify(file)) return put(); // ファイルに無い分があるときだけ書く
+      },
+      flush() { if (!online) return Promise.resolve(false); clearTimeout(timer); return put(); },
+      beacon() { if (!online) return; try { navigator.sendBeacon('/review', new Blob([JSON.stringify(payload())], { type: 'application/json' })); } catch (_) {} },
+    };
+  })();
+  const reviewReady = Review.start();
+
+  // ---- 練習モード（模範解答を見ながら解く。実績を残さない） ----------------
+  // 入力はこの端末の別キーにだけ保存（演習の下書き・履歴・周回・解答記録には一切書かない）。
+  // AI 採点の結果はこの画面を開いている間だけ表示し、どこにも保存しない。
+  const Practice = (() => {
+    const KEY = 'nespe-work-practice-v1';
+    let drafts = {};
+    try { drafts = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (_) { drafts = {}; }
+    let runs = {}; // 採点結果（メモリのみ）
+    const keep = () => { try { localStorage.setItem(KEY, JSON.stringify(drafts)); } catch (_) {} };
+    return {
+      q: k => ({ answer: drafts[k] || '', attempts: runs[k] || [] }),
+      setDraft(k, v) { if (v) drafts[k] = v; else delete drafts[k]; keep(); },
+      addAttempt(k, a) { (runs[k] = runs[k] || []).push(a); },
+      shown: (pid, qid) => runs[`${pid}:${qid}`] || [],
+      clear(pid) { for (const k of Object.keys(drafts)) if (k.startsWith(pid + ':')) delete drafts[k]; for (const k of Object.keys(runs)) if (k.startsWith(pid + ':')) delete runs[k]; keep(); },
+      has: pid => Object.keys(drafts).some(k => k.startsWith(pid + ':')),
+    };
+  })();
+
   // ---- 配点予想（履歴とは完全に別保存：別キー・別ファイル。履歴の上書きに巻き込まれない） ----
   // localStorage キー 'nespe-work-haiten-v1' と サーバの /haiten（server/haiten.json）に保存。
   // rev（最終編集時刻）を持ち、起動時はファイルの rev が新しければファイルの値を採用、そうでなければ
@@ -223,16 +287,17 @@
           <span class="tag">${esc(p.yearLabel)}　${esc(p.sectionLabel)}　問${p.no}</span>
           <div class="ttl">${esc(p.title)}${Store.round(p.id).n > 1 ? `<span class="round-tag">第${Store.round(p.id).n}周</span>` : ''}${done ? `<span class="done">解答済 ${done}/${total}</span>` : ''}</div>
         </button>
-        ${hasProgress(p) ? `<span class="pick-acts">
-          <button class="btn small primary" data-act="continue" data-id="${p.id}" title="前回の続きから解く">続きから</button>
-          <button class="btn small" data-act="reset" data-id="${p.id}" title="画面の解答・採点結果・時間をリセットして解く（採点結果は履歴に残る）">最初から${Store.roundGraded(p) ? `（第${Store.round(p.id).n + 1}周）` : ''}</button>
-        </span>` : ''}
+        <span class="pick-acts">
+          ${hasProgress(p) ? `<button class="btn small primary" data-act="continue" data-id="${p.id}" title="前回の続きから解く">続きから</button>
+          <button class="btn small" data-act="reset" data-id="${p.id}" title="画面の解答・採点結果・時間をリセットして解く（採点結果は履歴に残る）">最初から${Store.roundGraded(p) ? `（第${Store.round(p.id).n + 1}周）` : ''}</button>` : ''}
+          <button class="btn small practice-btn" data-act="practice" data-id="${p.id}" title="模範解答を見ながら解く練習モード（採点はできるが、履歴・周回・得点率・解答記録には残らない）">練習${Practice.has(p.id) ? '（続き）' : ''}</button>
+        </span>
         ${hasData ? `<button class="hist-btn" data-id="${p.id}" title="過去の解答・採点を見る">履歴</button>` : ''}
       </div>`;
     }).join('') : `<p class="muted">該当する問題がありません。</p>`;
     $('#prob-list').onclick = e => {
       const hb = e.target.closest('.hist-btn'); if (hb) return void openHistory(hb.dataset.id);
-      const ab = e.target.closest('[data-act]'); if (ab) return void openProblem(ab.dataset.id, ab.dataset.act);
+      const ab = e.target.closest('[data-act]'); if (ab) return void (ab.dataset.act === 'practice' ? openPractice(ab.dataset.id) : openProblem(ab.dataset.id, ab.dataset.act));
       const ob = e.target.closest('.prob-open'); if (ob) openProblem(ob.dataset.id);
     };
   }
@@ -264,8 +329,10 @@
   }
 
   // ---- タイマー ------------------------------------------------------
+  // 復習（start に { review: true }）のときは演習のタイマー（__timer）に書かず、0 から数える
   const Timer = (() => {
-    let pid = null, sec = 0, limit = 0, running = false, iv = null;
+    let pid = null, sec = 0, limit = 0, running = false, iv = null, persist = true;
+    const keep = () => { if (persist && pid) Store.setTimer(pid, sec); };
     function paint() {
       $('#t-clock').textContent = fmt(sec);
       const t = $('#timer');
@@ -273,14 +340,16 @@
       t.classList.toggle('paused', !running);
       $('#t-toggle').textContent = running ? '一時停止' : '再開';
     }
-    function tick() { sec++; if (sec % 5 === 0) Store.setTimer(pid, sec); paint(); }
+    function tick() { sec++; if (sec % 5 === 0) keep(); paint(); }
     return {
-      start(p) { this.stop(); pid = p.id; limit = limitSec(p); sec = Store.timer(pid); running = true;
-        $('#t-limit').textContent = `/ 目安 ${fmt(limit)}`; paint(); iv = setInterval(tick, 1000); },
-      toggle() { running = !running; if (running) iv = setInterval(tick, 1000); else { clearInterval(iv); Store.setTimer(pid, sec); } paint(); },
-      pause() { if (running) { running = false; clearInterval(iv); Store.setTimer(pid, sec); paint(); } },
-      reset() { sec = 0; Store.setTimer(pid, sec); paint(); },
-      stop() { if (iv) clearInterval(iv); iv = null; if (pid) Store.setTimer(pid, sec); pid = null; }, // 止めたら問題を手放す（後で古い時間を書き戻さない）
+      // opt.review：演習の時間に書かず 0 から数える／opt.practice：数えない（練習モード）
+      start(p, opt) { this.stop(); pid = p.id; persist = !(opt && (opt.review || opt.practice)); limit = persist ? limitSec(p) : 0; sec = persist ? Store.timer(pid) : 0;
+        $('#t-limit').textContent = persist ? `/ 目安 ${fmt(limit)}` : opt.practice ? '（練習）' : '（復習）';
+        running = !(opt && opt.practice); paint(); if (running) iv = setInterval(tick, 1000); },
+      toggle() { running = !running; if (running) iv = setInterval(tick, 1000); else { clearInterval(iv); keep(); } paint(); },
+      pause() { if (running) { running = false; clearInterval(iv); keep(); paint(); } },
+      reset() { sec = 0; keep(); paint(); },
+      stop() { if (iv) clearInterval(iv); iv = null; keep(); pid = null; }, // 止めたら問題を手放す（後で古い時間を書き戻さない）
       get sec() { return sec; },
     };
   })();
@@ -294,7 +363,15 @@
   }
 
   // ---- 演習表示 ------------------------------------------------------
-  let current = null, view = 'image', zoom = 100;
+  let current = null, currentQs = [], view = 'image', zoom = 100;
+
+  // ---- 解く画面の保存先：演習（Store・この周の採点を出す）／復習（Review・この復習を始めてからの採点を出す） ----
+  let review = null; // 復習中：{ genre, groups: [{ pid, qids }], idx, since }
+  const MainSink = { q: k => Store.q(k), setDraft: (k, v) => Store.setDraft(k, v), addAttempt: (k, a) => Store.addAttempt(k, a), shown: (pid, qid) => Store.roundAttempts(pid, qid) };
+  const ReviewSink = { q: k => Review.q(k), setDraft: (k, v) => Review.setDraft(k, v), addAttempt: (k, a) => Review.addAttempt(k, a),
+    shown: (pid, qid) => Review.attempts(pid, qid).filter(a => (a.at || 0) >= (review ? review.since : Infinity)) };
+  let practice = false; // 練習モード（記録なし）
+  const sink = () => (review ? ReviewSink : practice ? Practice : MainSink);
 
   // mode：省略＝途中なら「続きから／リセット」を聞く、'continue'＝続きから、'reset'＝リセットして解く
   function openProblem(id, mode) {
@@ -304,9 +381,26 @@
       const drafts = p.questions.filter(q => !Store.roundAttempts(p.id, q.id).length && (Store.q(`${p.id}:${q.id}`).answer || '').trim()).length;
       if (drafts && !confirm(`未採点の下書きが ${drafts} 設問あります。リセットすると下書きは消えます（採点結果は履歴に残ります）。\nよろしいですか？`)) return;
     }
-    current = p;
+    review = null; practice = false;
+    layoutSolve(p, p.questions);
+    if (mode === 'reset') startNewRound(p);
+    else if (mode !== 'continue' && hasProgress(p)) askRound(p); // 解答済み・途中の問題は「続きから／リセット」を選んでから始める
+    else Timer.start(p);
+  }
+  // 練習モードで開く（模範解答を見ながら解く。採点はできるが、履歴・周回・解答記録には残さない）
+  function openPractice(id) {
+    const p = PROBLEMS.find(x => x.id === id); if (!p) return;
+    review = null; practice = true;
+    layoutSolve(p, p.questions);
+    Timer.start(p, { practice: true });
+  }
+  // 解く画面を組み立てる（演習は全設問、復習は対象の設問だけ）
+  function layoutSolve(p, qs) {
+    current = p; currentQs = qs;
     document.body.classList.add('solving');
-    $('#pick').hidden = true;
+    document.body.classList.toggle('reviewing', !!review);
+    document.body.classList.toggle('practicing', practice);
+    $('#pick').hidden = true; $('#review').hidden = true;
     const solve = $('#solve'); solve.hidden = false; solve.classList.add('on');
     setSolveTitle(p);
     $('#s-overview').textContent = p.overview ? `出題趣旨：${p.overview}` : '';
@@ -315,20 +409,43 @@
     zoom = 100;
     renderExam();
     renderViewSeg();
-    $('#s-questions').innerHTML = p.questions.map(q => renderQuestion(p, q)).join('');
+    $('#s-questions').innerHTML = qs.map(q => renderQuestion(p, q)).join('');
     bindQuestions(p);
     $('#grade-summary').innerHTML = '';
-    $('#grade-all-note').textContent = `全${p.questions.length}問。書けた分だけでも提出できます`;
+    $('#grade-all-note').textContent = review ? `復習 ${qs.length}設問（${review.genre}）。書けた分だけでも採点できます`
+      : practice ? '練習モード：採点しても履歴・得点率・解答記録には残りません（入力はこの端末に別保存）'
+      : `全${qs.length}問。書けた分だけでも提出できます`;
+    $('#grade-all').textContent = review ? 'まとめて採点' : practice ? '採点する（記録なし）' : '解答終了（まとめて採点）';
+    $('#to-list').textContent = review ? '← 復習一覧' : '← 一覧';
+    const nx = $('#rv-next');
+    nx.hidden = !(review && review.idx < review.groups.length - 1);
+    if (review) nx.textContent = `次の問題へ →（${review.idx + 2}/${review.groups.length}）`;
     applySwap();
     $('#exam-body').scrollTop = 0; $('#answer-pane').scrollTop = 0;
     window.scrollTo(0, 0);
     bindTools(p);
-    if (mode === 'reset') startNewRound(p);
-    else if (mode !== 'continue' && hasProgress(p)) askRound(p); // 解答済み・途中の問題は「続きから／リセット」を選んでから始める
-    else Timer.start(p);
   }
-  // メモ（CBT ツール）をこの問題・この周に結び付ける。周が変わると別の項目（＝白紙）になる
+  // メモ（CBT ツール）をこの問題・この周に結び付ける。周が変わると別の項目（＝白紙）になる。
+  // 復習のメモは問題ごとに1つ（キー 'review:<問題id>'。演習の周のメモとは別）
   function bindTools(p) {
+    if (review) {
+      const key = `review:${p.id}`;
+      window.WorkTools.setContext({
+        key, title: `${p.yearLabel} ${p.sectionLabel} 問${p.no}（復習）`,
+        load: () => Notes.get(key),
+        onChange: v => Notes.set(key, { pid: p.id, roundN: 0, roundAt: 0, review: true, text: v.text, marks: v.marks }),
+      });
+      return;
+    }
+    if (practice) { // 練習のメモも問題ごとに1つ（キー 'practice:<問題id>'。履歴・解答記録には出ない）
+      const key = `practice:${p.id}`;
+      window.WorkTools.setContext({
+        key, title: `${p.yearLabel} ${p.sectionLabel} 問${p.no}（練習）`,
+        load: () => Notes.get(key),
+        onChange: v => Notes.set(key, { pid: p.id, roundN: 0, roundAt: 0, practice: true, text: v.text, marks: v.marks }),
+      });
+      return;
+    }
     const r = Store.round(p.id), key = Notes.key(p.id, r.at);
     window.WorkTools.setContext({
       key, title: `${p.yearLabel} ${p.sectionLabel} 問${p.no}${r.n > 1 ? `（第${r.n}周）` : ''}`,
@@ -339,6 +456,8 @@
   // 起動直後にサーバのメモを読み終えたら、開いている問題のメモを最新にする
   notesReady.then(() => { if (current) bindTools(current); });
   function setSolveTitle(p) {
+    if (review) { $('#s-title').textContent = `復習：${review.genre}｜${p.yearLabel} ${p.sectionLabel} 問${p.no}　${p.title}`; return; }
+    if (practice) { $('#s-title').textContent = `練習（記録なし）｜${p.yearLabel} ${p.sectionLabel} 問${p.no}　${p.title}`; return; }
     const n = Store.round(p.id).n;
     $('#s-title').textContent = `${p.yearLabel} ${p.sectionLabel} 問${p.no}　${p.title}${n > 1 ? `（第${n}周）` : ''}`;
   }
@@ -419,7 +538,7 @@
 
   function renderQuestion(p, q) {
     const key = `${p.id}:${q.id}`;
-    const saved = Store.q(key);
+    const saved = sink().q(key);
     const shape = answerShape(q);
     const inp = (attr, val) => `<input type="text" class="fld-input" ${attr} value="${esc(val)}" placeholder="解答">`;
     const lims = fieldLimits(q, shape.fields); // 欄ごとの字数上限（0＝なし）
@@ -450,6 +569,7 @@
       ${q.group ? `<p class="group">${esc(q.group)}</p>` : ''}
       <p class="prompt"><span class="qid">${esc(q.id)}</span>${esc(q.prompt)}${q.charLimit ? `<span class="limit">（${esc(q.charLimit)}）</span>` : ''}${Haiten.haiten(p.id, q.id) ? `<span class="haiten-tag">配点 ${Haiten.haiten(p.id, q.id)}点</span>` : ''}</p>
       ${inputArea}${legacy}
+      ${review ? reviewPrevHtml(p, q) : ''}
       <div class="count"></div>
       <div class="row">
         <button class="btn small toggle-model">模範解答を見る</button>
@@ -490,13 +610,13 @@
         }
       };
       updateCount();
-      const onInput = () => { updateCount(); Store.setDraft(key, cardAnswer(card)); };
+      const onInput = () => { updateCount(); sink().setDraft(key, cardAnswer(card)); };
       inputs.forEach(el => el && el.addEventListener('input', onInput));
       card.querySelector('.toggle-model').addEventListener('click', () => {
         const box = card.querySelector('.model'); box.hidden = !box.hidden;
         box.querySelector('.model-box').textContent = q.answer || '(なし)';
       });
-      if (Store.roundAttempts(p.id, q.id).length) showResult(card, key);
+      if (sink().shown(p.id, q.id).length) showResult(card, key);
     });
   }
 
@@ -521,7 +641,7 @@
       if (!r.ok) { out.innerHTML = `<p class="err">採点エラー：${esc(j.error || r.status)}${j.detail ? '<br>' + esc(j.detail) : ''}</p>`; return null; }
       // 配点予想があれば満点を固定し、点数をその範囲に収める
       if (scoreMax) { j.scoreMax = scoreMax; if (typeof j.score === 'number') j.score = Math.max(0, Math.min(scoreMax, j.score)); }
-      Store.addAttempt(key, { at: Date.now(), elapsed: Timer.sec, answer, result: j });
+      sink().addAttempt(key, { at: Date.now(), elapsed: Timer.sec, answer, result: j });
       showResult(card, key);
       return j; // 記録ファイルの保存は呼び出し側（1採点＝1ファイル）で行う
     } catch (e) {
@@ -536,14 +656,20 @@
     if (!serverOk) { $('#grade-summary').innerHTML = `<div class="banner warn">中継サーバが利用できません。<code>node server/relay.js</code> を起動してください。</div>`; return; }
     const cards = {};
     $('#s-questions').querySelectorAll('.setq').forEach(c => { cards[c.dataset.qid] = c; });
-    const items = p.questions.map(q => {
+    const items = currentQs.map(q => {
       const card = cards[q.id];
       return { q, card, key: `${p.id}:${q.id}`, answer: cardAnswer(card) };
     });
-    const answered = items.filter(x => x.answer);
-    const empties = items.length - answered.length;
-    if (!answered.length) { $('#grade-summary').innerHTML = `<p class="err">解答がまだ入力されていません。</p>`; return; }
-    if (!confirm(`解答を終了して、入力済みの ${answered.length} 問をまとめて採点します。${empties ? `（未入力 ${empties} 問は採点されません）` : ''}\nよろしいですか？`)) return;
+    const filled = items.filter(x => x.answer);
+    const empties = items.length - filled.length;
+    if (!filled.length) { $('#grade-summary').innerHTML = `<p class="err">解答がまだ入力されていません。</p>`; return; }
+    // 再採点は書き直した設問だけ（この画面に出ている最新の採点と解答が同じ設問は、前回の採点のまま）
+    const sameAsLast = x => { const s = sink().shown(p.id, x.q.id).filter(a => a.result), l = s[s.length - 1]; return !!l && (l.answer || '').trim() === x.answer.trim(); };
+    const answered = filled.filter(x => !sameAsLast(x));
+    const kept = filled.length - answered.length;
+    if (!answered.length) { $('#grade-summary').innerHTML = `<p class="muted">前回の採点から書き直した設問はありません（${kept}問は前回の採点のまま）。</p>`; return; }
+    const what = kept ? `書き直した ${answered.length} 問を採点します（変更なし ${kept} 問は前回の採点のまま）。` : `入力済みの ${answered.length} 問をまとめて採点します。`;
+    if (!confirm(`${practice ? '' : '解答を終了して、'}${what}${empties ? `（未入力 ${empties} 問は採点されません）` : ''}${practice ? '\n練習モードなので記録には残りません。' : ''}\nよろしいですか？`)) return;
     Timer.pause();
     const btn = $('#grade-all'); btn.disabled = true;
     const sum = $('#grade-summary');
@@ -560,12 +686,42 @@
       }
     };
     await Promise.all([worker(), worker(), worker()]); // 最大3並列
-    renderBatchSummary(results, empties, p);
     btn.disabled = false;
+    if (practice) { renderPracticeBatch(results, empties, kept, p); return; } // 練習：記録しない
+    if (review) { // 復習：結果まとめと記録（解答記録/_復習/）は演習とは別
+      renderReviewBatch(results, empties, p, currentQs, kept);
+      if (results.some(Boolean)) saveReviewRecord(p, currentQs);
+      return;
+    }
+    renderBatchSummary(results, empties, p, kept);
     if (results.some(Boolean)) saveRecord(p); // まとめて採点：全問終わってから記録を1ファイルだけ保存
   }
   // 解答終了（まとめて採点）後の結果まとめ：この周の合計点・前回比・内訳
-  function renderBatchSummary(results, empties, p) {
+  // 練習モードの採点結果：画面に出すだけ（どこにも保存しない）
+  function renderPracticeBatch(results, empties, kept, p) {
+    let score = 0, max = 0, graded = 0;
+    for (const q of p.questions) {
+      const at = Practice.shown(p.id, q.id), r = at.length ? at[at.length - 1].result : null;
+      const s = convScore(p, q, r);
+      max += s ? s.max : (Haiten.haiten(p.id, q.id) || 10);
+      if (s) { score += s.v; graded++; }
+    }
+    const n1 = v => (Math.round(v * 10) / 10).toString();
+    const pct = max ? Math.round(score / max * 100) : 0;
+    const ok = results.filter(r => r && r.verdict === '正解').length, part = results.filter(r => r && r.verdict === '部分正解').length;
+    const ng = results.filter(r => r && r.verdict === '不正解').length, failed = results.filter(r => !r).length;
+    $('#grade-summary').innerHTML = `<div class="batch-sum practice-sum">
+      <div class="batch-title">練習の採点結果（記録なし）</div>
+      <div class="batch-score"><b>${n1(score)}</b> / ${n1(max)}点　${bar(pct)} ${pct}%　<span class="muted">採点済み ${graded}/${p.questions.length}問</span></div>
+      <div class="batch-breakdown">
+        <span class="verdict ok">正解 ${ok}</span><span class="verdict part">部分正解 ${part}</span><span class="verdict ng">不正解 ${ng}</span>
+        ${failed ? `<span class="muted">採点失敗 ${failed}</span>` : ''}${kept ? `<span class="muted">変更なし ${kept}（前回の採点のまま）</span>` : ''}${empties ? `<span class="muted">未入力 ${empties}</span>` : ''}
+      </div>
+      <p class="muted">履歴・周回・得点率・解答記録には残っていません。この画面を閉じると採点結果は消えます（入力した解答は残ります）。</p>
+    </div>`;
+    $('#grade-summary').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function renderBatchSummary(results, empties, p, kept) {
     const ok = results.filter(r => r && r.verdict === '正解').length;
     const part = results.filter(r => r && r.verdict === '部分正解').length;
     const ng = results.filter(r => r && r.verdict === '不正解').length;
@@ -596,6 +752,7 @@
         <span class="verdict part">部分正解 ${part}</span>
         <span class="verdict ng">不正解 ${ng}</span>
         ${failed ? `<span class="muted">採点失敗 ${failed}</span>` : ''}
+        ${kept ? `<span class="muted">変更なし ${kept}（前回の採点のまま）</span>` : ''}
         ${empties ? `<span class="muted">未入力 ${empties}（0点）</span>` : ''}
         <span class="muted">所要 ${fmt(Timer.sec)}</span>
       </div>
@@ -625,7 +782,7 @@
   // 採点のたびに「回」として別々に保存し、各回の全内容を見返せる
   function showResult(card, key) {
     const i = key.indexOf(':');
-    const attempts = Store.roundAttempts(key.slice(0, i), key.slice(i + 1)); // この周の採点だけを出す
+    const attempts = sink().shown(key.slice(0, i), key.slice(i + 1)); // 演習＝この周の採点だけ／復習＝この復習の採点だけ
     if (!attempts.length) return;
     const out = card.querySelector('.grade-result');
     const n = attempts.length;
@@ -1058,6 +1215,187 @@
   }
   $('#progress-to-list').addEventListener('click', e => { e.preventDefault(); $('#progress').hidden = true; $('#pick').hidden = false; renderPicker(); window.scrollTo(0, 0); });
 
+  // ---- 苦手ジャンル復習 ------------------------------------------------
+  // 対象＝演習の最新の採点が満点でない設問、克服＝復習の最新の採点が満点（判定は js/work-review.js）。
+  // 分野は演習の得点率の低い順。解くときは「分野 → 問題ごと」に、実問題の横へ対象の設問だけを出す。
+  // 記録は演習とは別（Review＝server/review.json、解答記録/_復習/）。演習の得点率・想定合格率は変わらない。
+  let rvShowCleared = false, rvOpenGenre = null;
+  const probById = id => PROBLEMS.find(x => x.id === id);
+  // 採点結果を、配点予想の満点に換算して「3/5点」の形にする
+  function convScore(p, q, r) {
+    if (!r || typeof r.score !== 'number') return null;
+    const m0 = typeof r.scoreMax === 'number' && r.scoreMax > 0 ? r.scoreMax : 10, hm = Haiten.haiten(p.id, q.id);
+    return { v: hm ? r.score / m0 * hm : r.score, max: hm || m0 };
+  }
+  const scoreText = (p, q, r) => { const s = convScore(p, q, r); return s ? `${r1(s.v)}/${r1(s.max)}点` : '—'; };
+  function reviewData() {
+    const targets = WorkReview.reviewTargets(PROBLEMS, window.WORK_GENRE,
+      (pid, qid) => Store.q(`${pid}:${qid}`).attempts, (pid, qid) => Review.attempts(pid, qid));
+    const pct = new Map(genreStats().map(x => [x.g, x.pct]));
+    // 残りのある分野を先に、その中は演習の得点率の低い順
+    const genres = WorkReview.byGenre(targets, window.WORK_GENRES).map(g => ({ ...g, pct: pct.get(g.genre) }))
+      .sort((a, b) => ((a.cleared === a.total) - (b.cleared === b.total)) || ((a.pct ?? 101) - (b.pct ?? 101)));
+    return { targets, genres };
+  }
+  function openReviewList() {
+    review = null;
+    $('#pick').hidden = true; $('#review').hidden = false;
+    $('#rv-show-cleared').checked = rvShowCleared;
+    renderReview(); window.scrollTo(0, 0);
+  }
+  function renderReview() {
+    const { targets, genres } = reviewData();
+    const total = targets.length, cleared = targets.filter(t => t.cleared).length;
+    const graded = targets.reduce((a, t) => a + t.reviewCount, 0);
+    const day0 = new Date(); day0.setHours(0, 0, 0, 0);
+    const todayCleared = targets.filter(t => t.cleared && (t.review.at || 0) >= day0.getTime()).length;
+    const pct = total ? Math.round(cleared / total * 100) : 0;
+    const cheer = !total ? '演習で満点でなかった設問はありません。'
+      : cleared === total ? '🎉 苦手な設問をすべて克服しました！'
+      : todayCleared ? `今日は <b>${todayCleared}</b> 問を克服。この調子です！`
+      : cleared ? `これまでに <b>${cleared}</b> 問を克服。あと ${total - cleared} 問です。`
+      : '得点率の低い分野から、1問ずつ解き直してみましょう。';
+    const cards = `<div class="prog-cards">
+        <div class="prog-card"><div class="pc-num">${cleared}<span class="pc-den"> / ${total}</span></div><div class="pc-lbl">克服した設問</div></div>
+        <div class="prog-card"><div class="pc-num">${todayCleared}</div><div class="pc-lbl">今日克服</div></div>
+        <div class="prog-card"><div class="pc-num">${genres.filter(g => g.cleared === g.total).length}<span class="pc-den"> / ${genres.length}</span></div><div class="pc-lbl">克服した分野</div></div>
+        <div class="prog-card"><div class="pc-num">${graded}</div><div class="pc-lbl">復習で採点</div></div>
+      </div>
+      <p class="prog-overall">克服 ${bar(pct)} <b>${pct}%</b></p>`;
+    const blocks = genres.map(g => {
+      const items = g.items.filter(t => rvShowCleared || !t.cleared);
+      const groups = WorkReview.groupByProblem(items);
+      const gpct = Math.round(g.cleared / g.total * 100);
+      const list = groups.map((gr, i) => {
+        const p = probById(gr.pid);
+        const rows = gr.qids.map(qid => {
+          const t = items.find(x => x.pid === gr.pid && x.qid === qid), q = p.questions.find(x => x.id === qid);
+          const prompt = (q.prompt || '').replace(/\s+/g, ' ');
+          return `<li class="rv-q${t.cleared ? ' cleared' : ''}">
+            <span class="rv-qid">${esc(qid)}</span>
+            <span class="rv-prompt" title="${esc(prompt)}">${esc(prompt.length > 40 ? prompt.slice(0, 40) + '…' : prompt)}</span>
+            <span class="rv-sc">演習 ${scoreText(p, q, t.main && t.main.result)}</span>
+            <span class="rv-sc">${t.review ? `復習 ${scoreText(p, q, t.review.result)}${t.reviewCount > 1 ? `（${t.reviewCount}回）` : ''}` : '復習 —'}</span>
+            ${t.cleared ? '<span class="pstate done">克服</span>' : '<span></span>'}
+          </li>`;
+        }).join('');
+        return `<div class="rv-prob">
+          <div class="rv-prob-head"><span><span class="pi-tag">${esc(p.yearLabel)} ${esc(p.sectionLabel)} 問${p.no}</span> ${esc(p.title)}</span>
+            <button class="btn small" data-genre="${esc(g.genre)}" data-idx="${i}" title="この問題から、分野の設問を順に解く">${gr.qids.length}設問を解く</button></div>
+          <ul class="rv-qs">${rows}</ul></div>`;
+      }).join('');
+      const done = g.cleared === g.total;
+      return `<details class="rv-genre${done ? ' done' : ''}"${g.genre === rvOpenGenre ? ' open' : ''} data-g="${esc(g.genre)}">
+        <summary class="rv-genre-head">
+          <span class="rv-gname">${esc(g.genre)}</span>
+          <span class="rv-gpct${g.pct != null && g.pct < PASS_PCT ? ' low' : ''}">演習 ${g.pct ?? '—'}%</span>
+          <span class="rv-gprog">克服 <b>${g.cleared}</b>/${g.total} ${bar(gpct)}</span>
+          ${groups.length ? `<button class="btn small${done ? '' : ' primary'}" data-genre="${esc(g.genre)}" data-idx="0">${done ? '解き直す' : '解く'}（${groups.length}問題）</button>` : '<span class="pstate done">克服</span>'}
+        </summary>
+        ${list || '<p class="muted rv-empty">すべて克服しました（「克服済みも表示」で見返せます）。</p>'}
+      </details>`;
+    }).join('');
+    $('#review-body').innerHTML = `<p class="prog-cheer">${cheer}</p>${cards}
+      <h4 class="prog-h">分野ごと（演習の得点率の低い順）</h4>
+      ${blocks || '<p class="muted">まだ演習の採点がありません。</p>'}
+      <p class="muted rv-note">対象は、演習での最新の採点が満点でない設問です。復習で満点を取ると「克服」になります。
+        復習の解答・採点は演習とは別に記録され（<code>server/review.json</code>・<code>解答記録/_復習/</code>）、演習の得点率・周回・想定合格率は変わりません。</p>`;
+  }
+  $('#review-body').addEventListener('click', e => {
+    const b = e.target.closest('button[data-genre]'); if (!b) return;
+    e.preventDefault(); // summary の中のボタンで開閉しない
+    startReview(b.dataset.genre, Number(b.dataset.idx) || 0);
+  });
+  $('#review-body').addEventListener('toggle', e => {
+    const d = e.target; if (!d.matches || !d.matches('.rv-genre')) return;
+    if (d.open) rvOpenGenre = d.dataset.g; else if (rvOpenGenre === d.dataset.g) rvOpenGenre = null;
+  }, true);
+  $('#rv-show-cleared').addEventListener('change', e => { rvShowCleared = e.target.checked; renderReview(); });
+  $('#open-review').addEventListener('click', openReviewList);
+  $('#review-to-list').addEventListener('click', e => { e.preventDefault(); $('#review').hidden = true; $('#pick').hidden = false; renderPicker(); window.scrollTo(0, 0); });
+  reviewReady.then(() => { if (!$('#review').hidden) renderReview(); }); // サーバの復習記録を読んだら一覧を最新に
+
+  function startReview(genre, idx) {
+    const g = reviewData().genres.find(x => x.genre === genre); if (!g) return;
+    const groups = WorkReview.groupByProblem(g.items.filter(t => rvShowCleared || !t.cleared));
+    if (!groups.length) return;
+    rvOpenGenre = genre;
+    practice = false;
+    review = { genre, groups, idx: Math.min(idx, groups.length - 1), since: Date.now() };
+    openReviewGroup();
+  }
+  function openReviewGroup() {
+    const gr = review.groups[review.idx], p = probById(gr.pid); if (!p) return;
+    const qs = p.questions.filter(q => gr.qids.includes(q.id));
+    // 前回の復習で採点した解答が下書きに残っていたら空にする（新しく解き直すため。採点は記録に残る）
+    for (const q of qs) {
+      const k = `${p.id}:${q.id}`, s = Review.q(k), at = s.attempts || [], d = (s.answer || '').trim();
+      if (d && at.length && d === (at[at.length - 1].answer || '').trim()) Review.setDraft(k, '');
+    }
+    layoutSolve(p, qs);
+    Timer.start(p, { review: true });
+  }
+  // 解答欄の下：演習の最新の解答・採点と、前回までの復習（折りたたみ。見る前に解ける）
+  function reviewPrevHtml(p, q) {
+    const main = (Store.q(`${p.id}:${q.id}`).attempts || []).filter(a => a.result), m = main[main.length - 1];
+    const rv = Review.attempts(p.id, q.id).filter(a => a.result && (a.at || 0) < review.since);
+    if (!m && !rv.length) return '';
+    const row = (label, a) => `<details class="attempt"><summary>${label}　${attemptBadge(a.result)}　<span class="hist-meta">${stamp(a.at)}</span></summary>
+      <div class="attempt-answer"><b>解答：</b>${esc(a.answer)}</div><div class="result">${resultHtml(a.result || {})}</div></details>`;
+    return `<details class="rv-prev"><summary>前回までの解答と採点（演習${m ? ` ${scoreText(p, q, m.result)}` : ''}${rv.length ? `・復習 ${rv.length}回` : ''}）</summary>
+      ${m ? row(`演習（第${main.length}回）`, m) : ''}
+      ${rv.map((a, i) => ({ a, i })).reverse().map(({ a, i }) => row(`復習 ${i + 1}回目`, a)).join('')}</details>`;
+  }
+  // 復習のまとめて採点の結果：この問題の対象設問の合計、演習の最新からの伸び、克服した数
+  function renderReviewBatch(results, empties, p, qs, kept) {
+    let score = 0, max = 0, before = 0, cleared = 0;
+    for (const q of qs) {
+      const at = ReviewSink.shown(p.id, q.id), r = at.length ? at[at.length - 1].result : null;
+      const mm = (Store.q(`${p.id}:${q.id}`).attempts || []).filter(a => a.result), mr = mm.length ? mm[mm.length - 1].result : null;
+      const s = convScore(p, q, r), ms = convScore(p, q, mr);
+      max += (s || ms || { max: Haiten.haiten(p.id, q.id) || 10 }).max;
+      score += s ? s.v : 0; before += ms ? ms.v : 0;
+      if (r && WorkReview.isFull(r)) cleared++;
+    }
+    const n1 = v => (Math.round(v * 10) / 10).toString();
+    const pct = max ? Math.round(score / max * 100) : 0, d = score - before;
+    const diff = Math.abs(d) < 0.05 ? `<span class="trend-same">演習の最新（${n1(before)}点）と同点</span>`
+      : d > 0 ? `<span class="trend-up">演習の最新（${n1(before)}点）から +${n1(d)}点</span>`
+      : `<span class="trend-down">演習の最新（${n1(before)}点）から ${n1(d)}点</span>`;
+    const ok = results.filter(r => r && r.verdict === '正解').length, part = results.filter(r => r && r.verdict === '部分正解').length;
+    const ng = results.filter(r => r && r.verdict === '不正解').length, failed = results.filter(r => !r).length;
+    const hasNext = review.idx < review.groups.length - 1;
+    $('#grade-summary').innerHTML = `<div class="batch-sum">
+      <div class="batch-title">復習の採点結果（${esc(review.genre)}）</div>
+      <div class="batch-score"><b>${n1(score)}</b> / ${n1(max)}点　${bar(pct)} ${pct}%</div>
+      <div class="batch-diff">${diff}</div>
+      ${cleared ? `<p class="rv-cleared">🎉 <b>${cleared}</b> 設問を克服しました（満点）</p>` : ''}
+      <div class="batch-breakdown">
+        <span class="verdict ok">正解 ${ok}</span><span class="verdict part">部分正解 ${part}</span><span class="verdict ng">不正解 ${ng}</span>
+        ${failed ? `<span class="muted">採点失敗 ${failed}</span>` : ''}${kept ? `<span class="muted">変更なし ${kept}（前回の採点のまま）</span>` : ''}${empties ? `<span class="muted">未入力 ${empties}</span>` : ''}
+        <span class="muted">所要 ${fmt(Timer.sec)}</span>
+      </div>
+      <p class="rv-batch-acts">${hasNext ? `<button class="btn small primary" id="rb-next">次の問題へ →（${review.idx + 2}/${review.groups.length}）</button>` : '<span class="muted">この分野の問題はこれで最後です。</span>'}
+        <button class="btn small" id="rb-list">復習の一覧へ</button></p>
+    </div>`;
+    if (hasNext) $('#rb-next').onclick = () => $('#rv-next').click();
+    $('#rb-list').onclick = () => $('#to-list').click();
+    $('#grade-summary').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  // 練習モード：この問題の練習の解答と採点結果を消して、白紙から練習し直す
+  $('#pr-clear').addEventListener('click', () => {
+    if (!practice || !current) return;
+    if (!confirm('この問題の練習の解答と採点結果を消して、白紙から練習し直しますか？\n（演習の履歴には影響しません）')) return;
+    Practice.clear(current.id);
+    layoutSolve(current, current.questions);
+  });
+  $('#rv-next').addEventListener('click', () => {
+    if (!review || review.idx >= review.groups.length - 1) return;
+    Timer.stop(); window.WorkTools.hideAll(); Notes.flush();
+    review.idx++;
+    openReviewGroup();
+  });
+
   // ---- 操作（ビュー切替・ズーム・タイマー・やり直し・一覧へ） ----------
   $('#view-seg').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b || b.disabled) return;
@@ -1100,13 +1438,15 @@
     e.preventDefault();
     Timer.stop();
     window.WorkTools.hideAll(); window.WorkTools.setContext(null); Notes.flush();
-    document.body.classList.remove('solving');
+    document.body.classList.remove('solving', 'reviewing', 'practicing');
+    practice = false;
     const solve = $('#solve'); solve.hidden = true; solve.classList.remove('on');
+    if (review) { Review.flush(); openReviewList(); return; } // 復習中は復習の一覧へ戻る
     $('#pick').hidden = false;
     renderPicker();
     window.scrollTo(0, 0);
   });
-  window.addEventListener('beforeunload', () => { Timer.stop(); Notes.beacon(); });
+  window.addEventListener('beforeunload', () => { Timer.stop(); Notes.beacon(); Review.beacon(); });
   // CBT ツール（メモ・電卓）
   window.WorkTools.attachButtons({ memo: $('#tool-memo'), calc: $('#tool-calc') });
   $('#tool-memo').addEventListener('click', () => window.WorkTools.toggleMemo());
@@ -1155,6 +1495,7 @@
   }
   // 同じブラウザの別のタブが保存したら、このタブの手元の内容も読み直す
   window.addEventListener('storage', e => {
+    if (e.key === Review.KEY) { Review.reloadLocal(); if (!$('#review').hidden) renderReview(); return; }
     if (e.key !== Store.KEY) return;
     Store.reloadLocal();
     if (!current) renderPicker();
@@ -1186,6 +1527,7 @@
     await loadHaiten(); // 配点は履歴とは別に、サーバの別ファイルからマージ読み込み
     await loadEstimate(); // 想定合格率（前回の AI 判定）
     saveSummary();      // 起動時にも学習状況サマリーを最新化（もう一方のマシンの Claude Code 用）
+    reviewReady.then(() => { if (Object.keys(Review.raw()).length) saveReviewSummary(); }); // 復習の状況も
     renderPicker();
   }
   // 配点の読み込み：旧仕様で履歴に相乗りしていた分を移行し、サーバの配点ファイルをマージ。
@@ -1202,7 +1544,7 @@
   }
   // 手動：現在の履歴をファイルに書き出す（バックアップ／持ち運び用）
   function exportHistory() {
-    const blob = new Blob([JSON.stringify({ ...currentPayload(), haiten: Haiten.raw(), notes: Notes.raw() }, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ ...currentPayload(), haiten: Haiten.raw(), notes: Notes.raw(), review: Review.raw() }, null, 2)], { type: 'application/json' });
     const d = new Date(), p = n => String(n).padStart(2, '0');
     const name = `nespe-work-backup-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.json`;
     const a = document.createElement('a');
@@ -1224,6 +1566,7 @@
       try { if (payload.swap != null) localStorage.setItem('nespe-work-swap', payload.swap); } catch (_) {}
       if (payload.haiten) { Haiten.mergeIn(payload.haiten); Haiten.flush(); } // 配点も復元（マージ）
       if (payload.notes) Notes.mergeIn(payload.notes); // メモ・マーカーも復元（項目ごとに新しい方。消さない）
+      if (payload.review) { Review.mergeIn(payload.review); Review.flush(); } // 苦手ジャンル復習の記録も（採点は消さずに足す）
       note('復元しました。画面を更新します…');
       setTimeout(() => location.reload(), 900);
     };
@@ -1333,7 +1676,8 @@
     const L = ['# 午後問題 学習状況（自動生成・編集しない）', '',
       `- 更新：${stamp(Date.now())}`,
       `- 挑戦 ${touched}/${N} 問・完答 ${completed}/${N} 問・採点した設問 ${gradedQ}・学習時間 ${hhmm(totalTime)}・平均得点率 ${pct}%`,
-      '- 詳細：各回の解答・採点は `解答記録/<問題>/<日時>.md`、生データは `server/history.json`、配点は `server/haiten.json`', '',
+      '- 詳細：各回の解答・採点は `解答記録/<問題>/<日時>.md`、生データは `server/history.json`、配点は `server/haiten.json`',
+      '- 苦手ジャンル復習（演習とは別の記録。この表の数字には入らない）：`解答記録/_復習/_復習状況.md`', '',
       '## 問題ごと', '', '| 問題 | 完答 | 得点（最新） | 周回 | 最終学習日 |', '|---|---|---|---|---|'];
     for (const { p, s } of rows) {
       const score = s.graded ? `${s.score}/${s.max}（${s.max ? Math.round(s.score / s.max * 100) : 0}%）` : '—';
@@ -1369,6 +1713,67 @@
     fetch('/record', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ name: '_学習状況.md', markdown: buildSummaryMd() }),
+    }).catch(() => {});
+  }
+
+  // ---- 苦手ジャンル復習の記録（解答記録/_復習/。演習の記録・_学習状況.md とは別） ----
+  //   解答記録/_復習/2026-11-08/143500_令和5年_午後Ⅱ_問2_ECサーバの増強.md … 復習で採点するたびに1ファイル
+  //   解答記録/_復習/_復習状況.md … 分野ごとの克服数と、残っている設問（自動生成）
+  function buildReviewMd(p, qs) {
+    const L = [`# 復習：${review.genre}｜${p.yearLabel} ${p.sectionLabel} 問${p.no}　${p.title}`, '',
+      `- 記録日時：${stamp(Date.now())}`, `- 分野：${review.genre}`, `- 所要時間：${fmt(Timer.sec)}`, ''];
+    for (const q of qs) {
+      const k = `${p.id}:${q.id}`, at = ReviewSink.shown(p.id, q.id), a = at[at.length - 1], draft = (Review.q(k).answer || '').trim();
+      const mm = (Store.q(k).attempts || []).filter(x => x.result), m = mm[mm.length - 1];
+      L.push(`## 設問 ${q.id}${a && WorkReview.isFull(a.result) ? '　✅ 克服' : ''}`, '');
+      L.push(`**問題**：${q.prompt}${q.charLimit ? `（${q.charLimit}）` : ''}`, '');
+      if (q.answer) L.push(`**公式解答例**：${q.answer}`, '');
+      if (m) L.push(`**演習での最新の採点**：${(m.result || {}).verdict || '-'}　${scoreText(p, q, m.result)}（${stamp(m.at)}）`, '');
+      if (a) {
+        L.push(`**復習の解答**（${stamp(a.at)}）：`, '', quote(a.answer), '');
+        L.push(...resultMd(a.result));
+      } else if (draft) L.push('**下書き（未採点）**：', '', quote(draft), '');
+      else L.push('_未入力・未採点_', '');
+    }
+    const memo = Notes.get(`review:${p.id}`);
+    if (memo && (memo.text || '').trim()) L.push('## メモ', '', quote(memo.text), '');
+    return L.join('\n');
+  }
+  function saveReviewRecord(p, qs) {
+    if (!serverHist || !p || !review) return Promise.resolve(false);
+    const [day, time] = tsStamp().split('_');
+    return fetch('/record', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: `_復習/${day}/${time}_${recordDir(p).slice(0, 60)}.md`, markdown: buildReviewMd(p, qs) }),
+    }).then(r => { saveReviewSummary(); return r.ok; }).catch(() => false);
+  }
+  function buildReviewSummaryMd() {
+    const { targets, genres } = reviewData();
+    const cleared = targets.filter(t => t.cleared).length, graded = targets.reduce((a, t) => a + t.reviewCount, 0);
+    const L = ['# 苦手ジャンル復習 状況（自動生成・編集しない）', '',
+      `- 更新：${stamp(Date.now())}`,
+      `- 対象 ${targets.length} 設問・克服 ${cleared}（${targets.length ? Math.round(cleared / targets.length * 100) : 0}%）・復習で採点 ${graded} 回`,
+      '- 対象＝演習の最新の採点が満点でない設問、克服＝復習の最新の採点が満点。生データは `server/review.json`、各回は `解答記録/_復習/<日付>/`',
+      '- 演習の記録（`_学習状況.md`・得点率・想定合格率）には入っていない', '',
+      '## 分野ごと（残りのある分野を先に、演習の得点率の低い順）', '', '| 分野 | 演習の得点率 | 克服 | 残り |', '|---|---|---|---|'];
+    for (const g of genres) L.push(`| ${g.genre} | ${g.pct ?? '—'}% | ${g.cleared}/${g.total} | ${g.total - g.cleared} |`);
+    L.push('', '## 残っている設問', '');
+    for (const g of genres) {
+      const rest = g.items.filter(t => !t.cleared); if (!rest.length) continue;
+      L.push(`### ${g.genre}`, '');
+      for (const t of rest) {
+        const p = probById(t.pid), q = p.questions.find(x => x.id === t.qid);
+        L.push(`- ${p.yearLabel} ${p.sectionLabel} 問${p.no} ${t.qid}：演習 ${scoreText(p, q, t.main && t.main.result)}${t.review ? `・復習 ${scoreText(p, q, t.review.result)}（${t.reviewCount}回・${dayStamp(t.review.at)}）` : ''}`);
+      }
+      L.push('');
+    }
+    return L.join('\n') + '\n';
+  }
+  function saveReviewSummary() {
+    if (!serverHist) return;
+    fetch('/record', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: '_復習/_復習状況.md', markdown: buildReviewSummaryMd() }),
     }).catch(() => {});
   }
 

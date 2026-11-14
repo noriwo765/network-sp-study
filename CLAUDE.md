@@ -13,6 +13,9 @@ Claude Code のメモリ（~/.claude）はマシンごとで SSD に乗らない
 - `server/estimate.json` … 想定合格率の AI 判定結果（Git 管理外）。`{ at, rate, pm1, pm2, summary, reasons, actions, basis }`。判定材料は各設問の最終の採点結果で、未回答は0点。学習状況画面のボタンで判定し、`_学習状況.md` にも載る。
 - `server/notes.json` … ワーク演習のメモ・マーカー（Git 管理外。CBT のメモ機能）。`{ entries: { '<問題id>@<周の開始時刻 __round.at>': { pid, roundN, roundAt, at, text, marks: [[開始, 終了, 'r'|'b'|'y']] } } }`。履歴とは別キー（localStorage `nespe-work-notes-v1`）・別ファイルで、同期は項目ごとに at の新しい方を残すマージ（丸ごと上書きしない・項目を消さない）。リセットで周の開始時刻が変わるので新しい周は白紙、前の周は履歴画面と解答記録の「## メモ」に残る。
 - `server/progress.json` … 単語カード・一問一答・理解度チェック・診断の記録（Git 管理外）。`{ at, data: { localStorage のキー: 値 } }`。中継サーバで開いたとき `apps/js/progress-sync.js` が自動で保存・復元する（at が新しい方を採用。初回だけは両方を合わせる）。スマホ（GitHub Pages）はトップページの「書き出す／読み込む」で手動バックアップ。
+- `server/review.json` … 苦手ジャンル復習の解答・採点（Git 管理外。演習の履歴とは別管理）。形は history.json と同じ `data['<問題id>:<設問id>'] = { answer, attempts }` で、同期も同じ `mergeHistory`（`/review`）。対象＝演習の最新の採点が満点でない設問、克服＝復習の最新の採点が満点（`apps/js/work-review.js`）。演習の得点率・周回・想定合格率・`_学習状況.md` には入れない。状況は `解答記録/_復習/_復習状況.md`（自動生成）、各回は `解答記録/_復習/<日付>/<時刻>_<問題>.md`。復習のメモは notes.json のキー `review:<問題id>`。
+- 練習モード（問題一覧の「練習」）… 模範解答を見ながら解く。AI 採点はできるが**どこにも記録しない**（履歴・周回・得点率・解答記録・想定合格率に入れない）。入力は localStorage `nespe-work-practice-v1`（この端末だけ。サーバ同期なし）、採点結果は画面を開いている間だけ。メモは notes.json のキー `practice:<問題id>`。
+- まとめて採点（演習・復習・練習とも）は、画面に出ている最新の採点と解答が同じ設問を採点し直さない（書き直した設問だけ API を呼ぶ）。
 - 苦手ジャンル … `flashcards/qa_weak.js`（一問一答。`weak / src / miss`、`theme` がジャンル）と `flashcards/terms.js` の `weak: true` の用語。ワーク演習の失点から作る。`qa.html?weak=1`・`terms.html?weak=1` で絞り込み。
 - 過去問ベースの教材 … `flashcards/qa_<問題id>.js`（一問一答）と `apps/js/scenarios/<問題id>.js`（アニメ）。どちらも公開対象なので問題文・解答例・図を写さず、会社名やアドレスなどの設定も変える。問題の一覧は `apps/js/book.js` の `EXAMS`。
 - 問題データ … `apps/work/r*_pm*_q*.js`（`id` は `r7_pm1_q1` の形式、設問は `questions[].id`）。
@@ -29,10 +32,11 @@ Claude Code のメモリ（~/.claude）はマシンごとで SSD に乗らない
 | `apps/js/work-shape.js` | 解答例の書式から解答欄（欄の分け方）と欄ごとの字数上限（`fieldLimits`）を決める純粋関数。画面と検証ツールで共用 |
 | `apps/js/work-tools.js` | CBT ツール（本番の試験アプリの再現）：電卓（四則演算・かっこ・＝確定、小中大、移動）とメモ（半透明・検索・マーカー赤青黄／白で消去・カット/コピー/ペースト・10,000字）。計算とマーカー範囲の計算は純粋関数で `require` できる（`WorkToolsPure`）。保存は `work-app.js` の `Notes` |
 | `apps/js/work-merge.js` | 履歴の合わせ方（純粋関数 `mergeHistory`）。画面の起動時・復元・読み直しと、`relay.js` の `/history` 保存で共用。採点（attempts）は at で突き合わせて足すだけで消さない、`__round` は at の新しい方、片方にしかないキーは残す、下書き・タイマーは後から来た側（ただしその問題の採点を一部持っていない古い側なら base を残す） |
+| `apps/js/work-review.js` | 苦手ジャンル復習の対象設問・克服の判定（純粋関数 `reviewTargets`・`byGenre`・`groupByProblem`・`isFull`）。画面はワーク演習の「苦手ジャンル復習」（分野→問題ごとに、実問題の横へ対象の設問だけを出す） |
 | `apps/js/work-genre.js` | 設問→分野の対応（`WORK_GENRE[問題id][設問id]`、分野の一覧は `WORK_GENRES`）。学習状況の「分野別の得点率」と `_学習状況.md` の分野表で使う。問題を追加したら全設問ぶん足す（`work-check.js` が抜けを NG にする） |
 | `apps/css/work.css` | ワーク演習のスタイル |
 | `apps/plan.html`・`apps/js/plan-app.js`・`apps/css/plan.css` | 学習計画（ローカル専用）。履歴・配点は読むだけで、保存は `/plan` のみ。`work.html?p=<問題id>` でその問題を直接開く |
-| `server/relay.js` | 中継サーバ。静的配信、`/progress`（暗記系の学習記録。古い at での上書きは 409）、`/grade`（Claude で採点）、`/history`、`/haiten`、`/plan`（学習計画。ファイル更新時刻を版にし、古い版での上書きは 409）、`/estimate`（想定合格率の AI 判定。GET で前回の結果）、`/notes`（メモ・マーカー。項目ごとに新しい方を残す。notes.json が壊れていたら書かない）、`/record`（解答記録/ への書き出し） |
+| `server/relay.js` | 中継サーバ。静的配信、`/progress`（暗記系の学習記録。古い at での上書きは 409）、`/grade`（Claude で採点）、`/history`、`/haiten`、`/plan`（学習計画。ファイル更新時刻を版にし、古い版での上書きは 409）、`/estimate`（想定合格率の AI 判定。GET で前回の結果）、`/notes`（メモ・マーカー。項目ごとに新しい方を残す。notes.json が壊れていたら書かない）、`/review`（苦手ジャンル復習。history と同じ合わせ方）、`/record`（解答記録/ への書き出し） |
 | `apps/tools/work-check.js` | 整合性チェック（解答欄の分割・配点・履歴）。`--fields <問題id>` で欄の単位を表示 |
 | `apps/tools/haiten-set.js` | 配点の一括登録（欄ラベルを検証し、rev を進めて保存） |
 | `apps/tools/anki-export.js` | 苦手ジャンルの一問一答を Anki 用の `.apkg` に書き出す（`node --experimental-sqlite apps/tools/anki-export.js`）。`qa_weak.js` を更新したら書き出し直す。`--final` で本番前の定番の答え（`flashcards/qa_final.js`）を別デッキに書き出す |
@@ -61,7 +65,7 @@ Claude Code のメモリ（~/.claude）はマシンごとで SSD に乗らない
 
 ## ローカル専用リポジトリ（`.git-local`）
 公開用の `.git` とは別に、同じフォルダで2つ目のリポジトリを使っている。リモートはなく、公開しない。SSD ごと持ち運ぶ。
-- 管理するもの：`server/` の `history.json`・`plan.json`・`progress.json`・`estimate.json`・`notes.json`、`解答記録/`、過去問データ（`apps/work/pages/`・`figs/`・`_pages.js`・`r*_pm*_q*.js`）。`server/.env` は入れない。
+- 管理するもの：`server/` の `history.json`・`plan.json`・`progress.json`・`estimate.json`・`notes.json`・`review.json`、`解答記録/`、過去問データ（`apps/work/pages/`・`figs/`・`_pages.js`・`r*_pm*_q*.js`）。`server/.env` は入れない。
 - `git local-save [メッセージ]` … 上の一式を保存する。起動スクリプトが起動のたびに実行するので、前回の学習ぶんは次の起動時に記録される。
 - `git local <コマンド>` … 例：`git local log`、`git local diff HEAD~1 --stat`。別名の定義は `.git/config` にある（`git --git-dir=.git-local --work-tree=. <コマンド>` と同じ）。
 - 保存する一覧は `.git-local/save.sh` にある。公開用の `.gitignore` が優先されるため、新しいファイルは `git local add` では入らない。一覧に足して `git local-save` を使う。

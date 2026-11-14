@@ -32,6 +32,7 @@
       <nav id="section-chips" aria-label="区分"></nav>
     </div>
     <p class="pick-tools">
+      <button class="btn small primary" id="open-review" title="苦手ジャンルの設問だけを、過去問の画面で解き直す（記録は演習とは別）">苦手ジャンル復習</button>
       <button class="btn small" id="open-progress" title="午後問題の学習状況・達成度を見る">学習状況</button>
       <button class="btn small" id="open-haiten" title="設問ごとの配点予想（満点）を入力する">配点設定</button>
       <a class="btn small" href="plan.html" title="本番までの学習計画と達成状況を見る">学習計画</a>
@@ -65,6 +66,8 @@
       <button class="btn small tool-btn" id="tool-calc" title="電卓を開く／閉じる（四則演算・かっこ）">電卓</button>
       <button class="btn small" id="swap" title="問題と解答欄の左右を入れ替える">⇄ 左右入替</button>
       <button class="btn small" id="save-pause" title="採点せずに、今の解答と経過時間を保存して中断する">保存して中断</button>
+      <button class="btn small practice-only" id="pr-clear" title="この問題の練習の解答と採点結果を消して、白紙から練習し直す（演習の履歴には影響しない）">練習をやり直す</button>
+      <button class="btn small primary" id="rv-next" hidden title="同じジャンルの次の問題へ">次の問題へ →</button>
       <button class="btn small danger" id="retry" title="画面の解答と採点結果をリセットして次の周を始める（採点結果は履歴に残る）">リセット（次の周へ）</button>
     </div>
 
@@ -121,6 +124,16 @@
     <div id="history-body"></div>
   </section>
 
+  <!-- 苦手ジャンル復習（演習で満点でなかった設問を分野ごとに解き直す。記録は server/review.json） -->
+  <section id="review" hidden>
+    <div class="exam-topbar">
+      <a href="#" id="review-to-list" class="back-sm">← 一覧</a>
+      <span class="exam-title">苦手ジャンル復習</span>
+      <label class="rv-toggle"><input type="checkbox" id="rv-show-cleared"> 克服済みも表示</label>
+    </div>
+    <div id="review-body"></div>
+  </section>
+
   <!-- 学習状況（午後問題の達成度） -->
   <section id="progress" hidden>
     <div class="exam-topbar">
@@ -166,6 +179,7 @@
   <script src="js/work-shape.js"></script>
   <script src="js/work-merge.js"></script>
   <script src="js/work-genre.js"></script>
+  <script src="js/work-review.js"></script>
   <script src="js/work-tools.js"></script>
   <script src="js/work-app.js"></script>
   <script src="js/pwa.js"></script>

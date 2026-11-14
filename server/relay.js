@@ -57,6 +57,9 @@ const server = http.createServer(async (req, res) => {
     // 単語カード・一問一答・理解度チェック・診断の記録（progress.json）
     if (req.method === 'GET' && req.url === '/progress') return void readProgress(res);
     if ((req.method === 'PUT' || req.method === 'POST') && req.url === '/progress') return void (await writeProgress(req, res));
+    // 苦手ジャンル復習の解答・採点（演習の履歴とは別ファイル。review.json）
+    if (req.method === 'GET' && req.url === '/review') return void readReview(res);
+    if ((req.method === 'PUT' || req.method === 'POST') && req.url === '/review') return void (await writeReview(req, res));
     // ワーク演習のメモ・マーカー（問題×周ごと。notes.json）
     if (req.method === 'GET' && req.url === '/notes') return void readNotes(res);
     if ((req.method === 'PUT' || req.method === 'POST') && req.url === '/notes') return void (await writeNotes(req, res));
@@ -231,6 +234,33 @@ async function writeHistory(req, res) {
   const savedAt = [file && file.savedAt, body.savedAt].filter(Boolean).sort().pop() || new Date().toISOString();
   // 読む→合わせる→書くを同期で行い、同時に来た保存どうしで取りこぼさないようにする
   try { fs.writeFileSync(HISTORY_FILE, JSON.stringify({ ...body, savedAt, data }), 'utf8'); }
+  catch (err) { return send(res, 500, { error: String(err.message || err) }); }
+  send(res, 200, { ok: true, added });
+}
+
+// ---- /review（苦手ジャンル復習の保存ファイル。演習の履歴とは別管理） -------------
+// 中身は { app, savedAt, data: { '<問題id>:<設問id>': { answer, attempts } } }。演習の履歴と同じ形なので、
+// 合わせ方も同じ mergeHistory（採点は消さずに足す）。演習の得点率・想定合格率には混ぜない。
+const REVIEW_FILE = path.join(__dirname, 'review.json');
+function readReview(res) {
+  fs.readFile(REVIEW_FILE, 'utf8', (err, txt) => {
+    if (err) return send(res, 200, {});
+    try { return send(res, 200, JSON.parse(txt)); } catch (_) { return send(res, 200, {}); }
+  });
+}
+async function writeReview(req, res) {
+  let body;
+  try { body = await readJson(req); } catch (_) { return send(res, 400, { error: 'JSON ではありません' }); }
+  if (!body || typeof body.data !== 'object' || !body.data) return send(res, 400, { error: 'data がありません' });
+  let file = null;
+  try { file = JSON.parse(fs.readFileSync(REVIEW_FILE, 'utf8')); }
+  catch (e) {
+    if (e.code !== 'ENOENT') { try { fs.copyFileSync(REVIEW_FILE, `${REVIEW_FILE}.broken-${Date.now()}`); } catch (_) {} }
+  }
+  const { data, added } = mergeHistory(file && file.data, body.data);
+  const savedAt = [file && file.savedAt, body.savedAt].filter(Boolean).sort().pop() || new Date().toISOString();
+  const tmp = REVIEW_FILE + '.tmp';
+  try { fs.writeFileSync(tmp, JSON.stringify({ app: 'nespe-work-review', savedAt, data }), 'utf8'); fs.renameSync(tmp, REVIEW_FILE); }
   catch (err) { return send(res, 500, { error: String(err.message || err) }); }
   send(res, 200, { ok: true, added });
 }

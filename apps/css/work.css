@@ -424,3 +424,50 @@ textarea.fld-input { resize: vertical; line-height: 1.6; }
 /* 履歴画面のメモ */
 .memo-view { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; padding: 6px 2px; }
 .memo-view .mk-r, .memo-view .mk-b, .memo-view .mk-y { border-radius: 2px; }
+
+/* 苦手ジャンル復習 */
+body.reviewing #retry, body.reviewing #save-pause { display: none; }
+#review-body { margin: 10px 0 24px; }
+.rv-toggle { font-size: .85rem; white-space: nowrap; cursor: pointer; }
+.rv-genre { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); margin: 8px 0; }
+.rv-genre.done { opacity: .75; }
+.rv-genre > summary { list-style: none; cursor: pointer; }
+.rv-genre > summary::-webkit-details-marker { display: none; }
+.rv-genre-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 10px 12px; }
+.rv-gname { font-weight: 700; flex: 1 1 140px; }
+.rv-gname::before { content: '▸ '; color: var(--muted); }
+.rv-genre[open] .rv-gname::before { content: '▾ '; }
+.rv-gpct { font-size: .82rem; color: var(--muted); }
+.rv-gpct.low { color: var(--ng); font-weight: 700; }
+.rv-gprog { font-size: .85rem; display: inline-flex; align-items: center; gap: 6px; }
+.rv-prob { border-top: 1px solid var(--border); padding: 8px 12px; }
+.rv-prob-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; font-weight: 600; font-size: .92rem; }
+.rv-qs { list-style: none; margin: 6px 0 2px; padding: 0; display: grid; gap: 2px; }
+.rv-q { display: grid; grid-template-columns: 5.5em minmax(0, 1fr) auto auto 3.2em; gap: 4px 10px; align-items: center; font-size: .82rem; padding: 3px 4px; border-bottom: 1px dotted var(--border); }
+.rv-q.cleared { color: var(--muted); }
+.rv-qid { font-weight: 700; white-space: nowrap; }
+.rv-prompt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.rv-sc { white-space: nowrap; }
+.rv-empty { padding: 4px 12px 10px; margin: 0; }
+.rv-note { font-size: .8rem; margin-top: 14px; }
+.rv-prev { margin: 8px 0 4px; font-size: .88rem; }
+.rv-prev > summary { cursor: pointer; color: var(--muted); }
+.rv-prev .attempt { border: 1px solid var(--border); border-radius: 8px; margin: 6px 0; padding: 6px 10px; background: var(--bg); }
+.rv-prev .attempt > summary { cursor: pointer; }
+.rv-prev .attempt .result { border: none; margin-top: 6px; padding-top: 6px; }
+.rv-cleared { font-weight: 700; color: var(--ok); margin: 6px 0; }
+.rv-batch-acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 0; }
+@media (max-width: 640px) {
+  .rv-q { grid-template-columns: 5em minmax(0, 1fr) auto; }
+  .rv-q .rv-prompt { grid-column: 2 / -1; }
+  .rv-q > :last-child:empty { display: none; }
+}
+
+/* 練習モード（模範解答を見ながら解く。記録なし） */
+.practice-only { display: none; }
+body.practicing .practice-only { display: inline-block; }
+body.practicing #retry, body.practicing #save-pause, body.practicing #t-toggle, body.practicing #t-reset, body.practicing #t-clock { display: none; }
+body.practicing .exam-topbar { box-shadow: inset 0 -3px 0 #d97706; }
+body.practicing #grade-all-note { color: #b45309; }
+.prob-list .practice-btn { border-style: dashed; }
+.practice-sum { border-color: #d97706; }
