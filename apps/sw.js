@@ -5,7 +5,7 @@
 //   （更新内容は「次に開いたとき」に反映される）
 // - ファイルを追加・削除したら FILES を直し、VERSION を上げる（tools/check.js が漏れを検出する）
 
-const VERSION = 'nespe-v13';
+const VERSION = 'nespe-v14';
 
 const FILES = [
   './',
@@ -18,10 +18,12 @@ const FILES = [
   './ports.html',
   './diagnostic.html',
   './qa.html',
+  './final-check.html',
   './manifest.webmanifest',
   './css/style.css',
   './css/flow.css',
   './css/study.css',
+  './css/final.css',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -39,6 +41,7 @@ const FILES = [
   './js/study.js',
   './js/progress-sync.js',
   './js/terms-app.js',
+  './js/final-check.js',
   './js/scenarios/r7_pm1_q1.js',
   './js/scenarios/r7_pm1_q2.js',
   './js/scenarios/r7_pm1_q3.js',

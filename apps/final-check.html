@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <script src="js/gate.js"></script>
+  <title>本番前チェック</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ネスペ学習">
+  <meta name="theme-color" content="#14171c">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/study.css">
+  <link rel="stylesheet" href="css/final.css">
+</head>
+<body>
+  <header>
+    <p class="back"><a href="index.html">← メニュー</a></p>
+    <h1>本番前チェック</h1>
+    <p class="sub">本番 2026年11月15日。2周分の採点結果から、点を失った傾向と、本番までに押さえることをまとめました。</p>
+    <ul class="fc-stats">
+      <li><b>20</b>問・全問2周</li>
+      <li><b>245</b>設問を採点</li>
+      <li><b>121</b>設問で1周目より上昇</li>
+      <li><b>109</b>設問が満点</li>
+      <li>最終平均 午後Ⅰ <b>73</b>% ・ 午後Ⅱ <b>62</b>%</li>
+    </ul>
+  </header>
+
+  <div class="fc-toc" aria-label="目次">
+    <a href="#review">過去問の確認</a>
+    <a href="#steps">本番の手順</a>
+    <a href="#terms">用語の取り違え</a>
+    <a href="#keys">鍵・認証</a>
+    <a href="#subject">対象を書く</a>
+    <a href="#genre">定番の答え</a>
+  </div>
+
+  <!-- ================= 過去問の確認（前日用） ================= -->
+  <section id="review" class="fc-sec">
+    <h2>確認する過去問の解説</h2>
+    <p class="muted">解答記録の「解答例との差分」と「アドバイス」を読めば十分です。チェックはこの端末に残ります。</p>
+    <div class="fc-progress"><span id="fc-count">0 / 0</span><div class="fc-bar"><i id="fc-fill"></i></div><button id="fc-reset" type="button">チェックを外す</button></div>
+
+    <div class="fc-tier">
+      <div class="fc-tier-head a"><span class="fc-badge">A</span><b>本番に出やすく、まだ点が取れていない</b><span class="min">約60分</span></div>
+
+      <div class="fc-prob">
+        <h4>R6午後Ⅱ問1 データセンター<small>VXLAN・EVPN</small></h4>
+        <p class="alert">3周目（11/14）でも0点の設問が残っています。解説は全体を通して読む。</p>
+        <ul>
+          <li><label><input type="checkbox" id="r6p2q1-1-1"><span><span class="fc-q">設問1(1)</span>カプセル化に使うプロトコル（TCP → TLS と答えた。正解はUDP）</span></label></li>
+          <li><label><input type="checkbox" id="r6p2q1-2-2"><span><span class="fc-q">設問2(2)</span>ルータIDが何を識別するか（3周とも0点）</span></label></li>
+          <li><label><input type="checkbox" id="r6p2q1-2-4"><span><span class="fc-q">設問2(4)</span>VTEPにループバックアドレスを使う理由（3周とも0点）</span></label></li>
+          <li><label><input type="checkbox" id="r6p2q1-1-3"><span><span class="fc-q">設問1(3)</span>BUMフレームをどこへ転送するか</span></label></li>
+          <li><label><input type="checkbox" id="r6p2q1-3-4"><span><span class="fc-q">設問3(3)・4(2)(4)</span>リモートVTEPのIPアドレス、EVPNの学習方法</span></label></li>
+        </ul>
+        <p class="fc-path">解答記録/令和6年_午後Ⅱ_問1_データセンターのネットワークの検討/2026-11-14_150519.md</p>
+      </div>
+
+      <div class="fc-prob">
+        <h4>R4午後Ⅰ問1 ネットワークの更改<small>L2・パケット取得</small></h4>
+        <ul>
+          <li><label><input type="checkbox" id="r4p1q1-3-1"><span><span class="fc-q">設問3(1)</span>フラッディング（ブロードキャストと書いた）</span></label></li>
+          <li><label><input type="checkbox" id="r4p1q1-3-2"><span><span class="fc-q">設問3(2)</span>ミラーポート方式の制約（メリットを書いて0/6点）</span></label></li>
+          <li><label><input type="checkbox" id="r4p1q1-3-4"><span><span class="fc-q">設問3(4)</span>プロミスキャスモードで受け取れるフレーム</span></label></li>
+        </ul>
+        <p class="fc-path">解答記録/令和4年_午後Ⅰ_問1_ネットワークの更改/2026-11-07_170321.md</p>
+      </div>
+
+      <div class="fc-prob">
+        <h4>R5午後Ⅰ問2 IPマルチキャスト<small>マルチキャスト</small></h4>
+        <ul>
+          <li><label><input type="checkbox" id="r5p1q2-1"><span><span class="fc-q">設問1</span>穴埋めの用語（フラッディング、PIM-SM、SSM）</span></label></li>
+          <li><label><input type="checkbox" id="r5p1q2-2-3"><span><span class="fc-q">設問2(3)</span>グループアドレスの割り当て方</span></label></li>
+        </ul>
+        <p class="fc-path">解答記録/令和5年_午後Ⅰ_問2_IPマルチキャストによる映像配信の導入/2026-11-08_203802.md</p>
+      </div>
+    </div>
+
+    <div class="fc-tier">
+      <div class="fc-tier-head"><span class="fc-badge">B</span><b>鍵・証明書・認証</b><span class="min">約40分</span></div>
+
+      <div class="fc-prob">
+        <h4>R4午後Ⅱ問1 テレワーク</h4>
+        <ul>
+          <li><label><input type="checkbox" id="r4p2q1-3"><span><span class="fc-q">設問3(1)(2)(5)</span>署名と検証に使う鍵、事前に入れておく証明書（設問3(5)は鍵を逆に書いて0点）</span></label></li>
+          <li><label><input type="checkbox" id="r4p2q1-5"><span><span class="fc-q">設問5(3)(4)</span>ECMPのフローモードとハッシュ</span></label></li>
+        </ul>
+        <p class="fc-path">解答記録/令和4年_午後Ⅱ_問1_テレワーク環境の導入/2026-11-13_210233.md</p>
+      </div>
+
+      <div class="fc-prob">
+        <h4>R5午後Ⅱ問2 ECサーバ</h4>
+        <ul>
+          <li><label><input type="checkbox" id="r5p2q2-6"><span><span class="fc-q">設問6(1)(3)(4)</span>SAMLとケルベロス（設問6(4)は0/8点）</span></label></li>
+        </ul>
+        <p class="fc-path">解答記録/令和5年_午後Ⅱ_問2_ECサーバの増強/2026-11-13_203208.md</p>
+      </div>
+
+      <div class="fc-prob">
+        <h4>R6午後Ⅱ問2 メール</h4>
+        <ul>
+          <li><label><input type="checkbox" id="r6p2q2-1-5"><span><span class="fc-q">設問1(5)</span>PTRレコード</span></label></li>
+          <li><label><input type="checkbox" id="r6p2q2-2"><span><span class="fc-q">設問2(1)(3)</span>SPFが確かめるもの（グローバルIPアドレス）</span></label></li>
+          <li><label><input type="checkbox" id="r6p2q2-3-3"><span><span class="fc-q">設問3(3)</span>DKIMで分かること</span></label></li>
+        </ul>
+        <p class="fc-path">解答記録/令和6年_午後Ⅱ_問2_電子メールを用いた製品サポート/2026-11-10_132519.md</p>
+      </div>
+    </div>
+
+    <div class="fc-tier">
+      <div class="fc-tier-head"><span class="fc-badge">C</span><b>時間が余ったら</b><span class="min">約30分</span></div>
+
+      <div class="fc-prob">
+        <h4>R5午後Ⅱ問1 マルチクラウド</h4>
+        <ul>
+          <li><label><input type="checkbox" id="r5p2q1-2"><span><span class="fc-q">設問2(3)(6)・3(1)</span>BGPの動作、静的経路が優先される理由（AD）、ルーティングのループ</span></label></li>
+        </ul>
+        <p class="fc-path">解答記録/令和5年_午後Ⅱ_問1_マルチクラウド利用による可用性向上/2026-11-13_195429.md</p>
+      </div>
+
+      <div class="fc-prob">
+        <h4>R7午後Ⅱ問1 IPv6<small>最新のテーマ</small></h4>
+        <ul>
+          <li><label><input type="checkbox" id="r7p2q1-4-3"><span><span class="fc-q">設問4(3)</span>RSとRAのやり取り</span></label></li>
+          <li><label><input type="checkbox" id="r7p2q1-4-4"><span><span class="fc-q">設問4(4)</span>ネクストホップはリンクローカルアドレスで書く</span></label></li>
+        </ul>
+        <p class="fc-path">解答記録/令和7年_午後Ⅱ_問1_社内ネットワークのIPv6対応/2026-11-07_121236.md</p>
+      </div>
+    </div>
+
+    <h3>読み方のコツ</h3>
+    <ul class="fc-tips">
+      <li>読むたびに「この設問は何を問われていたか」を一言で言ってみる。問われたことと違うことに答える失点の対策にもなります。</li>
+      <li>本の解説は、記録を読んで納得できなかった設問だけで十分です。</li>
+      <li>全部で2時間ほど。Aだけ読んで寝ても十分に効果があります。</li>
+    </ul>
+  </section>
+
+  <!-- ================= 本番の手順 ================= -->
+  <section id="steps" class="fc-sec">
+    <h2>本番で1問ごとにやること</h2>
+    <p class="muted">失点が一番大きかったのは、知識不足よりも「問われたことと違うことに答える」ことでした。</p>
+    <ol class="fc-steps">
+      <li><strong>設問文に下線を引く</strong><span>「何の」「どの機器の」「どの時点の」「理由・制約・動作・設定のどれか」</span></li>
+      <li><strong>文末を問いに合わせる</strong>
+        <div class="fc-endings"><code>理由 → 〜から</code><code>目的 → 〜ため</code><code>制約・問題 → 〜できない</code><code>設定 → 〇〇に△△を登録する</code></div></li>
+      <li><strong>対象を必ず書く</strong><span>「IPアドレス」「FQDN」など、何の値なのかまで書く</span></li>
+      <li><strong>本文の言葉を使う</strong><span>自分の言い換えより、本文の字句のほうが安全</span></li>
+      <li><strong>空欄を作らない</strong><span>あいまいな解答でも、平均して配点の半分の部分点が付いていた。午後Ⅱでは特に大きい</span></li>
+    </ol>
+    <h3>問われたことと違うことに答えた例</h3>
+    <div class="fc-ba">
+      <div><s>メリット</s><span class="arrow">→</span><b>制約</b>を問われていた（R4午後Ⅰ問1 設問3(2)・0/6点）</div>
+      <div><s>社内機器の設定</s><span class="arrow">→</span><b>SaaS側の設定</b>を問われていた（R7午後Ⅰ問3 設問3(4)・0/5点）</div>
+      <div><s>SPFの話</s><span class="arrow">→</span><b>PTRレコード</b>への不正操作を問われていた（R6午後Ⅱ問2 設問1(5)・0/7点）</div>
+      <div><s>入れ替え完了後</s><span class="arrow">→</span>電源を切る<b>前に</b>閉塞する理由を問われていた（R7午後Ⅰ問1 設問2(3)）</div>
+    </div>
+  </section>
+
+  <!-- ================= 用語の取り違え ================= -->
+  <section id="terms" class="fc-sec">
+    <h2>取り違えた用語</h2>
+    <p class="muted">赤字が書いた答え、太字が正しい答えです。</p>
+    <div class="fc-fixes">
+      <div class="fc-fix"><span class="bad">ブロードキャスト</span><span class="good">フラッディング<small>宛先MACアドレスが未学習のとき、受信ポート以外の全ポートへ送る</small></span><span class="src"><span class="twice">2回間違えた</span> ・ R4午後Ⅰ問1、R5午後Ⅰ問2</span></div>
+      <div class="fc-fix"><span class="bad">交換</span><span class="good">再配布<small>OSPFとBGPの間で経路を取り込むこと。iBGP同士は「経路交換」</small></span><span class="src"><span class="twice">2回間違えた</span> ・ R6午後Ⅰ問2、R5午後Ⅱ問1</span></div>
+      <div class="fc-fix"><span class="bad">TCP ／ TLS</span><span class="good">UDP<small>VXLANはUDPでカプセル化する（宛先ポート4789）</small></span><span class="src"><span class="twice">3周とも間違えた</span> ・ R6午後Ⅱ問1 設問1(1)</span></div>
+      <div class="fc-fix"><span class="bad">ルータID</span><span class="good">VRID<small>VRRPで仮想ルータを見分ける番号</small></span><span class="src">R4午後Ⅱ問2</span></div>
+      <div class="fc-fix"><span class="bad">バックボーンエリア</span><span class="good">クラスターID<small>ルートリフレクタを冗長化するときに設定する</small></span><span class="src">R6午後Ⅱ問1</span></div>
+      <div class="fc-fix"><span class="bad">X-Forwarded-For</span><span class="good">Hostヘッダ<small>振り分けの判定に使う</small></span><span class="src">R4午後Ⅱ問2</span></div>
+      <div class="fc-fix"><span class="bad">リプライ</span><span class="good">エコー応答<small>ICMPのEcho Reply</small></span><span class="src">R4午後Ⅱ問2</span></div>
+      <div class="fc-fix"><span class="bad">routetrace6</span><span class="good">traceroute6</span><span class="src">R7午後Ⅱ問1</span></div>
+      <div class="fc-fix"><span class="bad">クライアント</span><span class="good">カスタマー<small>CE（カスタマーエッジ）ルータ</small></span><span class="src">R6午後Ⅰ問2</span></div>
+    </div>
+  </section>
+
+  <!-- ================= 鍵・証明書・認証 ================= -->
+  <section id="keys" class="fc-sec">
+    <h2>鍵・証明書・認証</h2>
+    <p class="muted">「DMZ・認証」は得点率58%。午後Ⅰでも午後Ⅱでも出るテーマです。</p>
+    <div class="fc-card">
+      <dl class="fc-qa">
+        <dt>署名を作る鍵 ／ 検証する鍵</dt>
+        <dd><em>本人の秘密鍵</em>で作り、<em>本人の公開鍵</em>で検証する <span class="fc-note">CAの鍵ではない。R4午後Ⅱ問1で両方を逆に書いて0/6点</span></dd>
+        <dt>クライアント証明書を検証する側が、事前に入れておくもの</dt>
+        <dd><em>CAのルート証明書</em> <span class="fc-note">送られてくるクライアント証明書は検証される側</span></dd>
+        <dt>ケルベロス認証の暗号方式</dt>
+        <dd><em>共通鍵方式</em> <span class="fc-note">チケットを「秘密鍵で暗号化」と書くと誤り</span></dd>
+        <dt>SAMLアサーションの署名を検証して分かること</dt>
+        <dd><em>信頼しているIdPが作ったこと</em>と<em>改ざんされていないこと</em> <span class="fc-note">利用者の権限は分からない（R5午後Ⅱ問2・0/8点）</span></dd>
+        <dt>DKIMの署名で分かること</dt>
+        <dd><em>正規のメールサーバから送られたこと</em> <span class="fc-note">署名するのはメールサーバ</span></dd>
+        <dt>SPFが確かめるもの</dt>
+        <dd>送ってきたメールサーバの<em>グローバルIPアドレス</em> <span class="fc-note">ドメイン名やプライベートIPアドレスではない</span></dd>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ================= 対象を書く ================= -->
+  <section id="subject" class="fc-sec">
+    <h2>「何の」「どの機器の」を書く</h2>
+    <p class="muted">1〜3点ずつ削られた減点理由は、ほとんどがこれでした。</p>
+    <div class="fc-ba">
+      <div><s>送信元の情報</s><span class="arrow">→</span><b>アクセス元PCのIPアドレス</b></div>
+      <div><s>接続先のIPアドレス</s><span class="arrow">→</span><b>IPsecトンネルを確立するための、どの装置のIPアドレスか</b></div>
+      <div><s>メール中継サーバZ</s><span class="arrow">→</span><b>メール中継サーバZのIPアドレス</b></div>
+      <div><s>例外設定</s><span class="arrow">→</span><b>プロキシ例外リストに、そのサーバのFQDNを入れる</b></div>
+    </div>
+  </section>
+
+  <!-- ================= 定番の答え ================= -->
+  <section id="genre" class="fc-sec">
+    <h2>弱点ジャンルの定番の答え</h2>
+    <p class="muted">2〜3回、声に出して読むのがおすすめです。</p>
+    <div class="fc-cards">
+      <div class="fc-card">
+        <h3>VXLAN・EVPN <span class="fc-rate">53%</span></h3>
+        <dl class="fc-qa">
+          <dt>VTEPにループバックアドレスを使う理由</dt>
+          <dd><em>物理インタフェースが1つ故障しても、VTEPとして動き続けられる</em>から</dd>
+          <dt>EVPNがMACアドレスを学習する方法</dt>
+          <dd><em>MP-BGP</em>で学習する</dd>
+          <dt>BUMフレームを送る先</dt>
+          <dd><em>同じVNIを持つ全てのリモートVTEP</em> <span class="fc-note">端末ではない</span></dd>
+          <dt>リモートVTEPのIPアドレス</dt>
+          <dd><em>ループバックアドレス</em> <span class="fc-note">マルチキャストグループのアドレスではない</span></dd>
+          <dt>カプセル化の構造</dt>
+          <dd>外側のイーサネット ／ IPv4 ／ <em>UDP</em> ／ VXLANヘッダ（<em>VNIは24ビット</em>） ／ 元のフレーム</dd>
+          <dt>OSPFのルータIDが識別するもの</dt>
+          <dd><em>OSPFが動作する各ルータ（L3SW）</em> <span class="fc-note">3周とも0点だった設問</span></dd>
+        </dl>
+      </div>
+      <div class="fc-card">
+        <h3>マルチキャスト <span class="fc-rate">58%</span></h3>
+        <dl class="fc-qa">
+          <dt>宛先が未学習のときのL2SWの動作</dt>
+          <dd><em>フラッディング</em></dd>
+          <dt>送信元を指定して受信する方式</dt>
+          <dd><em>SSM</em> <span class="fc-note">IGMPv3はこれを使うためのプロトコル</span></dd>
+          <dt>ルータ間で配信経路（ツリー）を作るプロトコル</dt>
+          <dd><em>PIM-SM</em></dd>
+        </dl>
+      </div>
+      <div class="fc-card">
+        <h3>L2・パケット取得 <span class="fc-rate">59%</span></h3>
+        <dl class="fc-qa">
+          <dt>ミラーポートで取り込む方式の制約</dt>
+          <dd><em>送信と受信を合わせて、ポートの帯域（例：1Gbps）までしか取り込めない</em></dd>
+          <dt>プロミスキャスモードで受け取れるようになるもの</dt>
+          <dd><em>宛先MACアドレスが自分以外のフレーム</em></dd>
+        </dl>
+      </div>
+      <div class="fc-card">
+        <h3>経路制御・冗長化の理由</h3>
+        <dl class="fc-qa">
+          <dt>静的経路がBGPの経路より優先される理由</dt>
+          <dd><em>AD（アドミニストレーティブディスタンス）</em>の値が小さいから</dd>
+          <dt>ECMPのフローモードで品質が保たれる理由</dt>
+          <dd><em>パケットの到着順序が入れ替わりにくい</em>から</dd>
+          <dt>BFDを使う目的</dt>
+          <dd><em>障害を高速に検知する</em>ため</dd>
+          <dt>IPv6のネクストホップ</dt>
+          <dd>相手の<em>リンクローカルアドレス（fe80::〜）</em>で書く <span class="fc-note">インタフェース名ではない</span></dd>
+          <dt>PCがSLAACでアドレスを設定するとき、ルータがすること</dt>
+          <dd>PCの<em>RS</em>に対して<em>RA</em>を返す</dd>
+        </dl>
+      </div>
+    </div>
+    <p class="fc-anki">このページの定番の答えと用語は、Anki の単語帳「ネスペ::本番前 定番の答え」（48枚）にもしてあります。ファイルは <code>flashcards/本番前_定番の答え.apkg</code>、作り直すときは <code>node --experimental-sqlite apps/tools/anki-export.js --final</code>。</p>
+  </section>
+
+  <p class="fc-foot">2週間で全20問を2周しました。明日はその力をそのまま出すだけです。前日は早めに寝てください。</p>
+
+  <script src="js/final-check.js"></script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+/* 本番前チェック（final-check.html）。色は style.css の変数を使う */
+
+.fc-stats { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 10px 0 0; padding: 0; list-style: none; font-size: 0.9rem; }
+.fc-stats b { font-family: ui-monospace, Consolas, monospace; font-size: 1.1rem; color: var(--accent); margin-right: 2px; }
+
+.fc-toc {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+  margin: 14px -16px 0; padding: 8px 16px;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+}
+.fc-toc::-webkit-scrollbar { display: none; }
+.fc-toc a {
+  flex: none; font-size: 0.82rem; text-decoration: none; color: var(--text);
+  border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 3px 12px;
+}
+
+.fc-sec { padding-top: 22px; scroll-margin-top: 48px; }
+.fc-sec > h2 { font-size: 1.2rem; margin: 0 0 2px; }
+.fc-sec > .muted { margin: 0 0 12px; }
+.fc-sec h3 { font-size: 0.95rem; margin: 18px 0 8px; color: var(--accent); }
+
+/* ---- 過去問の確認チェックリスト ---- */
+.fc-progress { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; margin: 0 0 4px; }
+.fc-progress #fc-count { font-family: ui-monospace, Consolas, monospace; min-width: 4.5em; }
+.fc-bar { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.fc-bar i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .3s; }
+@media (prefers-reduced-motion: reduce) { .fc-bar i { transition: none; } }
+#fc-reset { font: inherit; font-size: 0.8rem; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 6px; padding: 2px 10px; cursor: pointer; }
+
+.fc-tier { margin-top: 16px; }
+.fc-tier-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.fc-badge { font-family: ui-monospace, Consolas, monospace; font-weight: 700; font-size: 0.8rem; color: var(--accent-text); background: var(--accent); padding: 0 8px; border-radius: 4px; }
+.fc-tier-head.a .fc-badge { background: var(--ng); color: var(--surface); }
+.fc-tier-head .min { margin-left: auto; font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+
+.fc-prob { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; }
+.fc-prob h4 { margin: 0; font-size: 1rem; }
+.fc-prob h4 small { font-weight: 400; color: var(--muted); margin-left: 6px; }
+.fc-prob .alert { margin: 4px 0 0; font-size: 0.82rem; color: var(--ng); }
+.fc-prob ul { list-style: none; margin: 6px 0 0; padding: 0; }
+.fc-prob label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; padding: 5px 0; line-height: 1.55; }
+.fc-prob input { width: 18px; height: 18px; margin: 3px 0 0; flex: none; accent-color: var(--ok); }
+.fc-prob input:checked + span { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--border); }
+.fc-q { font-family: ui-monospace, Consolas, monospace; font-size: 0.82rem; font-weight: 700; color: var(--accent); margin-right: 6px; white-space: nowrap; }
+.fc-path { margin: 6px 0 0; font-family: ui-monospace, Consolas, monospace; font-size: 0.7rem; color: var(--muted); overflow-wrap: anywhere; }
+.fc-tips { margin: 0; padding-left: 1.2em; }
+
+/* ---- 本番の手順 ---- */
+.fc-steps { list-style: none; margin: 0; padding: 0; counter-reset: s; display: grid; gap: 8px; }
+.fc-steps li { counter-increment: s; position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px 10px 50px; }
+.fc-steps li::before {
+  content: counter(s); position: absolute; left: 14px; top: 10px;
+  width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--accent); color: var(--accent);
+  font-family: ui-monospace, Consolas, monospace; font-weight: 700; font-size: 0.85rem; display: grid; place-items: center;
+}
+.fc-steps strong { display: block; }
+.fc-steps span { font-size: 0.88rem; color: var(--muted); }
+.fc-endings { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.fc-endings code { font-size: 0.82rem; background: var(--code-bg); padding: 1px 8px; border-radius: 4px; }
+
+/* ---- 書いた答え → 正しい答え ---- */
+.fc-ba { display: grid; gap: 6px; }
+.fc-ba div { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 0.93rem; }
+.fc-ba s { color: var(--ng); }
+.fc-ba .arrow { color: var(--muted); margin: 0 6px; }
+
+.fc-fixes { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.fc-fix { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 2px 14px; padding: 10px 14px; border-top: 1px solid var(--border); }
+.fc-fix:first-child { border-top: 0; }
+.fc-fix .bad { color: var(--ng); text-decoration: line-through; }
+.fc-fix .good { font-weight: 700; }
+.fc-fix .good small { display: block; font-weight: 400; color: var(--muted); font-size: 0.82rem; }
+.fc-fix .src { grid-column: 1 / -1; font-size: 0.75rem; color: var(--muted); }
+.fc-fix .twice { color: var(--ng); font-weight: 700; }
+@media (max-width: 480px) { .fc-fix { grid-template-columns: 1fr; } }
+
+/* ---- 定番の答え ---- */
+.fc-cards { display: grid; gap: 10px; }
+.fc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.fc-card h3 { margin: 0 0 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; color: var(--text); }
+.fc-rate { font-family: ui-monospace, Consolas, monospace; font-size: 0.75rem; font-weight: 400; color: var(--ng); background: var(--ng-bg); padding: 0 6px; border-radius: 4px; }
+.fc-qa { margin: 0; display: grid; gap: 8px; }
+.fc-qa dt { font-size: 0.85rem; color: var(--muted); }
+.fc-qa dd { margin: 0; font-weight: 700; }
+.fc-qa em { font-style: normal; background: linear-gradient(transparent 60%, var(--ok-bg) 60%); }
+.fc-note { font-size: 0.8rem; color: var(--muted); font-weight: 400; }
+
+.fc-anki { margin-top: 12px; font-size: 0.85rem; color: var(--muted); }
+.fc-anki code { font-size: 0.78rem; background: var(--code-bg); padding: 1px 6px; border-radius: 4px; overflow-wrap: anywhere; }
+.fc-foot { margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 0.85rem; color: var(--muted); }

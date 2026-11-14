@@ -1,5 +1,7 @@
 // 苦手ジャンルの一問一答（flashcards/qa_weak.js）を Anki 用の .apkg に書き出す
 //   node --experimental-sqlite apps/tools/anki-export.js [出力先.apkg]
+//   node --experimental-sqlite apps/tools/anki-export.js --final [出力先.apkg]
+//     … 本番前の定番の答え（flashcards/qa_final.js）を別のデッキ「ネスペ::本番前 定番の答え」に書き出す
 //
 // - 出力先の既定は flashcards/苦手ジャンル_一問一答.apkg。ダブルクリックで Anki に取り込める。
 // - ノートの guid はカードの id から作るので、qa_weak.js を更新して書き出し直しても
@@ -14,16 +16,23 @@ const crypto = require('crypto');
 const { DatabaseSync } = require('node:sqlite');
 
 const ROOT = path.join(__dirname, '..', '..');
-const out = process.argv[2] || path.join(ROOT, 'flashcards', '苦手ジャンル_一問一答.apkg');
+// 書き出す一式（カードのファイル・デッキ・既定の出力先）。デッキの id は書き出し直しても変えない
+const SETS = {
+  weak: { src: 'qa_weak.js', deckId: 1762000000002, deckName: 'ネスペ::苦手ジャンル 一問一答', out: '苦手ジャンル_一問一答.apkg' },
+  final: { src: 'qa_final.js', deckId: 1762000000102, deckName: 'ネスペ::本番前 定番の答え', out: '本番前_定番の答え.apkg' },
+};
+const args = process.argv.slice(2);
+const set = args.includes('--final') ? SETS.final : SETS.weak;
+const out = args.find(a => !a.startsWith('--')) || path.join(ROOT, 'flashcards', set.out);
 
 global.window = {};
-require(path.join(ROOT, 'flashcards', 'qa_weak.js'));
+require(path.join(ROOT, 'flashcards', set.src));
 const cards = window.QA_CARDS;
 
 // id は書き出し直しても変わらないよう固定する
 const MODEL_ID = 1762000000001;
-const DECK_ID = 1762000000002;
-const DECK_NAME = 'ネスペ::苦手ジャンル 一問一答';
+const DECK_ID = set.deckId;
+const DECK_NAME = set.deckName;
 const FIELDS = ['問題', '答え', 'つまずき', '解説', '覚え方', '出典', 'ジャンル'];
 const FIELD_SEP = '\x1f';
 

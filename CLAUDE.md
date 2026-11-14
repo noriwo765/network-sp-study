@@ -35,7 +35,7 @@ Claude Code のメモリ（~/.claude）はマシンごとで SSD に乗らない
 | `server/relay.js` | 中継サーバ。静的配信、`/progress`（暗記系の学習記録。古い at での上書きは 409）、`/grade`（Claude で採点）、`/history`、`/haiten`、`/plan`（学習計画。ファイル更新時刻を版にし、古い版での上書きは 409）、`/estimate`（想定合格率の AI 判定。GET で前回の結果）、`/notes`（メモ・マーカー。項目ごとに新しい方を残す。notes.json が壊れていたら書かない）、`/record`（解答記録/ への書き出し） |
 | `apps/tools/work-check.js` | 整合性チェック（解答欄の分割・配点・履歴）。`--fields <問題id>` で欄の単位を表示 |
 | `apps/tools/haiten-set.js` | 配点の一括登録（欄ラベルを検証し、rev を進めて保存） |
-| `apps/tools/anki-export.js` | 苦手ジャンルの一問一答を Anki 用の `.apkg` に書き出す（`node --experimental-sqlite apps/tools/anki-export.js`）。`qa_weak.js` を更新したら書き出し直す |
+| `apps/tools/anki-export.js` | 苦手ジャンルの一問一答を Anki 用の `.apkg` に書き出す（`node --experimental-sqlite apps/tools/anki-export.js`）。`qa_weak.js` を更新したら書き出し直す。`--final` で本番前の定番の答え（`flashcards/qa_final.js`）を別デッキに書き出す |
 
 解答欄の分け方（`work-shape.js`）：解答例が「ラベル：値　ラベル：値」→ラベル付きの複数欄、「ラベル：①X　②Y」「①X　②Y」→丸数字ごとの欄、「・X　・Y」→設問文が複数答えさせている（二つ/それぞれ/全て…）ときだけ番号付きの複数欄（そうでなければ別解の列挙なので1欄）、それ以外→1欄。「（順不同）」などの注記は欄にしない。
 
@@ -68,6 +68,7 @@ Claude Code のメモリ（~/.claude）はマシンごとで SSD に乗らない
 - 戻すときは、サーバを止めてブラウザのタブも閉じてから `git local restore --source=<コミット> -- server/history.json` のようにする。
 
 ## 進め方（利用者の好み）
+- Web ページ（まとめ・チェックリストなど）は Artifact ではなく、このワークスペースの `apps/` に置いて管理する。`index.html` からリンクし、`apps/sw.js` の FILES に足して VERSION を上げる（`check.js` が漏れを検出）。過去問由来の内容は `past-check.js` の全件検査の対象に入れる。
 - 方針が分かれるときは、選択肢と推奨を示して確認してから作る（過去に意図とずれたことがある）。
 - 学習面では**達成感**を大事にしている。数字で「できたこと」を見せる。
 - コミットメッセージは日本語。1行目に要約、本文に変更点の箇条書き。

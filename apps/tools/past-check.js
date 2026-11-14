@@ -10,7 +10,7 @@ const vm = require('vm');
 const ROOT = path.join(__dirname, '../..');
 const MIN = 20;
 // プロトコルの正式名など、問題文と一致しても写しではない語句
-const ALLOW = ['PMTUDPathMTUDiscovery'];
+const ALLOW = ['PMTUDPathMTUDiscovery', 'ESIEthernetSegmentIdentifier', 'SSMSource-SpecificMulticast'];
 const only = process.argv[2];
 let errors = 0;
 
@@ -55,12 +55,12 @@ for (const p of box.window.WORK_PROBLEMS) {
     if (hit) { errors++; console.log(`NG 写しの疑い ${f}: ${hit}`); }
   }
 }
-// 苦手カードと単語集は全問題と比べる（node apps/tools/past-check.js で全件検査するとき）
+// 苦手カード・本番前の定番の答え・単語集・本番前チェックのページは全問題と比べる（node apps/tools/past-check.js で全件検査するとき）
 if (!only) {
   const source = norm(box.window.WORK_PROBLEMS.flatMap(p => texts([p.overview, p.body, p.questions, p.commentary])).join('\n'));
   const grams = new Set();
   for (let i = 0; i + MIN <= source.length; i++) grams.add(source.slice(i, i + MIN));
-  for (const f of ['flashcards/qa_weak.js', 'flashcards/terms.js']) {
+  for (const f of ['flashcards/qa_weak.js', 'flashcards/qa_final.js', 'flashcards/terms.js', 'apps/final-check.html']) {
     const hit = longestCommon(norm(fs.readFileSync(path.join(ROOT, f), 'utf8')), grams);
     if (hit) { errors++; console.log(`NG 写しの疑い ${f}: ${hit}`); }
   }
