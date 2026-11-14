@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <script src="js/gate.js"></script>
+  <title>予想テーマ</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ネスペ学習">
+  <meta name="theme-color" content="#14171c">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/final.css">
+  <link rel="stylesheet" href="css/yosou.css">
+</head>
+<body>
+  <!-- 矢印の形（各図で共用） -->
+  <svg class="ys-defs" aria-hidden="true" focusable="false">
+    <defs>
+      <marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--accent)"/></marker>
+      <marker id="mm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--muted)"/></marker>
+      <marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--ng)"/></marker>
+      <marker id="mo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--ok)"/></marker>
+    </defs>
+  </svg>
+
+  <header>
+    <p class="back"><a href="index.html">← メニュー</a></p>
+    <h1>予想テーマ（時事ネタ）</h1>
+    <p class="sub">本番 2026年11月15日。R4〜R7 でまだ出ていない、最近話題の技術を11個。朝は上の「一覧」だけ眺めれば十分です。</p>
+    <ul class="fc-stats">
+      <li><b id="ys-count">0</b>/ 11 テーマを読んだ</li>
+    </ul>
+    <p class="ys-note">AI（Claude）による予想で、当たる保証はありません。時事ネタは問題の<strong>舞台設定</strong>に使われることが多く、設問で聞かれるのは TCP/UDP・DNS・経路制御・証明書などの<strong>基礎</strong>です。知らない技術名が出ても慌てず、問題文の説明と基礎の知識で解きましょう。</p>
+  </header>
+
+  <div class="fc-toc" aria-label="目次">
+    <a href="#list">一覧</a>
+    <a href="#past">出題済み</a>
+    <a href="#t-quic">QUIC</a>
+    <a href="#t-cert">証明書47日</a>
+    <a href="#t-ztna">VPN→ZTNA</a>
+    <a href="#t-ddos">DDoS</a>
+    <a href="#t-pqc">耐量子暗号</a>
+    <a href="#t-ech">HTTPS RR・ECH</a>
+    <a href="#t-wifi7">Wi-Fi 7</a>
+    <a href="#t-sat">衛星回線</a>
+    <a href="#t-passkey">パスキー</a>
+    <a href="#t-rpki">RPKI</a>
+    <a href="#t-aidc">AI DC</a>
+    <a href="#others">名前だけ</a>
+  </div>
+
+  <!-- ================= 一覧 ================= -->
+  <section id="list" class="fc-sec">
+    <h2>朝の5分：一覧</h2>
+    <p class="muted"><span class="ys-rank s">◎</span> 出そう　<span class="ys-rank a">○</span> ありえる　<span class="ys-rank b">△</span> 名前を知っておく</p>
+    <nav class="ys-list" id="ys-list">
+      <a href="#t-quic" data-id="quic"><span class="ys-rank s">◎</span><b>QUIC／HTTP/3</b><span>UDP の上で TLS 込みの通信。FW が UDP/443 を止めると TCP に戻る</span></a>
+      <a href="#t-cert" data-id="cert"><span class="ys-rank s">◎</span><b>証明書の短期化</b><span>最長有効期間が 200日（2026/3〜）→ 47日へ。ACME で自動更新が前提に</span></a>
+      <a href="#t-ztna" data-id="ztna"><span class="ys-rank s">◎</span><b>VPN装置 → ZTNA</b><span>ランサムウェアの入口の多くは VPN 装置。アプリ単位で毎回確認する方式へ</span></a>
+      <a href="#t-ddos" data-id="ddos"><span class="ys-rank s">◎</span><b>DDoS 対策</b><span>国内の航空・銀行が被害。スクラビング・CDN・Anycast で受け流す</span></a>
+      <a href="#t-pqc" data-id="pqc"><span class="ys-rank a">○</span><b>耐量子計算機暗号</b><span>TLS の鍵交換を「従来＋ML-KEM」のハイブリッドに。ClientHello が大きくなる</span></a>
+      <a href="#t-ech" data-id="ech"><span class="ys-rank a">○</span><b>HTTPS レコード・ECH</b><span>DNS で h3 対応と暗号化用の鍵を配る。SNI が見えなくなる</span></a>
+      <a href="#t-wifi7" data-id="wifi7"><span class="ys-rank a">○</span><b>Wi-Fi 7（MLO）</b><span>2.4/5/6GHz を同時に使う。6GHz 帯は WPA3 必須</span></a>
+      <a href="#t-sat" data-id="sat"><span class="ys-rank a">○</span><b>衛星回線をバックアップに</b><span>低軌道衛星。CGNAT なので外から着信できず、VPN は拠点から張る</span></a>
+      <a href="#t-passkey" data-id="passkey"><span class="ys-rank a">○</span><b>パスキー</b><span>証券口座の乗っ取り多発で普及。鍵がドメインに紐づくので偽サイトに効く</span></a>
+      <a href="#t-rpki" data-id="rpki"><span class="ys-rank b">△</span><b>RPKI（経路の検証）</b><span>BGP の経路を「正しい AS からの広告か」で検証。不正なら捨てる</span></a>
+      <a href="#t-aidc" data-id="aidc"><span class="ys-rank b">△</span><b>AI データセンター</b><span>GPU 間を RoCEv2 で結ぶ。損失が致命的なので PFC・ECN でロスレスに</span></a>
+    </nav>
+  </section>
+
+  <!-- ================= 出題済み ================= -->
+  <section id="past" class="fc-sec">
+    <h2>R4〜R7 で既に出たテーマ</h2>
+    <p class="muted">昨年の予想記事にあった SD-WAN・SASE・マルチクラウド・VXLAN/EVPN は、この4年間で出題済みです。同じテーマがすぐ続けて出ることは少ないので、このページでは<strong>まだ出ていない</strong>ものを選びました。</p>
+    <ul class="ys-chips done">
+      <li>SASE・SWG<small>R4・R7</small></li>
+      <li>SSO（SAML）<small>R4</small></li>
+      <li>テレワーク<small>R4</small></li>
+      <li>仮想化<small>R4</small></li>
+      <li>マルチクラウド<small>R5</small></li>
+      <li>IPマルチキャスト<small>R5</small></li>
+      <li>高速無線LAN（Wi-Fi 6）<small>R5</small></li>
+      <li>CDN<small>R6</small></li>
+      <li>SD-WAN・ローカルブレイクアウト<small>R6</small></li>
+      <li>VXLAN・EVPN<small>R6</small></li>
+      <li>メール<small>R6</small></li>
+      <li>IPv6<small>R7</small></li>
+      <li>IoT<small>R7</small></li>
+    </ul>
+  </section>
+
+  <section class="fc-sec">
+    <h2>テーマ別</h2>
+    <p class="muted">「ネスペならこう問われる」は予想の設問です。解答例を開く前に、一言で答えを考えてみてください。</p>
+
+    <!-- ================= QUIC ================= -->
+    <article class="ys-card" id="t-quic">
+      <div class="ys-head"><span class="ys-rank s">◎</span><h3>QUIC／HTTP/3</h3><label class="ys-read"><input type="checkbox" data-id="quic">読んだ</label></div>
+      <p class="ys-one">TCP＋TLS の代わりに、UDP の上で暗号化と再送をまとめて行うプロトコル。</p>
+      <p class="ys-why"><b>なぜ今</b>　主要なブラウザ・CDN・動画サービスでは既に HTTP/3 が標準。社内では「FW や SWG で見えない UDP 通信が増えた」ことが課題になっている。</p>
+      <figure class="yd">
+        <svg viewBox="0 0 440 172" role="img" aria-label="TCPとTLSは2往復、QUICは1往復でHTTP要求を送れる図">
+          <text x="10" y="16" class="s">接続を始めてから、最初の HTTP 要求を送るまで</text>
+          <text x="10" y="48">TCP+TLS</text>
+          <rect x="90" y="30" width="95" height="28" rx="6" class="bm"/><text x="137.5" y="48" class="c">TCP 1往復</text>
+          <rect x="189" y="30" width="95" height="28" rx="6" class="bm"/><text x="236.5" y="48" class="c">TLS 1往復</text>
+          <rect x="288" y="30" width="140" height="28" rx="6" class="bo"/><text x="358" y="48" class="c">HTTP 要求</text>
+          <text x="10" y="88" class="b ta">QUIC</text>
+          <rect x="90" y="70" width="95" height="28" rx="6" class="ba"/><text x="137.5" y="88" class="c">QUIC 1往復</text>
+          <rect x="189" y="70" width="140" height="28" rx="6" class="bo"/><text x="259" y="88" class="c">HTTP/3 要求</text>
+          <text x="10" y="128" class="ta">0-RTT</text>
+          <rect x="90" y="110" width="140" height="28" rx="6" class="bo"/><text x="160" y="128" class="c">最初から要求</text>
+          <text x="238" y="128" class="s">※2回目以降の接続</text>
+          <text x="10" y="162" class="s">UDP/443 を使う → FW が UDP/443 を通さないとブラウザは TCP（HTTP/2）に戻る</text>
+        </svg>
+      </figure>
+      <h4>ネスペならこう問われる</h4>
+      <ol class="ys-q">
+        <li>HTTP/3 に対応したのに、社内の利用者だけ HTTP/2 で通信していた。FW の設定で考えられる原因は？
+          <details><summary>解答例</summary><p>FW が UDP の 443 番ポートを許可しておらず、ブラウザが TCP に切り替えたため。</p></details></li>
+        <li>スマートフォンが Wi-Fi から LTE に切り替わっても、QUIC の通信が切れない理由は？
+          <details><summary>解答例</summary><p>IP アドレスとポート番号ではなく、コネクション ID で接続を識別しているから。</p></details></li>
+        <li>HTTP/2（TCP）と比べて、パケットが1個失われたときの影響が小さい理由は？
+          <details><summary>解答例</summary><p>TCP では1つの損失で全ストリームが待たされる（HoL ブロッキング）が、QUIC はストリームごとに再送を管理するので、他のストリームは止まらない。</p></details></li>
+      </ol>
+      <p class="ys-kw"><code>UDP/443</code><code>TLS 1.3 を内蔵</code><code>0-RTT</code><code>コネクション ID</code><code>HoL ブロッキング</code><code>Alt-Svc</code><code>ヘッダまで暗号化（中継機器から見えない）</code></p>
+    </article>
+
+    <!-- ================= 証明書 ================= -->
+    <article class="ys-card" id="t-cert">
+      <div class="ys-head"><span class="ys-rank s">◎</span><h3>サーバ証明書の短期化と ACME</h3><label class="ys-read"><input type="checkbox" data-id="cert">読んだ</label></div>
+      <p class="ys-one">証明書の最長有効期間が段階的に短くなり、最終的に47日に。手作業の更新はもう回らない。</p>
+      <p class="ys-why"><b>なぜ今</b>　2025年に CA/ブラウザフォーラムで決定し、<strong>2026年3月から最長200日</strong>に短縮済み（ちょうど今年の話）。ACME による自動更新が前提になる。</p>
+      <figure class="yd">
+        <svg viewBox="0 0 440 252" role="img" aria-label="証明書の有効期間が398日から47日へ短くなる図と、ACMEの手順">
+          <text x="10" y="16" class="s">サーバ証明書の最長有効期間</text>
+          <text x="10" y="40">〜2026/3</text><rect x="95" y="26" width="318" height="18" rx="4" class="bm"/><text x="405" y="40" style="text-anchor:end">398日</text>
+          <text x="10" y="64" class="b ta">2026/3〜</text><rect x="95" y="50" width="160" height="18" rx="4" class="ba"/><text x="262" y="64" class="ta b">200日 ← 今ここ</text>
+          <text x="10" y="88">2027/3〜</text><rect x="95" y="74" width="80" height="18" rx="4" class="bm"/><text x="182" y="88">100日</text>
+          <text x="10" y="112">2029/3〜</text><rect x="95" y="98" width="38" height="18" rx="4" class="bn"/><text x="140" y="112" class="tn">47日 → 手作業の更新は無理</text>
+          <rect x="10" y="134" width="125" height="64" rx="8" class="bx"/><text x="72.5" y="160" class="c">Webサーバ</text><text x="72.5" y="178" class="c s">ACME クライアント</text>
+          <rect x="305" y="134" width="125" height="64" rx="8" class="bx"/><text x="367.5" y="160" class="c">認証局（CA）</text><text x="367.5" y="178" class="c s">ACME サーバ</text>
+          <line x1="140" y1="148" x2="300" y2="148" class="la" marker-end="url(#ma)"/><text x="220" y="143" class="c s">① 発行を申し込む</text>
+          <line x1="300" y1="170" x2="140" y2="170" class="lm" marker-end="url(#mm)"/><text x="220" y="165" class="c s">② 課題（トークン）</text>
+          <line x1="140" y1="192" x2="300" y2="192" class="la" marker-end="url(#ma)"/><text x="220" y="187" class="c s">③ 課題を置いた → ④ 発行</text>
+          <rect x="10" y="208" width="420" height="40" rx="6" class="bm"/>
+          <text x="20" y="224" class="s">HTTP-01：CA が /.well-known/acme-challenge/ を取りに来る（80番）</text>
+          <text x="20" y="241" class="s">DNS-01：TXT レコードで証明（ワイルドカード・社内サーバも可）</text>
+        </svg>
+      </figure>
+      <h4>ネスペならこう問われる</h4>
+      <ol class="ys-q">
+        <li>有効期間の短縮に対して、運用面で必要な対策は？
+          <details><summary>解答例</summary><p>ACME を使い、証明書の取得と更新を自動化する。</p></details></li>
+        <li>ワイルドカード証明書を ACME で取得するときに使う検証方式は？
+          <details><summary>解答例</summary><p>DNS-01（_acme-challenge の TXT レコードで、ドメインの管理者であることを示す）。HTTP-01 では取得できない。</p></details></li>
+        <li>インターネットから 80 番に到達できない社内サーバでも DNS-01 なら取得できる理由は？
+          <details><summary>解答例</summary><p>CA はサーバではなく DNS サーバ上の TXT レコードを確認するので、サーバ自体に外から到達できなくてもよいから。</p></details></li>
+        <li>負荷分散装置で TLS を終端している構成で、更新を忘れがちな機器は？
+          <details><summary>解答例</summary><p>負荷分散装置（サーバではなく、TLS を終端している機器の証明書を更新する必要がある）。</p></details></li>
+      </ol>
+      <p class="ys-kw"><code>ACME</code><code>HTTP-01（80番）</code><code>DNS-01（TXT）</code><code>ワイルドカード</code><code>TLS 終端</code><code>OCSP ステープリング</code><code>証明書の失効</code></p>
+    </article>
+
+    <!-- ================= ZTNA ================= -->
+    <article class="ys-card" id="t-ztna">
+      <div class="ys-head"><span class="ys-rank s">◎</span><h3>VPN 装置の脆弱性 → ZTNA</h3><label class="ys-read"><input type="checkbox" data-id="ztna">読んだ</label></div>
+      <p class="ys-one">VPN は「入れたら社内LAN全体」。ZTNA は「人・端末を毎回確認して、許可したアプリだけ」。</p>
+      <p class="ys-why"><b>なぜ今</b>　警察庁の集計では、ランサムウェアの侵入経路の約8割が VPN 機器とリモートデスクトップ。2025年も国内の大手企業でランサムウェアによる業務停止が相次いだ。</p>
+      <figure class="yd">
+        <svg viewBox="0 0 440 232" role="img" aria-label="VPNでは社内LAN全体に入れるが、ZTNAでは許可したアプリだけに接続できる図">
+          <text x="10" y="16" class="b">従来：VPN</text>
+          <text x="240" y="16" class="b ta">ZTNA</text>
+          <line x1="225" y1="6" x2="225" y2="226" class="lm dash"/>
+          <rect x="10" y="28" width="90" height="30" rx="6" class="bx"/><text x="55" y="48" class="c">利用者</text>
+          <rect x="115" y="28" width="95" height="30" rx="6" class="bn"/><text x="162.5" y="48" class="c tn">攻撃者</text>
+          <line x1="55" y1="58" x2="80" y2="88" class="la" marker-end="url(#ma)"/>
+          <line x1="162" y1="58" x2="140" y2="88" class="ln" marker-end="url(#mn)"/>
+          <rect x="35" y="90" width="150" height="34" rx="6" class="bn"/><text x="110" y="112" class="c">VPN 装置（公開）</text>
+          <line x1="110" y1="124" x2="110" y2="150" class="ln" marker-end="url(#mn)"/>
+          <rect x="10" y="152" width="200" height="56" rx="8" class="bm"/><text x="110" y="176" class="c">社内LAN</text><text x="110" y="196" class="c tn">全体に入れてしまう</text>
+          <rect x="240" y="28" width="90" height="30" rx="6" class="bx"/><text x="285" y="48" class="c">利用者</text>
+          <rect x="340" y="28" width="90" height="30" rx="6" class="bn"/><text x="385" y="48" class="c tn">攻撃者</text>
+          <line x1="285" y1="58" x2="285" y2="86" class="la" marker-end="url(#ma)"/>
+          <line x1="385" y1="58" x2="385" y2="86" class="ln" marker-end="url(#mn)"/><text x="395" y="78" class="tn b">×</text>
+          <rect x="240" y="88" width="190" height="44" rx="8" class="ba"/><text x="335" y="106" class="c">ZTNA（クラウド）</text><text x="335" y="124" class="c s">ID と端末の状態を毎回確認</text>
+          <line x1="282" y1="132" x2="282" y2="166" class="lo" marker-end="url(#mo)"/>
+          <line x1="387" y1="132" x2="387" y2="166" class="lm dash"/><text x="395" y="154" class="tn b">×</text>
+          <rect x="240" y="168" width="85" height="32" rx="6" class="bo"/><text x="282.5" y="189" class="c">アプリA</text>
+          <rect x="345" y="168" width="85" height="32" rx="6" class="bm"/><text x="387.5" y="189" class="c">アプリB</text>
+          <text x="238" y="222" class="s">コネクタは社内から外向きに接続</text>
+        </svg>
+      </figure>
+      <h4>ネスペならこう問われる</h4>
+      <ol class="ys-q">
+        <li>VPN 装置が攻撃の入口になりやすい理由は？
+          <details><summary>解答例</summary><p>インターネットに公開されていて誰でも接続を試せるため、脆弱性を悪用されると社内LANに入られてしまうから。</p></details></li>
+        <li>ZTNA のコネクタが、社内からクラウドへ外向きに接続する方式の利点は？
+          <details><summary>解答例</summary><p>FW でインターネットからの通信（インバウンド）を許可する必要がなく、攻撃の対象になる公開ポートがなくなる。</p></details></li>
+        <li>VPN と比べて、乗っ取られたときの被害範囲を小さくできる理由は？
+          <details><summary>解答例</summary><p>利用者ごとに許可したアプリケーションにだけ接続させ、社内LAN全体には到達させないから。</p></details></li>
+        <li>接続のたびに端末の何を確認する？
+          <details><summary>解答例</summary><p>OS の更新プログラムの適用状況、EDR（ウイルス対策）が動いているか、会社が管理している端末か、など。条件を満たさない端末は接続させない。</p></details></li>
+      </ol>
+      <p class="ys-kw"><code>ゼロトラスト</code><code>ZTNA</code><code>IdP・多要素認証</code><code>端末の状態確認</code><code>最小権限</code><code>マイクロセグメンテーション</code><code>EDR</code></p>
+      <p class="ys-link">関連：R4午後Ⅰ問2・R7午後Ⅰ問3（SWG）、R4午後Ⅰ問3（SSO）</p>
+    </article>
+
+    <!-- ================= DDoS ================= -->
+    <article class="ys-card" id="t-ddos">
+      <div class="ys-head"><span class="ys-rank s">◎</span><h3>DDoS 攻撃への対策</h3><label class="ys-read"><input type="checkbox" data-id="ddos">読んだ</label></div>
+      <p class="ys-one">大量の通信を自社の手前で受け止めて、正常な通信だけを通す。</p>
+      <p class="ys-why"><b>なぜ今</b>　2024年末〜2025年初めに、国内の航空会社や大手銀行のネットサービスが DDoS 攻撃でつながりにくくなった。IoT 機器を乗っ取ったボットネットが使われる。</p>
+      <figure class="yd">
+        <svg viewBox="0 0 440 196" role="img" aria-label="攻撃通信をスクラビングセンターに誘導して、正常な通信だけを自社に送る図">
+          <rect x="10" y="20" width="80" height="26" rx="6" class="bn"/><text x="50" y="38" class="c tn">ボット</text>
+          <rect x="10" y="52" width="80" height="26" rx="6" class="bn"/><text x="50" y="70" class="c tn">ボット</text>
+          <rect x="10" y="84" width="80" height="26" rx="6" class="bn"/><text x="50" y="102" class="c tn">ボット</text>
+          <rect x="10" y="122" width="80" height="26" rx="6" class="bo"/><text x="50" y="140" class="c">利用者</text>
+          <line x1="90" y1="33" x2="148" y2="60" class="ln" marker-end="url(#mn)"/>
+          <line x1="90" y1="65" x2="148" y2="74" class="ln" marker-end="url(#mn)"/>
+          <line x1="90" y1="97" x2="148" y2="88" class="ln" marker-end="url(#mn)"/>
+          <line x1="90" y1="135" x2="148" y2="102" class="lo" marker-end="url(#mo)"/>
+          <rect x="150" y="50" width="130" height="62" rx="8" class="ba"/><text x="215" y="76" class="c">スクラビング</text><text x="215" y="96" class="c s">攻撃だけ捨てる</text>
+          <line x1="280" y1="81" x2="328" y2="81" class="lo" marker-end="url(#mo)"/><text x="304" y="74" class="c s">正常のみ</text>
+          <rect x="330" y="60" width="100" height="42" rx="8" class="bx"/><text x="380" y="86" class="c">自社サーバ</text>
+          <text x="150" y="134" class="s">誘導のしかた：BGP で経路を切り替える</text>
+          <text x="150" y="150" class="s">（または DNS で CDN に向ける）</text>
+          <text x="10" y="184" class="s tn">注意：自社サーバの IP アドレスが知られていると、CDN を通さず直接狙われる</text>
+        </svg>
+      </figure>
+      <h4>ネスペならこう問われる</h4>
+      <ol class="ys-q">
+        <li>CDN を導入したのに、Web サーバへの攻撃が止まらなかった。考えられる原因と対策は？
+          <details><summary>解答例</summary><p>原因：オリジンサーバの IP アドレスが知られていて、CDN を経由せず直接攻撃された。対策：オリジンサーバは CDN からの通信だけを許可する。</p></details></li>
+        <li>攻撃を受けたときに、通信をスクラビング事業者に誘導する方法は？
+          <details><summary>解答例</summary><p>BGP で自社のアドレスの経路を事業者から広告させ、攻撃対象宛ての通信を事業者経由にする。</p></details></li>
+        <li>Anycast が DDoS に強い理由は？
+          <details><summary>解答例</summary><p>同じ IP アドレスを複数の拠点から広告するので、攻撃の通信が各拠点に分散するから。</p></details></li>
+        <li>RTBH（宛先のアドレスへの通信を上流で捨てる）の欠点は？
+          <details><summary>解答例</summary><p>攻撃の通信だけでなく正常な通信も捨てるので、攻撃対象のサービスは止まってしまう（他のサービスは守れる）。</p></details></li>
+      </ol>
+      <p class="ys-kw"><code>スクラビング</code><code>CDN・WAF</code><code>Anycast</code><code>RTBH</code><code>SYN cookie</code><code>レート制限</code><code>DNS 水責め攻撃</code><code>リフレクション（増幅）攻撃</code></p>
+      <p class="ys-link">関連：R6午後Ⅰ問1（CDN）</p>
+    </article>
+
+    <!-- ================= PQC ================= -->
+    <article class="ys-card" id="t-pqc">
+      <div class="ys-head"><span class="ys-rank a">○</span><h3>耐量子計算機暗号（PQC）</h3><label class="ys-read"><input type="checkbox" data-id="pqc">読んだ</label></div>
+      <p class="ys-one">量子コンピュータでも解けない暗号。TLS では従来の方式と組み合わせた「ハイブリッド」で使い始めている。</p>
+      <p class="ys-why"><b>なぜ今</b>　2024年に米国 NIST が ML-KEM などを標準化し、主要なブラウザは既に TLS の鍵交換で X25519MLKEM768（ハイブリッド）を使っている。米国などは2035年ごろまでの移行を目標にしている。</p>
+      <figure class="yd">
+        <svg viewBox="0 0 440 198" role="img" aria-label="従来の鍵交換と耐量子の鍵交換を同時に行い、二つの秘密を合成する図">
+          <rect x="10" y="30" width="110" height="112" rx="8" class="bx"/><text x="65" y="52" class="c">ブラウザ</text>
+          <text x="65" y="84" class="c s">A：X25519</text><text x="65" y="102" class="c s">B：ML-KEM</text><text x="65" y="128" class="c s">両方で鍵を作る</text>
+          <rect x="320" y="30" width="110" height="112" rx="8" class="bx"/><text x="375" y="52" class="c">Webサーバ</text>
+          <text x="375" y="84" class="c s">A：X25519</text><text x="375" y="102" class="c s">B：ML-KEM</text><text x="375" y="128" class="c s">両方で鍵を作る</text>
+          <line x1="122" y1="70" x2="316" y2="70" class="la" marker-end="url(#ma)"/><text x="220" y="62" class="c">ClientHello</text><text x="220" y="86" class="c s">A と B の鍵を一緒に送る（約1.2KB 増）</text>
+          <line x1="316" y1="112" x2="122" y2="112" class="lm" marker-end="url(#mm)"/><text x="220" y="106" class="c">ServerHello</text>
+          <rect x="95" y="156" width="250" height="32" rx="6" class="bo"/><text x="220" y="177" class="c">A と B を合成 → セッション鍵</text>
+        </svg>
+      </figure>
+      <h4>ネスペならこう問われる</h4>
+      <ol class="ys-q">
+        <li>量子コンピュータの実用化はまだ先なのに、今から対応する理由は？
+          <details><summary>解答例</summary><p>今盗聴して保存した暗号文が、将来の量子コンピュータで解読されるおそれがあるから（Harvest Now, Decrypt Later）。</p></details></li>
+        <li>PQC 単独ではなく、従来方式と組み合わせる（ハイブリッド）理由は？
+          <details><summary>解答例</summary><p>新しい PQC に未知の弱点が見つかっても、従来方式が破られない限り安全を保てるから。</p></details></li>
+        <li>PQC を有効にしたら、古いプロキシ経由の TLS 接続だけ失敗した。考えられる原因は？
+          <details><summary>解答例</summary><p>ClientHello が大きくなって複数の TCP セグメントに分かれ、中継機器がそれを正しく処理できなかった。</p></details></li>
+      </ol>
+      <p class="ys-kw"><code>ML-KEM（鍵カプセル化）</code><code>ML-DSA（署名）</code><code>ハイブリッド鍵交換</code><code>X25519MLKEM768</code><code>Harvest Now, Decrypt Later</code><code>クリプトアジリティ</code></p>
+    </article>
+
+    <!-- ================= ECH ================= -->
+    <article class="ys-card" id="t-ech">
+      <div class="ys-head"><span class="ys-rank a">○</span><h3>DNS の HTTPS レコードと ECH</h3><label class="ys-read"><input type="checkbox" data-id="ech">読んだ</label></div>
+      <p class="ys-one">DNS で「HTTP/3 に対応しているか」と「ClientHello を暗号化する鍵」を配る。接続先のドメイン名（SNI）が見えなくなる。</p>
+      <p class="ys-why"><b>なぜ今</b>　HTTPS レコード（SVCB）は大手 CDN とブラウザが対応済み。ECH も主要ブラウザ・CDN で使われ始め、SNI でフィルタリングしている FW・SWG に影響が出ている。</p>
+      <figure class="yd">
+        <svg viewBox="0 0 440 210" role="img" aria-label="DNSのHTTPSレコードで鍵を受け取り、ECHでSNIを暗号化するため、FWからは本当の宛先が見えない図">
+          <rect x="10" y="62" width="90" height="80" rx="8" class="bx"/><text x="55" y="106" class="c">ブラウザ</text>
+          <rect x="140" y="10" width="120" height="38" rx="6" class="bm"/><text x="200" y="34" class="c">DNS（DoH）</text>
+          <line x1="60" y1="60" x2="138" y2="34" class="la" marker-end="url(#ma)"/>
+          <rect x="272" y="6" width="160" height="46" rx="6" class="bo"/><text x="282" y="25" class="s">HTTPS レコード</text><text x="282" y="43" class="s">alpn=h3 ／ ech=暗号化用の鍵</text>
+          <line x1="260" y1="29" x2="270" y2="29" class="lm"/>
+          <rect x="160" y="88" width="110" height="40" rx="6" class="bx"/><text x="215" y="113" class="c">FW／SWG</text>
+          <rect x="340" y="80" width="90" height="56" rx="8" class="bx"/><text x="385" y="113" class="c">Webサーバ</text>
+          <line x1="100" y1="108" x2="158" y2="108" class="la" marker-end="url(#ma)"/>
+          <line x1="270" y1="108" x2="338" y2="108" class="la" marker-end="url(#ma)"/>
+          <rect x="110" y="150" width="320" height="52" rx="6" class="bm"/>
+          <text x="120" y="171" class="s">外側の SNI：cdn.example.net（FW から見える）</text>
+          <text x="120" y="191" class="ta">内側の SNI：本当の宛先（暗号化）</text>
+        </svg>
+      </figure>
+      <h4>ネスペならこう問われる</h4>
+      <ol class="ys-q">
+        <li>HTTPS レコードを使うと、初回の接続から HTTP/3 を使える理由は？
+          <details><summary>解答例</summary><p>DNS の応答（alpn）で HTTP/3 対応が分かるので、Alt-Svc ヘッダを受け取るのを待たずに QUIC で接続できるから。</p></details></li>
+        <li>ECH が使われると、SWG の URL フィルタリングにどんな影響がある？
+          <details><summary>解答例</summary><p>SNI で宛先を判断していると、本当の接続先のドメイン名が分からず、フィルタリングできなくなる。</p></details></li>
+        <li>ECH の暗号化に使う公開鍵は、どうやってクライアントに配られる？
+          <details><summary>解答例</summary><p>DNS の HTTPS レコード（ech パラメータ）で配られる。</p></details></li>
+      </ol>
+      <p class="ys-kw"><code>SVCB／HTTPS レコード</code><code>alpn</code><code>ECH</code><code>SNI</code><code>DoH（443）</code><code>DoT（853）</code><code>TLS インスペクション</code></p>
+    </article>
+
+    <!-- ================= Wi-Fi 7 ================= -->
+    <article class="ys-card" id="t-wifi7">
+      <div class="ys-head"><span class="ys-rank a">○</span><h3>Wi-Fi 7（IEEE 802.11be）</h3><label class="ys-read"><input type="checkbox" data-id="wifi7">読んだ</label></div>
+      <p class="ys-one">一番の新機能は MLO（マルチリンク）。複数の周波数帯を同時に使って、速く・途切れにくくする。</p>
+      <p class="ys-why"><b>なぜ今</b>　国内では2023年末に解禁され、対応する AP・スマートフォン・PC が普及期に入った。次の Wi-Fi 8（802.11bn）は速度より信頼性を重視している。</p>
+      <figure class="yd">
+        <svg viewBox="0 0 440 172" role="img" aria-label="APと端末が2.4GHz、5GHz、6GHzの三つのリンクで同時につながる図">
+          <text x="220" y="16" class="c s">MLO：複数の周波数帯を同時に使う（束ねる／混んだら別の帯へ）</text>
+          <rect x="10" y="30" width="110" height="112" rx="8" class="ba"/><text x="65" y="58" class="c">AP</text><text x="65" y="76" class="c s">（AP MLD）</text>
+          <rect x="320" y="30" width="110" height="112" rx="8" class="ba"/><text x="375" y="58" class="c">端末</text><text x="375" y="76" class="c s">（non-AP MLD）</text>
+          <line x1="120" y1="92" x2="320" y2="92" class="lm"/><text x="220" y="87" class="c s">2.4GHz</text>
+          <line x1="120" y1="112" x2="320" y2="112" class="la"/><text x="220" y="107" class="c s">5GHz</text>
+          <line x1="120" y1="132" x2="320" y2="132" class="la" style="stroke-width:4"/><text x="220" y="127" class="c s">6GHz（最大 320MHz 幅）</text>
+          <text x="220" y="164" class="c s">6GHz 帯は WPA3（または OWE）が必須</text>
+        </svg>
+      </figure>
+      <h4>ネスペならこう問われる</h4>
+      <ol class="ys-q">
+        <li>MLO によって可用性が上がる理由は？
+          <details><summary>解答例</summary><p>複数の周波数帯の通信路を同時に使うので、一つが干渉で劣化しても他の通信路で通信を続けられるから。</p></details></li>
+        <li>6GHz 帯を使う利点と注意点は？
+          <details><summary>解答例</summary><p>利点：新しく開放された帯域で干渉が少なく、広いチャネル幅を確保できる。注意点：電波が届く範囲が狭いので AP を増やす必要がある。</p></details></li>
+        <li>WPA2 にしか対応していない端末が 6GHz 帯の SSID に接続できない理由は？
+          <details><summary>解答例</summary><p>6GHz 帯では WPA3（または OWE）と PMF が必須だから。</p></details></li>
+      </ol>
+      <p class="ys-kw"><code>802.11be</code><code>MLO</code><code>320MHz 幅</code><code>4096QAM</code><code>プリアンブルパンクチャリング</code><code>WPA3・PMF</code><code>Wi-Fi 8（802.11bn）</code></p>
+      <p class="ys-link">関連：R5午後Ⅰ問3（高速無線LAN）</p>
+    </article>
+
+    <!-- ================= 衛星 ================= -->
+    <article class="ys-card" id="t-sat">
+      <div class="ys-head"><span class="ys-rank a">○</span><h3>低軌道衛星をバックアップ回線に</h3><label class="ys-read"><input type="checkbox" data-id="sat">読んだ</label></div>
+      <p class="ys-one">地上の回線と経路が全く違うので、災害時の予備回線に向く。ただし CGNAT の内側になる。</p>
+      <p class="ys-why"><b>なぜ今</b>　低軌道衛星のインターネット（遅延は数十ms）を企業や自治体が BCP 用に導入。2025年には国内でスマートフォンと衛星の直接通信も始まった。</p>
+      <figure class="yd">
+        <svg viewBox="0 0 440 200" role="img" aria-label="拠点ルータが主回線の光回線と、予備の衛星回線で本社につながる図">
+          <text x="220" y="16" class="c s">主回線が切れたら衛星回線へ（経路の監視 ＋ フローティングスタティック）</text>
+          <rect x="10" y="80" width="100" height="44" rx="8" class="bx"/><text x="60" y="107" class="c">拠点ルータ</text>
+          <rect x="150" y="40" width="120" height="30" rx="6" class="bm"/><text x="210" y="60" class="c">光回線（主）</text>
+          <rect x="150" y="132" width="120" height="30" rx="6" class="ba"/><text x="210" y="152" class="c">衛星回線（予備）</text>
+          <text x="210" y="178" class="c s tn">CGNAT：外から着信できない</text>
+          <rect x="330" y="80" width="100" height="44" rx="8" class="bx"/><text x="380" y="107" class="c">本社</text>
+          <line x1="110" y1="92" x2="150" y2="58" class="la"/>
+          <line x1="270" y1="56" x2="330" y2="92" class="la"/>
+          <line x1="110" y1="112" x2="150" y2="145" class="lm dash"/>
+          <line x1="270" y1="146" x2="328" y2="114" class="lm dash" marker-end="url(#mm)"/>
+          <text x="220" y="196" class="c s">VPN は拠点側から張る（NAT トラバーサル：UDP/4500）</text>
+        </svg>
+      </figure>
+      <h4>ネスペならこう問われる</h4>
+      <ol class="ys-q">
+        <li>衛星回線では、本社から拠点へ VPN の接続を開始できない理由は？
+          <details><summary>解答例</summary><p>キャリアグレード NAT でプライベートアドレスが割り当てられ、外部からの接続を受けられないから。</p></details></li>
+        <li>その環境で IPsec VPN を使うには？
+          <details><summary>解答例</summary><p>拠点側から接続を開始し、NAT トラバーサル（ESP を UDP/4500 でカプセル化）を使う。</p></details></li>
+        <li>主回線の障害時に、自動で衛星回線に切り替えるには？
+          <details><summary>解答例</summary><p>主回線の先への到達性を監視し、断を検知したら主回線の経路を消して、優先度の低い静的経路（衛星回線向け）を使わせる。</p></details></li>
+      </ol>
+      <p class="ys-kw"><code>低軌道（LEO）衛星</code><code>CGNAT</code><code>NAT トラバーサル（UDP/4500）</code><code>フローティングスタティック</code><code>IP SLA・トラッキング</code><code>BCP</code></p>
+    </article>
+
+    <!-- ================= パスキー ================= -->
+    <article class="ys-card" id="t-passkey">
+      <div class="ys-head"><span class="ys-rank a">○</span><h3>パスキー（FIDO2／WebAuthn）</h3><label class="ys-read"><input type="checkbox" data-id="passkey">読んだ</label></div>
+      <p class="ys-one">パスワードの代わりに、端末の中の秘密鍵で署名してログインする。鍵はドメインごとに分かれている。</p>
+      <p class="ys-why"><b>なぜ今</b>　2025年にフィッシングによる証券口座の乗っ取りが多発し、証券会社などがパスキーや多要素認証を必須にした。</p>
+      <figure class="yd">
+        <svg viewBox="0 0 440 182" role="img" aria-label="端末の秘密鍵で本物のサイトにだけ署名し、偽サイトには鍵が使われない図">
+          <rect x="10" y="40" width="130" height="100" rx="8" class="bx"/><text x="75" y="66" class="c">スマホ・PC</text><text x="75" y="90" class="c s">サイトごとの秘密鍵</text><text x="75" y="110" class="c s">生体認証で使う</text>
+          <rect x="300" y="20" width="130" height="56" rx="8" class="bo"/><text x="365" y="44" class="c">本物のサイト</text><text x="365" y="64" class="c s">公開鍵だけ保存</text>
+          <rect x="300" y="112" width="130" height="56" rx="8" class="bn"/><text x="365" y="136" class="c tn">偽サイト</text><text x="365" y="156" class="c s">ドメインが違う</text>
+          <line x1="298" y1="36" x2="142" y2="56" class="lm" marker-end="url(#mm)"/><text x="215" y="26" class="c s">① チャレンジ（毎回違う乱数）</text>
+          <line x1="142" y1="76" x2="298" y2="60" class="lo" marker-end="url(#mo)"/><text x="220" y="86" class="c s">② 秘密鍵で署名して返す</text>
+          <line x1="142" y1="120" x2="298" y2="138" class="ln dash"/><text x="220" y="160" class="c tn">鍵が使われない ×</text>
+        </svg>
+      </figure>
+      <h4>ネスペならこう問われる</h4>
+      <ol class="ys-q">
+        <li>パスキーがフィッシングに強い理由は？
+          <details><summary>解答例</summary><p>鍵がサイトのドメイン（オリジン）と結び付けて保存されていて、偽サイトのドメインでは署名しないから。</p></details></li>
+        <li>サーバから認証情報が漏えいしても被害が出にくい理由は？
+          <details><summary>解答例</summary><p>サーバには公開鍵しか保存されず、パスワードのような秘密の情報がないから。</p></details></li>
+        <li>サーバが毎回違うチャレンジを送る理由は？
+          <details><summary>解答例</summary><p>以前の署名を使い回すリプレイ攻撃を防ぐため。</p></details></li>
+      </ol>
+      <p class="ys-kw"><code>FIDO2</code><code>WebAuthn</code><code>公開鍵暗号</code><code>オリジンの検証</code><code>チャレンジレスポンス</code><code>リプレイ攻撃</code><code>AitM フィッシング</code></p>
+      <p class="ys-link">関連：R4午後Ⅰ問3（SSO）</p>
+    </article>
+
+    <!-- ================= RPKI ================= -->
+    <article class="ys-card" id="t-rpki">
+      <div class="ys-head"><span class="ys-rank b">△</span><h3>RPKI（BGP の経路の検証）</h3><label class="ys-read"><input type="checkbox" data-id="rpki">読んだ</label></div>
+      <p class="ys-one">「このアドレスを広告してよいのはこの AS」という証明（ROA）で、偽の経路を捨てる。</p>
+      <p class="ys-why"><b>なぜ今</b>　BGP の経路ハイジャックや設定ミスによる経路漏れで、大規模な通信障害が繰り返し起きている。国内の ISP でも経路の検証（ROV）の導入が進んだ。</p>
+      <figure class="yd">
+        <svg viewBox="0 0 440 206" role="img" aria-label="ROAと照らし合わせ、正しいASからの経路は受け入れ、偽のASからの経路を捨てる図">
+          <rect x="10" y="20" width="120" height="44" rx="8" class="bo"/><text x="70" y="38" class="c">AS64500（正規）</text><text x="70" y="56" class="c s">203.0.113.0/24</text>
+          <rect x="10" y="130" width="120" height="44" rx="8" class="bn"/><text x="70" y="148" class="c tn">AS64666（偽）</text><text x="70" y="166" class="c s">203.0.113.0/24</text>
+          <rect x="180" y="75" width="110" height="50" rx="8" class="bx"/><text x="235" y="97" class="c">ISP のルータ</text><text x="235" y="115" class="c s">経路を検証</text>
+          <rect x="320" y="20" width="110" height="44" rx="8" class="bm"/><text x="375" y="38" class="c">RPKI キャッシュ</text><text x="375" y="56" class="c s">ROA の一覧</text>
+          <line x1="330" y1="64" x2="290" y2="84" class="la dash" marker-end="url(#ma)"/><text x="340" y="88" class="s">RTR で配る</text>
+          <rect x="300" y="130" width="130" height="44" rx="6" class="bm"/><text x="310" y="148" class="s">ROA：203.0.113.0/24</text><text x="310" y="166" class="s">最大 /24・AS64500</text>
+          <line x1="130" y1="42" x2="178" y2="88" class="lo" marker-end="url(#mo)"/><text x="140" y="34" class="to b">Valid</text>
+          <line x1="130" y1="152" x2="178" y2="114" class="ln" marker-end="url(#mn)"/><text x="10" y="196" class="tn">Invalid → 経路を捨てる（ハイジャックを防ぐ）</text>
+        </svg>
+      </figure>
+      <h4>ネスペならこう問われる</h4>
+      <ol class="ys-q">
+        <li>ROA に登録する情報は？
+          <details><summary>解答例</summary><p>プレフィックス、許可する最大プレフィックス長、広告してよい起点の AS 番号。</p></details></li>
+        <li>正規の AS から広告されたのに Invalid になる例は？
+          <details><summary>解答例</summary><p>ROA の最大プレフィックス長より長いプレフィックス（例：/24 まで登録しているのに /25 で広告した）。</p></details></li>
+        <li>攻撃者が正規の AS 番号を起点に見せかけて広告すると、ROV では防げない理由は？
+          <details><summary>解答例</summary><p>ROV は起点の AS 番号しか検証せず、AS_PATH の途中の経路が正しいかは検証しないから。</p></details></li>
+      </ol>
+      <p class="ys-kw"><code>RPKI</code><code>ROA</code><code>ROV</code><code>Valid／Invalid／NotFound</code><code>経路ハイジャック</code><code>ルートリーク</code><code>ASPA</code></p>
+    </article>
+
+    <!-- ================= AI DC ================= -->
+    <article class="ys-card" id="t-aidc">
+      <div class="ys-head"><span class="ys-rank b">△</span><h3>AI データセンターのネットワーク</h3><label class="ys-read"><input type="checkbox" data-id="aidc">読んだ</label></div>
+      <p class="ys-one">GPU 同士を RDMA（RoCEv2）で結ぶ。パケットが1個落ちると全体が待たされるので、ロスレスにする。</p>
+      <p class="ys-why"><b>なぜ今</b>　生成 AI の学習用に、国内でも大規模な GPU データセンターの建設が相次いでいる。400G／800G イーサネットや、AI 向けの新規格 Ultra Ethernet（2025年に仕様 1.0）が登場した。</p>
+      <figure class="yd">
+        <svg viewBox="0 0 440 196" role="img" aria-label="スイッチが混雑したらPFCで送信を止め、ECNとCNPで送信側に速度を落とさせる図">
+          <text x="220" y="18" class="c s">RoCEv2（RDMA を UDP/4791 で運ぶ）はパケットの損失に弱い</text>
+          <rect x="10" y="40" width="100" height="56" rx="8" class="bx"/><text x="60" y="64" class="c">GPU サーバ</text><text x="60" y="82" class="c s">送信側</text>
+          <rect x="170" y="40" width="100" height="56" rx="8" class="ba"/><text x="220" y="64" class="c">スイッチ</text><text x="220" y="82" class="c s">キューが混雑</text>
+          <rect x="330" y="40" width="100" height="56" rx="8" class="bx"/><text x="380" y="64" class="c">GPU サーバ</text><text x="380" y="82" class="c s">受信側</text>
+          <line x1="110" y1="56" x2="168" y2="56" class="la" marker-end="url(#ma)"/>
+          <line x1="270" y1="56" x2="328" y2="56" class="la" marker-end="url(#ma)"/>
+          <line x1="170" y1="110" x2="112" y2="110" class="ln" marker-end="url(#mn)"/><text x="140" y="126" class="c tn s">① PFC：一時停止</text>
+          <text x="300" y="126" class="c s">② ECN の印を付ける</text>
+          <path d="M380,96 V160 H60 V98" class="lm" marker-end="url(#mm)"/>
+          <text x="220" y="178" class="c s">③ CNP を返す → 送信側が速度を落とす（DCQCN）</text>
+        </svg>
+      </figure>
+      <h4>ネスペならこう問われる</h4>
+      <ol class="ys-q">
+        <li>RoCEv2 が、ルータを越えて通信できる理由は？
+          <details><summary>解答例</summary><p>RDMA のデータを UDP/IP でカプセル化しているから（宛先ポート 4791）。</p></details></li>
+        <li>PFC はどうやってパケットの損失を防ぐ？
+          <details><summary>解答例</summary><p>スイッチのバッファがあふれそうになると、優先度クラスごとに送信元へ一時停止（PAUSE）フレームを送り、送信を止めさせる。</p></details></li>
+        <li>PFC だけに頼らず ECN も使う理由は？
+          <details><summary>解答例</summary><p>PFC の一時停止が上流へ連鎖すると、無関係な通信まで止まる（デッドロックや HoL ブロッキング）ため、ECN で早めに送信側の速度を落とす。</p></details></li>
+      </ol>
+      <p class="ys-kw"><code>RDMA</code><code>RoCEv2（UDP/4791）</code><code>PFC（802.1Qbb）</code><code>ECN</code><code>DCQCN</code><code>スパインリーフ・ECMP</code><code>エレファントフロー</code><code>Ultra Ethernet</code></p>
+      <p class="ys-link">関連：R6午後Ⅱ問1（データセンター・スパインリーフ）</p>
+    </article>
+  </section>
+
+  <!-- ================= 名前だけ ================= -->
+  <section id="others" class="fc-sec">
+    <h2>名前だけ知っておく</h2>
+    <p class="muted">問題文に出てきたときに「聞いたことがある」と思えれば十分なもの。</p>
+    <div class="ys-others">
+      <div><b>能動的サイバー防御</b><span>2025年5月に関連法が成立。政府が通信情報を分析し、攻撃元のサーバに無害化の措置をとれるようにする。</span></div>
+      <div><b>DMARC</b><span>SPF・DKIM の結果をもとに、なりすましメールの扱い（none／quarantine／reject）を送信側が宣言する。Gmail などが大量送信者に必須化した。</span></div>
+      <div><b>SRv6</b><span>IPv6 の拡張ヘッダに経路の指示（セグメントのリスト）を書いて転送する。通信事業者の網で採用が進む。</span></div>
+      <div><b>IOWN APN</b><span>NTT の全光ネットワーク。電気に変換せず光のまま中継するので遅延が小さく一定。遠隔地のデータセンター間接続に使う。</span></div>
+      <div><b>ローカル5G</b><span>企業が自社の敷地で免許を受けて運用する5G。工場などで、多数の端末・低遅延・閉域が必要なところに使う。</span></div>
+      <div><b>MACsec（802.1AE）</b><span>イーサネットのフレームを隣の機器との間で暗号化する。データセンター間の接続などで使う。</span></div>
+      <div><b>ASPA</b><span>RPKI の拡張。「自分の上流（プロバイダ）の AS はこれ」と登録して、ルートリークや経路の偽装を見つける。</span></div>
+      <div><b>Windows 10 のサポート終了</b><span>2025年10月。更新されない端末を ZTNA・NAC の端末確認で接続させない、という形で問題文に出うる。</span></div>
+    </div>
+  </section>
+
+  <script>
+    // 「読んだ」のチェック（この端末だけ）
+    (function () {
+      var KEY = 'nespe-yosou-read-v1';
+      var read = {};
+      try { read = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { read = {}; }
+      var boxes = document.querySelectorAll('.ys-read input');
+      function render() {
+        var n = 0;
+        boxes.forEach(function (b) { b.checked = !!read[b.dataset.id]; if (b.checked) n++; });
+        document.querySelectorAll('#ys-list a').forEach(function (a) { a.classList.toggle('read', !!read[a.dataset.id]); });
+        document.getElementById('ys-count').textContent = n;
+      }
+      boxes.forEach(function (b) {
+        b.addEventListener('change', function () {
+          if (b.checked) read[b.dataset.id] = true; else delete read[b.dataset.id];
+          try { localStorage.setItem(KEY, JSON.stringify(read)); } catch (e) {}
+          render();
+        });
+      });
+      render();
+    })();
+  </script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>

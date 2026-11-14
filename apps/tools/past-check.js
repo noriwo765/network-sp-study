@@ -60,7 +60,7 @@ if (!only) {
   const source = norm(box.window.WORK_PROBLEMS.flatMap(p => texts([p.overview, p.body, p.questions, p.commentary])).join('\n'));
   const grams = new Set();
   for (let i = 0; i + MIN <= source.length; i++) grams.add(source.slice(i, i + MIN));
-  for (const f of ['flashcards/qa_weak.js', 'flashcards/qa_final.js', 'flashcards/terms.js', 'apps/final-check.html']) {
+  for (const f of ['flashcards/qa_weak.js', 'flashcards/qa_final.js', 'flashcards/terms.js', 'apps/final-check.html', 'apps/nigate.html']) {
     const hit = longestCommon(norm(fs.readFileSync(path.join(ROOT, f), 'utf8')), grams);
     if (hit) { errors++; console.log(`NG 写しの疑い ${f}: ${hit}`); }
   }

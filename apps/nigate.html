@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <script src="js/gate.js"></script>
+  <title>苦手分野の解説</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ネスペ学習">
+  <meta name="theme-color" content="#14171c">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/final.css">
+  <link rel="stylesheet" href="css/yosou.css">
+  <link rel="stylesheet" href="css/nigate.css">
+</head>
+<body>
+  <!-- 矢印の形（各図で共用） -->
+  <svg class="ys-defs" aria-hidden="true" focusable="false">
+    <defs>
+      <marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--accent)"/></marker>
+      <marker id="mm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--muted)"/></marker>
+      <marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--ng)"/></marker>
+      <marker id="mo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--ok)"/></marker>
+    </defs>
+  </svg>
+
+  <header>
+    <p class="back"><a href="index.html">← メニュー</a></p>
+    <h1>苦手分野の解説</h1>
+    <p class="sub">ワーク演習で得点率が低かった9分野を低い順に並べ、最後に気になる2分野（OSPF・VRRP、SNMP・運用）を足しました。1分野2〜3分で読めます。仕組みが分かれば、知らない問題でも答えを組み立てられます。</p>
+    <ul class="fc-stats">
+      <li><b id="ng-count">0</b>/ 11 分野を読んだ</li>
+    </ul>
+  </header>
+
+  <div class="fc-toc" aria-label="目次">
+    <a href="#g-vxlan">VXLAN・EVPN</a>
+    <a href="#g-mcast">マルチキャスト</a>
+    <a href="#g-auth">DMZ・認証</a>
+    <a href="#g-l2">L2・取得</a>
+    <a href="#g-v6">IPv6</a>
+    <a href="#g-napt">NAPT・回線</a>
+    <a href="#g-iot">IoT・CoAP</a>
+    <a href="#g-mail">メール</a>
+    <a href="#g-bgp">BGP</a>
+    <a href="#g-ospf">OSPF・VRRP</a>
+    <a href="#g-snmp">SNMP・運用</a>
+  </div>
+
+  <p class="ys-note">各分野の最後の「落とした論点」は、あなたが演習で書いた答え（<s style="color:var(--ng)">赤の取り消し線</s>）と、正しい答えです。答えの言い回しをまとめて確認するなら <a href="final-check.html#genre">本番前チェックの「定番の答え」</a>。</p>
+
+  <!-- ================= VXLAN・EVPN ================= -->
+  <article class="ng-card" id="g-vxlan">
+    <div class="ng-head"><h3>VXLAN・EVPN</h3><span class="ng-rate"><span><i style="width:56%"></i></span>56%</span><label class="ys-read"><input type="checkbox" data-id="vxlan">読んだ</label></div>
+    <p class="ng-one">L2 のフレームを UDP で包んで、IP ネットワークの向こうへ運ぶ。包む・ほどく係が VTEP。</p>
+    <ul class="ng-points">
+      <li><b>VXLAN</b>：元のイーサネットフレームに VXLAN・UDP（宛先 4789）・IP のヘッダを付ける。L3 の上に L2 を作る技術。</li>
+      <li><b>VNI</b>（24ビット・約1600万）で L2 ネットワークを区別する。VLAN ID（12ビット・4094）の不足を解消する。</li>
+      <li><b>BUM</b>（Broadcast・Unknown unicast・Multicast）は宛先の VTEP を1つに決められない → <b>同じ VNI の全てのリモート VTEP</b> へ送る（マルチキャストか、1台ずつユニキャストで複製）。</li>
+      <li><b>EVPN</b>：MP-BGP で MAC アドレス・VNI・VTEP の IP を<b>事前に</b>配る（コントロールプレーンで学習）。宛先 MAC を知っているので Unknown unicast のフラッディングが減る。</li>
+      <li>VTEP のアドレスに<b>ループバック</b>を使うのは、物理インタフェースが1つ落ちても、別の経路で同じアドレスのまま動き続けられるから。</li>
+    </ul>
+    <figure class="yd">
+      <svg viewBox="0 0 440 154" role="img" aria-label="VXLANのカプセル化。外側から外側イーサネット、外側IP、UDP、VXLAN、元のフレームの順">
+        <text x="10" y="16" class="s">VTEP が付けるヘッダ（左が外側）</text>
+        <rect x="10" y="26" width="70" height="44" rx="6" class="bm"/><text x="45" y="45" class="c s">外側</text><text x="45" y="60" class="c s">Ether</text>
+        <rect x="82" y="26" width="100" height="44" rx="6" class="ba"/><text x="132" y="45" class="c">外側 IP</text><text x="132" y="61" class="c s">VTEP 同士</text>
+        <rect x="184" y="26" width="70" height="44" rx="6" class="ba"/><text x="219" y="45" class="c">UDP</text><text x="219" y="61" class="c s">宛先 4789</text>
+        <rect x="256" y="26" width="80" height="44" rx="6" class="ba"/><text x="296" y="45" class="c">VXLAN</text><text x="296" y="61" class="c s">VNI 24bit</text>
+        <rect x="338" y="26" width="92" height="44" rx="6" class="bo"/><text x="384" y="45" class="c">元のフレーム</text><text x="384" y="61" class="c s">VM の MAC</text>
+        <text x="10" y="90" class="s">受け取った VTEP が学習する3点：中のフレームの送信元 MAC（VM）・VNI・</text>
+        <text x="10" y="106" class="s">外側 IP の送信元＝相手 VTEP のループバックのアドレス</text>
+        <rect x="10" y="118" width="420" height="28" rx="6" class="bm"/>
+        <text x="20" y="137" class="s">BUM の送り先：同じ VNI の全リモート VTEP（マルチキャスト／ユニキャストで複製）</text>
+      </svg>
+    </figure>
+    <h4>落とした論点 → こう書く</h4>
+    <ul class="ng-fix">
+      <li><s>IP</s><span class="to">→</span>外側 IP ヘッダの内側は <b>UDP</b>。VXLAN は <b>L3</b> の上に L2 を作る</li>
+      <li><s>他の VTEP に対して</s><span class="to">→</span><b>同じ L2 ネットワーク（VNI）の全ての</b>リモート VTEP へ</li>
+      <li><s>不用意なマルチキャストを防ぐ</s><span class="to">→</span>ループバックは<b>物理インタフェースの障害でも到達できる</b>から</li>
+      <li><s>スイッチの MAC</s><span class="to">→</span>学習するのは <b>VM の MAC・VNI・相手 VTEP の IP</b> の3点</li>
+      <li><s>BUM フレームによって学習</s><span class="to">→</span>EVPN は <b>MP-BGP で事前に</b>学習（順序が逆）</li>
+    </ul>
+    <p class="ng-oboe">覚え方：VXLAN は「L2 の手紙を UDP の封筒に入れる」。封筒の差出人（外側 IP）を見れば、相手の VTEP が分かる。</p>
+  </article>
+
+  <!-- ================= マルチキャスト ================= -->
+  <article class="ng-card" id="g-mcast">
+    <div class="ng-head"><h3>マルチキャスト</h3><span class="ng-rate"><span><i style="width:58%"></i></span>58%</span><label class="ys-read"><input type="checkbox" data-id="mcast">読んだ</label></div>
+    <p class="ng-one">送信元は1本送るだけ。欲しい人がいる方向にだけ、途中の機器が複製して届ける。</p>
+    <ul class="ng-points">
+      <li><b>ユニキャストの欠点</b>：受信者の数に応じて、送信元の通信量（負荷と帯域）が増える。</li>
+      <li><b>IGMP</b>（IPv6 は MLD）＝<b>端末とルータの間</b>。「このグループが欲しい」（Report／Join）、「もう要らない」（Leave）。</li>
+      <li><b>PIM</b>＝<b>ルータとルータの間</b>の経路制御。PIM-SM は RP を経由する共有ツリー（*,G）、<b>SSM</b> は送信元を指定する（S,G）。</li>
+      <li><b>IGMPv2</b> はグループアドレスだけで参加（*,G）→ 送信元ごとにグループアドレスを分ける必要がある。<b>IGMPv3</b> は送信元も指定できる（S,G）→ 同じグループアドレスでも区別できる。</li>
+      <li><b>L2SW</b> は普通、マルチキャストを全ポートへ<b>フラッディング</b>する。<b>IGMP スヌーピング</b>で「グループアドレス × Join を受けたポート」の表を作り、要るポートにだけ流す。</li>
+    </ul>
+    <figure class="yd">
+      <svg viewBox="0 0 440 214" role="img" aria-label="送信元からルータ間はPIM、L2SWはIGMPスヌーピングで受信者のポートにだけ転送する図">
+        <rect x="10" y="20" width="90" height="34" rx="6" class="bx"/><text x="55" y="42" class="c">送信元</text>
+        <rect x="150" y="20" width="100" height="34" rx="6" class="ba"/><text x="200" y="42" class="c">ルータ</text>
+        <rect x="300" y="20" width="100" height="34" rx="6" class="ba"/><text x="350" y="42" class="c">ルータ</text>
+        <line x1="100" y1="37" x2="148" y2="37" class="la" marker-end="url(#ma)"/>
+        <line x1="250" y1="37" x2="298" y2="37" class="la" marker-end="url(#ma)"/><text x="274" y="30" class="c s">PIM</text>
+        <rect x="300" y="95" width="100" height="34" rx="6" class="ba"/><text x="350" y="117" class="c">L2SW</text>
+        <line x1="350" y1="54" x2="350" y2="93" class="la" marker-end="url(#ma)"/>
+        <rect x="240" y="168" width="50" height="30" rx="6" class="bo"/><text x="265" y="188" class="c s">受信</text>
+        <rect x="310" y="168" width="50" height="30" rx="6" class="bo"/><text x="335" y="188" class="c s">受信</text>
+        <rect x="380" y="168" width="50" height="30" rx="6" class="bm"/><text x="405" y="188" class="c s">不要</text>
+        <line x1="330" y1="129" x2="268" y2="166" class="la" marker-end="url(#ma)"/>
+        <line x1="345" y1="129" x2="336" y2="166" class="la" marker-end="url(#ma)"/>
+        <line x1="370" y1="129" x2="402" y2="166" class="lm dash"/><text x="396" y="150" class="tn b">×</text>
+        <text x="10" y="86" class="b">① 端末 ⇔ ルータ</text>
+        <text x="10" y="104" class="s">IGMP（v6 は MLD）で「欲しい／要らない」</text>
+        <text x="10" y="128" class="b">② ルータ ⇔ ルータ</text>
+        <text x="10" y="146" class="s">PIM-SM（RP 経由）／SSM（送信元を指定）</text>
+        <text x="10" y="170" class="b">③ L2SW</text>
+        <text x="10" y="188" class="s">IGMP スヌーピング：グループ × ポートの表</text>
+        <text x="10" y="206" class="s">（なければ全ポートへフラッディング）</text>
+      </svg>
+    </figure>
+    <h4>落とした論点 → こう書く</h4>
+    <ul class="ng-fix">
+      <li><s>ブロードキャスト</s><span class="to">→</span>L2SW が全ポートへ転送する動作は<b>フラッディング</b></li>
+      <li><s>グループ</s><span class="to">→</span>IGMPv3 の Report の宛先は <b>224.0.0.22</b>（マルチキャストアドレス）</li>
+      <li><s>マルチキャスト</s><span class="to">→</span>ルータ間で動かすのは <b>PIM-SM</b>、送信元を指定するのは <b>SSM</b></li>
+      <li><s>通信量が肥大化</s><span class="to">→</span>「<b>受信者の数に応じて</b>送信元の通信量が増加する」と主語と比例関係を書く</li>
+      <li>（*,G）と（S,G）：<b>v2 はグループだけ → 送信元ごとにアドレスを分ける</b>、v3 は送信元で区別できる</li>
+    </ul>
+    <p class="ng-oboe">覚え方：IGMP は「客と店」、PIM は「店と問屋」。スヌーピングは「店の中の配膳係」。</p>
+  </article>
+
+  <!-- ================= DMZ・認証 ================= -->
+  <article class="ng-card" id="g-auth">
+    <div class="ng-head"><h3>DMZ・認証</h3><span class="ng-rate"><span><i style="width:58%"></i></span>58%</span><label class="ys-read"><input type="checkbox" data-id="auth">読んだ</label></div>
+    <p class="ng-one">「誰が・何を持っているか・何を確かめたか」で答えを組み立てる。</p>
+    <ul class="ng-points">
+      <li><b>DMZ</b>：公開サーバを内部 LAN から分ける。目的は「公開サーバが<b>侵入された場合に</b>、そこを踏み台に<b>内部 LAN へ被害が広がる</b>のを防ぐ」。</li>
+      <li><b>認証</b>＝利用者が<b>本人であること</b>の確認。<b>認可</b>＝<b>操作ごとに権限</b>があるかの確認。</li>
+      <li><b>ケルベロス</b>：鍵は<b>すべて共通鍵</b>。KDC が TGT を発行し、TGT と引き換えにサービス用のチケット（ST）を発行する。ST は<b>サーバの鍵</b>で暗号化されているので、PC は中身を読めず、書き換えられない。</li>
+      <li><b>SAML</b>：SP が利用者を IdP へリダイレクトし、IdP が署名したアサーションを SP が検証する。IdP が複数あるなら、SP は先に利用者の所属（どの IdP か）を知る必要がある。</li>
+      <li><b>デジタル署名</b>で分かること：<b>作成者が正しいこと（真正性）</b>と<b>改ざんされていないこと（完全性）</b>。</li>
+    </ul>
+    <figure class="yd">
+      <svg viewBox="0 0 440 200" role="img" aria-label="ケルベロス認証の流れ。PCがKDCからTGTを受け取り、次にSTを受け取り、サーバに提示する">
+        <rect x="15" y="10" width="90" height="30" rx="6" class="bx"/><text x="60" y="30" class="c">PC</text>
+        <rect x="165" y="10" width="110" height="30" rx="6" class="ba"/><text x="220" y="30" class="c">KDC</text>
+        <rect x="330" y="10" width="100" height="30" rx="6" class="bx"/><text x="380" y="30" class="c">サーバ</text>
+        <line x1="60" y1="40" x2="60" y2="176" class="lm dash"/><line x1="220" y1="40" x2="220" y2="176" class="lm dash"/><line x1="380" y1="40" x2="380" y2="176" class="lm dash"/>
+        <line x1="62" y1="64" x2="216" y2="64" class="la" marker-end="url(#ma)"/><text x="140" y="59" class="c s">① ログイン（認証）</text>
+        <line x1="218" y1="88" x2="64" y2="88" class="lm" marker-end="url(#mm)"/><text x="140" y="83" class="c s">② TGT</text>
+        <line x1="62" y1="112" x2="216" y2="112" class="la" marker-end="url(#ma)"/><text x="140" y="107" class="c s">③ TGT を見せる</text>
+        <line x1="218" y1="136" x2="64" y2="136" class="lm" marker-end="url(#mm)"/><text x="140" y="131" class="c s ta">④ ST（サーバの鍵で暗号化）</text>
+        <line x1="62" y1="162" x2="376" y2="162" class="lo" marker-end="url(#mo)"/><text x="300" y="157" class="c s">⑤ ST を提示</text>
+        <text x="220" y="194" class="c s">鍵はすべて共通鍵。PC は ST を読めない・書き換えられない</text>
+      </svg>
+    </figure>
+    <h4>落とした論点 → こう書く</h4>
+    <ul class="ng-fix">
+      <li><s>DMZ に制限され、不正アクセスのリスクを低減</s><span class="to">→</span><b>公開サーバが侵入された場合に、内部 LAN の端末まで侵入される</b>リスク</li>
+      <li><s>登録ユーザか判定</s><span class="to">→</span>認証は<b>本人であること</b>、認可は<b>操作ごとの権限</b></li>
+      <li>ケルベロスの鍵<span class="to">→</span><b>共通鍵</b>（公開鍵ではない）。答えには対象（ST）を入れる</li>
+      <li>署名を検証して分かること<span class="to">→</span><b>正規の IdP が作成し、改ざんされていない</b></li>
+      <li>「図中の字句を用いて」<span class="to">→</span>機器名は図の名前を<b>そのまま</b>写す</li>
+    </ul>
+  </article>
+
+  <!-- ================= L2・パケット取得 ================= -->
+  <article class="ng-card" id="g-l2">
+    <div class="ng-head"><h3>L2・パケット取得</h3><span class="ng-rate"><span><i style="width:59%"></i></span>59%</span><label class="ys-read"><input type="checkbox" data-id="l2">読んだ</label></div>
+    <p class="ng-one">スイッチの転送のしかたと、パケットを「どこから・どれだけ」取り込めるか。</p>
+    <ul class="ng-points">
+      <li>L2SW は宛先 MAC を学習済みならそのポートへ、<b>未学習なら受信ポート以外の全ポートへ</b>送る＝<b>フラッディング</b>（ブロードキャストは宛先が全ビット1のフレームの名前）。</li>
+      <li><b>ミラーポート</b>：送信と受信を<b>1本のポートにまとめて</b>複製する → <b>送受信の合計</b>がポートの速度を超えると取りこぼす。</li>
+      <li><b>ネットワークタップ</b>：配線から方向ごとに別のポートへ複製する → 両方向とも上限まで取れる。</li>
+      <li><b>プロミスキャスモード</b>：NIC が<b>自分宛てではない</b>（宛先 MAC が自分と違う）フレームも受け取る。</li>
+      <li>保存容量＝<b>ビット/秒 × 86,400 秒 × 日数 ÷ 8</b>（バイトへ）。例：100k ビット/秒 × 86,400 × 365 ÷ 8 ≒ 394G バイト。</li>
+    </ul>
+    <figure class="yd">
+      <svg viewBox="0 0 440 176" role="img" aria-label="ミラーポートは送受信を1本にまとめ、タップは方向ごとに別ポートで取り込む図">
+        <text x="10" y="16" class="b">ミラーポート</text>
+        <text x="235" y="16" class="b ta">タップ</text>
+        <line x1="222" y1="6" x2="222" y2="170" class="lm dash"/>
+        <rect x="10" y="28" width="120" height="42" rx="8" class="bx"/><text x="70" y="54" class="c">スイッチ</text>
+        <rect x="10" y="108" width="120" height="38" rx="8" class="ba"/><text x="70" y="132" class="c">キャプチャ</text>
+        <line x1="70" y1="70" x2="70" y2="106" class="ln" marker-end="url(#mn)" style="stroke-width:4"/>
+        <text x="82" y="86" class="s">送信＋受信</text><text x="82" y="100" class="s">を1本に</text>
+        <text x="10" y="168" class="s tn">合計が速度を超えると取りこぼす</text>
+        <rect x="235" y="28" width="70" height="34" rx="6" class="bx"/><text x="270" y="50" class="c">機器A</text>
+        <rect x="360" y="28" width="70" height="34" rx="6" class="bx"/><text x="395" y="50" class="c">機器B</text>
+        <line x1="305" y1="45" x2="360" y2="45" class="lm"/>
+        <rect x="320" y="36" width="26" height="18" rx="3" class="ba"/><text x="333" y="49" class="c s">TAP</text>
+        <line x1="326" y1="54" x2="300" y2="106" class="la" marker-end="url(#ma)"/><text x="282" y="86" class="s">送信</text>
+        <line x1="340" y1="54" x2="368" y2="106" class="la" marker-end="url(#ma)"/><text x="362" y="86" class="s">受信</text>
+        <rect x="255" y="108" width="175" height="38" rx="8" class="ba"/><text x="342" y="132" class="c">キャプチャ（2ポート）</text>
+        <text x="235" y="168" class="s to">方向ごとに別ポート → 取りこぼしにくい</text>
+      </svg>
+    </figure>
+    <h4>落とした論点 → こう書く</h4>
+    <ul class="ng-fix">
+      <li><s>ブロードキャスト</s><span class="to">→</span>スイッチの動作は<b>フラッディング</b></li>
+      <li><s>大量トラフィックでは難しい</s><span class="to">→</span><b>送信と受信の合計で 1G ビット/秒まで</b>しか取り込めない（数値と「合計」を入れる）</li>
+      <li><s>○○宛てではないフレーム</s><span class="to">→</span><b>宛先 MAC アドレスが自分の NIC と異なる</b>フレーム</li>
+      <li>容量計算で答えが半分になった<span class="to">→</span>式を書き出し、<b>86,400 秒</b>と<b>÷8</b>を1つずつ確認</li>
+    </ul>
+  </article>
+
+  <!-- ================= IPv6 ================= -->
+  <article class="ng-card" id="g-v6">
+    <div class="ng-head"><h3>IPv6</h3><span class="ng-rate"><span><i style="width:60%"></i></span>60%</span><label class="ys-read"><input type="checkbox" data-id="v6">読んだ</label></div>
+    <p class="ng-one">IPv4 の仕組みと1対1で対応させると覚えやすい。ブロードキャストは無く、マルチキャストで代わりをする。</p>
+    <table class="ng-table">
+      <tr><th>やること</th><th>IPv4</th><th>IPv6</th></tr>
+      <tr><td>相手の MAC を知る</td><td>ARP（ブロードキャスト）</td><td><b>NDP の NS/NA</b>（マルチキャスト）</td></tr>
+      <tr><td>アドレスの自動設定</td><td>DHCP</td><td><b>RS → RA</b> でプレフィックスを知り SLAAC（DHCPv6 も可）</td></tr>
+      <tr><td>デフォルトゲートウェイ</td><td>DHCP で配る</td><td><b>RA の送信元の LLA</b></td></tr>
+      <tr><td>アドレスの重複確認</td><td>GARP</td><td><b>DAD</b>：使う予定のアドレスで NS → NA が来なければ使う</td></tr>
+      <tr><td>経路表のネクストホップ</td><td>隣のルータの IP</td><td>隣のルータの <b>LLA（fe80::）</b></td></tr>
+      <tr><td>外からの通信を防ぐ</td><td>NAPT が副次的に防いでいた</td><td>NAPT が無い → <b>FW で外からの通信を制御</b></td></tr>
+      <tr><td>MTU の調整</td><td>Fragmentation Needed</td><td><b>Packet Too Big</b>（ルータは分割しない）</td></tr>
+    </table>
+    <ul class="ng-points">
+      <li><b>LLA</b>（fe80::/10）は<b>同じリンクの中だけ</b>で有効。ルータを越えない。</li>
+      <li><b>Modified EUI-64</b>：MAC（<b>48ビット</b>）の真ん中に FFFE（16ビット）を入れて64ビットにし、U/L ビットを反転する。</li>
+      <li><b>ランダムなインタフェース ID</b>：アドレスが変わるので、ログから PC を特定しにくい（プライバシーとは裏表）。</li>
+      <li><b>デュアルスタック</b>：IPv6 で失敗すると IPv4 にフォールバックし、同じページが見えてしまう → IPv6 の障害に気付きにくい。</li>
+      <li>機器間のリンクを <b>LLA だけ</b>にすると、外から宛先にできない（守れる）。GUA を付けると <b>traceroute6</b> で機器を区別しやすい。</li>
+    </ul>
+    <h4>落とした論点 → こう書く</h4>
+    <ul class="ng-fix">
+      <li><s>MAC は 24 ビット</s><span class="to">→</span>MAC は <b>48</b> ビット（24 ビットは OUI だけ）</li>
+      <li><s>同一のネットワーク</s><span class="to">→</span>LLA の範囲は<b>同一リンク（データリンク層で通信できる範囲）</b></li>
+      <li><s>DHCP サーバで管理が難しい</s><span class="to">→</span>SLAAC は <b>PC が自分でアドレスを作る</b>。困るのは PC を特定しにくいこと</li>
+      <li>ネクストホップに宛先のプレフィックス<span class="to">→</span><b>隣接機器の LLA</b></li>
+      <li><s>マルチキャストが届かないか確認</s><span class="to">→</span>DAD の目的は<b>アドレスの重複がないこと</b>の確認</li>
+      <li><s>データサイズの大きいパケット</s><span class="to">→</span>PMTUD が検出するのは<b>経路上で最小の MTU</b></li>
+    </ul>
+    <p class="ys-link">続きは R7午後Ⅱ問1（IPv6 対応）の解答記録で。</p>
+  </article>
+
+  <!-- ================= NAPT・回線 ================= -->
+  <article class="ng-card" id="g-napt">
+    <div class="ng-head"><h3>NAPT・回線</h3><span class="ng-rate"><span><i style="width:60%"></i></span>60%</span><label class="ys-read"><input type="checkbox" data-id="napt">読んだ</label></div>
+    <p class="ng-one">NAPT は「変換表」の装置。表が埋まると、新しい通信だけが失敗する。</p>
+    <ul class="ng-points">
+      <li>NAPT は（内側の IP・ポート）⇔（外側の IP・ポート）の組を<b>変換テーブル</b>に1行ずつ持つ。</li>
+      <li>テーブルが<b>枯渇</b>すると、空きがないときに始めた通信だけが失敗する → 症状は「<b>一部の・不特定の端末</b>だけ」。帯域不足なら全員が遅くなる。</li>
+      <li><b>UDP</b> には終わりの合図（FIN）が無いので、<b>保持時間</b>が過ぎたら消す。QUIC（HTTP/3）が増えたら UDP の保持時間を<b>短く</b>して、使われなくなった行を早く消す（短すぎると通信中の行も消える）。</li>
+      <li><b>ベストエフォート型</b>（速度は努力目標）⇔ <b>帯域確保型</b>（速度を保証）。</li>
+      <li>サブネットの計算：オクテットの途中で区切れるときは2進数にする。255.240.0.0（/12）なら第2オクテットは16刻み → 172.16.0.0〜<b>172.31.255.255</b>。</li>
+    </ul>
+    <figure class="yd">
+      <svg viewBox="0 0 440 160" role="img" aria-label="NAPTの変換テーブルが満杯になると、新しい通信をはじめた端末だけが失敗する図">
+        <rect x="10" y="18" width="80" height="30" rx="6" class="bx"/><text x="50" y="38" class="c">PC1</text>
+        <rect x="10" y="58" width="80" height="30" rx="6" class="bx"/><text x="50" y="78" class="c">PC2</text>
+        <rect x="10" y="98" width="80" height="30" rx="6" class="bn"/><text x="50" y="118" class="c tn">PC3（新規）</text>
+        <rect x="130" y="14" width="170" height="118" rx="8" class="ba"/>
+        <text x="215" y="34" class="c">NAPT の変換テーブル</text>
+        <text x="142" y="58" class="s">内 .1:50001 ⇔ 外 :40001</text>
+        <text x="142" y="78" class="s">内 .2:50002 ⇔ 外 :40002</text>
+        <text x="142" y="98" class="s">…（UDP の古い行が残る）</text>
+        <text x="142" y="120" class="s tn b">空きなし</text>
+        <line x1="90" y1="33" x2="128" y2="40" class="lo" marker-end="url(#mo)"/>
+        <line x1="90" y1="73" x2="128" y2="73" class="lo" marker-end="url(#mo)"/>
+        <line x1="90" y1="113" x2="128" y2="113" class="ln dash"/><text x="104" y="106" class="tn b">×</text>
+        <rect x="340" y="52" width="90" height="40" rx="8" class="bx"/><text x="385" y="77" class="c">インターネット</text>
+        <line x1="300" y1="72" x2="338" y2="72" class="la" marker-end="url(#ma)"/>
+        <text x="10" y="152" class="s">満杯 → 新しい通信だけ失敗（一部・不特定の端末）。UDP の保持時間を短くして空ける</text>
+      </svg>
+    </figure>
+    <h4>落とした論点 → こう書く</h4>
+    <ul class="ng-fix">
+      <li>原因の説明で「何が起きるか」が抜けた<span class="to">→</span>本文の症状（<b>画面が表示されない</b>）と原因（テーブルの枯渇）をつなげる</li>
+      <li><s>コネクション維持時間が減り、確立が安定</s><span class="to">→</span>効果は<b>使われなくなったエントリーを早く削除できる</b>。UDP は「フロー」</li>
+      <li><s>直接計測</s><span class="to">→</span>ベストエフォートの反対は<b>帯域確保型</b></li>
+      <li><s>172.16.255.255</s><span class="to">→</span>/12 なので最後は <b>172.31.255.255</b></li>
+    </ul>
+  </article>
+
+  <!-- ================= IoT・CoAP ================= -->
+  <article class="ng-card" id="g-iot">
+    <div class="ng-head"><h3>IoT・CoAP</h3><span class="ng-rate"><span><i style="width:61%"></i></span>61%</span><label class="ys-read"><input type="checkbox" data-id="iot">読んだ</label></div>
+    <p class="ng-one">CoAP は「UDP の上で動く軽い HTTP」。UDP の弱点を CoAP と DTLS がどう補うかが問われる。</p>
+    <ul class="ng-points">
+      <li><b>LPWA</b>＝Low Power, Wide Area（低消費電力・広域）。LTE-M・NB-IoT はセルラー系で標準化は <b>3GPP</b>。Wi-Fi は IEEE。</li>
+      <li><b>ISM バンド</b>（2.4GHz 帯など）は免許不要。Wi-Fi・Bluetooth・電子レンジと共用なので<b>干渉</b>しやすい。</li>
+      <li><b>UDP</b> では、パケットが<b>順不同・重複・消失</b>しうる。CoAP は<b>メッセージ ID</b> で重複を見分け、後から来た方を無視する。</li>
+      <li><b>DTLS の cookie</b>：正しい cookie が返れば、ClientHello の<b>送信元が偽装されていない</b>と分かる。不正なら大きな応答を返さず打ち切る（返すと<b>リフレクション攻撃</b>の踏み台になる）。</li>
+      <li>多数の機器が一斉に送らないよう<b>ランダムに待つ</b> → <b>サーバとネットワークの両方</b>で負荷の集中を避ける。</li>
+    </ul>
+    <figure class="yd">
+      <svg viewBox="0 0 440 170" role="img" aria-label="HTTP/1.1はTCPの接続と切断で9パケット、CoAPは要求と応答の2パケット">
+        <text x="10" y="16" class="s">HTTP/1.1（TCP の上）：接続と切断のパケットが加わる</text>
+        <rect x="10" y="24" width="44" height="26" rx="4" class="bm"/><text x="32" y="41" class="c s">SYN</text>
+        <rect x="56" y="24" width="44" height="26" rx="4" class="bm"/><text x="78" y="41" class="c s">SYN/ACK</text>
+        <rect x="102" y="24" width="44" height="26" rx="4" class="bm"/><text x="124" y="41" class="c s">ACK</text>
+        <rect x="148" y="24" width="44" height="26" rx="4" class="ba"/><text x="170" y="41" class="c s">要求</text>
+        <rect x="194" y="24" width="44" height="26" rx="4" class="bo"/><text x="216" y="41" class="c s">応答</text>
+        <rect x="240" y="24" width="44" height="26" rx="4" class="bm"/><text x="262" y="41" class="c s">FIN</text>
+        <rect x="286" y="24" width="44" height="26" rx="4" class="bm"/><text x="308" y="41" class="c s">ACK</text>
+        <rect x="332" y="24" width="44" height="26" rx="4" class="bm"/><text x="354" y="41" class="c s">FIN</text>
+        <rect x="378" y="24" width="44" height="26" rx="4" class="bm"/><text x="400" y="41" class="c s">ACK</text>
+        <text x="10" y="74" class="s ta">CoAP（UDP の上）</text>
+        <rect x="10" y="82" width="90" height="26" rx="4" class="ba"/><text x="55" y="99" class="c s">要求（CON）</text>
+        <rect x="104" y="82" width="90" height="26" rx="4" class="bo"/><text x="149" y="99" class="c s">応答（ACK）</text>
+        <rect x="10" y="122" width="420" height="42" rx="6" class="bm"/>
+        <text x="20" y="139" class="s">UDP では 順序が入れ替わる・重複する・消える</text>
+        <text x="20" y="156" class="s">→ CoAP はメッセージ ID で重複を見分け、確認応答（ACK）と再送で補う</text>
+      </svg>
+    </figure>
+    <h4>落とした論点 → こう書く</h4>
+    <ul class="ng-fix">
+      <li><s>不連続・破損</s><span class="to">→</span>UDP で起こるのは<b>順不同・重複・消失</b></li>
+      <li><s>攻撃者の IP を偽装・SYN Flood</s><span class="to">→</span>送信元を<b>攻撃対象の IP</b> に偽装、手法は<b>リフレクション攻撃</b></li>
+      <li><s>送信元が正しいかを判断する</s><span class="to">→</span>「<b>偽装されていない</b>と判断できる」と言い切る</li>
+      <li><s>認証情報の発行</s><span class="to">→</span>HTTP が多いのは <b>TCP の接続確立と切断</b>の分</li>
+      <li><s>サーバ負荷を軽減</s><span class="to">→</span><b>サーバとネットワーク</b>の両方の負荷集中を避ける</li>
+    </ul>
+  </article>
+
+  <!-- ================= メール ================= -->
+  <article class="ng-card" id="g-mail">
+    <div class="ng-head"><h3>メール（SPF・DKIM・S/MIME）</h3><span class="ng-rate"><span><i style="width:62%"></i></span>62%</span><label class="ys-read"><input type="checkbox" data-id="mail">読んだ</label></div>
+    <p class="ng-one">SPF は「どの IP から送ったか」、DKIM は「どのサーバが署名したか」。どちらも送信者個人は保証しない。</p>
+    <ul class="ng-points">
+      <li><b>SPF</b>：送信ドメインの DNS（TXT）に<b>送ってよい IP アドレス</b>を書く。受信側は<b>接続してきた IP</b> と照合する。登録するのは外から見える IP（NAT 後のグローバル IP・中継サーバ）。ドメイン名は SPF レコードを引くための検索キーにすぎない。</li>
+      <li><b>DKIM</b>：送信サーバが<b>秘密鍵で署名</b>し、<b>公開鍵は DNS の TXT</b> に置く（証明書は使わない）。秘密鍵は正規のサーバしか持たない → 検証できれば<b>正規のサーバから送られた</b>と分かる。</li>
+      <li>DKIM の鍵を<b>組織や中継サーバごとに分ける</b> → 1つが漏れても、他の署名・検証には影響しない。</li>
+      <li>SPF・DKIM が保証するのは<b>サーバ・ドメイン</b>。乗っ取られたアカウントからのメールも同じサーバから送られるので通ってしまう → 個人の確認は <b>S/MIME</b>（送信者の秘密鍵で署名、証明書の公開鍵で検証）。</li>
+      <li><b>PTR（逆引き）</b>だけでは弱い：攻撃者は自分の逆引きゾーンに好きな FQDN を書ける → <b>正引きして IP が一致するか</b>も確かめる。</li>
+    </ul>
+    <figure class="yd">
+      <svg viewBox="0 0 440 200" role="img" aria-label="受信メールサーバが送信ドメインのDNSからSPFのIPとDKIMの公開鍵を取り、接続元IPと署名を検査する図">
+        <rect x="10" y="30" width="125" height="64" rx="8" class="bx"/><text x="72.5" y="56" class="c">送信サーバ</text><text x="72.5" y="76" class="c s">秘密鍵で DKIM 署名</text>
+        <rect x="305" y="30" width="125" height="64" rx="8" class="bx"/><text x="367.5" y="56" class="c">受信サーバ</text><text x="367.5" y="76" class="c s">SPF・DKIM を検査</text>
+        <line x1="135" y1="62" x2="303" y2="62" class="la" marker-end="url(#ma)"/><text x="219" y="55" class="c">メール</text><text x="219" y="80" class="c s">接続元の IP を見る</text>
+        <rect x="90" y="130" width="250" height="62" rx="8" class="bm"/>
+        <text x="215" y="150" class="c">送信ドメインの DNS</text>
+        <text x="104" y="168" class="s">SPF：送ってよい IP（TXT）</text>
+        <text x="104" y="184" class="s">DKIM：公開鍵（TXT）</text>
+        <line x1="367" y1="94" x2="330" y2="128" class="lm dash" marker-end="url(#mm)"/><text x="358" y="120" class="s">問い合わせ</text>
+      </svg>
+    </figure>
+    <h4>落とした論点 → こう書く</h4>
+    <ul class="ng-fix">
+      <li>SPF に登録する IP<span class="to">→</span>受信側から見える<b>グローバル IP</b>（社内のプライベート IP ではない）</li>
+      <li>SPF で照合するもの<span class="to">→</span><b>送信元 IP アドレス</b>が SPF レコードに含まれるか（ドメイン名ではない）</li>
+      <li>DKIM の公開鍵の置き場所<span class="to">→</span><b>DNS の TXT レコード</b>（CA の証明書ではない）</li>
+      <li>正規のサーバから送られたと分かる理由<span class="to">→</span><b>秘密鍵は正規のサーバだけが持つ</b> → 公開鍵で署名を検証できる → 正規</li>
+      <li>SPF/DKIM で防げないもの<span class="to">→</span>正規のメールも<b>なりすましメールも同じサーバから</b>送られる場合</li>
+    </ul>
+    <p class="ys-link">続きは R6午後Ⅱ問2（メール）の解答記録で。</p>
+  </article>
+
+  <!-- ================= BGP ================= -->
+  <article class="ng-card" id="g-bgp">
+    <div class="ng-head"><h3>BGP</h3><span class="ng-rate"><span><i style="width:64%"></i></span>64%</span><label class="ys-read"><input type="checkbox" data-id="bgp">読んだ</label></div>
+    <p class="ng-one">BGP は AS どうしの経路交換。AS_PATH を右から読めば、経路の生まれた場所が分かる。</p>
+    <ul class="ng-points">
+      <li><b>eBGP</b>＝異なる AS 間、<b>iBGP</b>＝同じ AS 内。<b>プライベート AS 番号</b>は 64512〜65534（2バイト）。</li>
+      <li><b>AS_PATH</b> は経由した AS が<b>左に</b>追加される → <b>右端が発信元</b>、左端が隣の AS。自分の AS 番号を含む経路は<b>ループとみなして捨てる</b>。</li>
+      <li>全拠点が同じ AS 番号の IP-VPN：そのままだと拠点同士の経路を捨ててしまう → <b>as-override</b>（PE が顧客の AS を自分の AS に置き換える。<b>数は変わらない</b>）。</li>
+      <li><b>ルートリフレクタ</b>：iBGP のフルメッシュが要らなくなり、<b>ピアの数を減らせる</b>。2台で冗長化するときは<b>クラスタ ID</b> でループを防ぐ。</li>
+      <li>不正な経路を受け入れると、<b>自分がその宛先へ送る通信</b>が誤った方へ行き、<b>正規の宛先に届かなくなる</b>。</li>
+      <li><b>RTBH</b> の利点は位置：攻撃を<b>攻撃元に近いところ（入口）で捨てる</b>ので、FW や LB まで届かない。</li>
+    </ul>
+    <figure class="yd">
+      <svg viewBox="0 0 440 160" role="img" aria-label="AS65500が生成した経路をAS64500が自分のAS番号を左に追加して伝える図">
+        <rect x="10" y="30" width="110" height="52" rx="8" class="bo"/><text x="65" y="52" class="c">AS65500</text><text x="65" y="70" class="c s">経路を生成</text>
+        <rect x="165" y="30" width="110" height="52" rx="8" class="ba"/><text x="220" y="52" class="c">AS64500</text><text x="220" y="70" class="c s">自分を左に追加</text>
+        <rect x="320" y="30" width="110" height="52" rx="8" class="bx"/><text x="375" y="52" class="c">受け取る AS</text><text x="375" y="70" class="c s">AS_PATH を見る</text>
+        <line x1="120" y1="56" x2="163" y2="56" class="la" marker-end="url(#ma)"/>
+        <line x1="275" y1="56" x2="318" y2="56" class="la" marker-end="url(#ma)"/>
+        <text x="142" y="104" class="c ta">65500</text>
+        <text x="297" y="104" class="c ta b">64500 65500</text>
+        <text x="220" y="132" class="c s">右端＝発信元（経路を生成した AS）／左端＝隣の AS</text>
+        <text x="220" y="150" class="c s">自分の AS 番号が入っていたら、ループとみなして捨てる</text>
+      </svg>
+    </figure>
+    <h4>落とした論点 → こう書く</h4>
+    <ul class="ng-fix">
+      <li><s>負荷が高まる／不正な経路へ誘導</s><span class="to">→</span>影響は<b>そのアドレスブロックへ届かなくなる</b></li>
+      <li><s>BGP ルータより内部への通信を遮断</s><span class="to">→</span>RTBH は<b>攻撃元に近いところで遮断</b>できる（比べる軸は位置）</li>
+      <li><s>コンテンツ</s><span class="to">→</span>CE の C は <b>Customer</b>（PE＝Provider Edge）</li>
+      <li><s>mBGP</s><span class="to">→</span>AS 間は <b>eBGP</b></li>
+      <li><s>64500</s>（1つだけ）<span class="to">→</span>as-override は置き換えなので <b>64500 64500</b>（長さは同じ）</li>
+      <li><s>経路情報を共有できる</s><span class="to">→</span>ルートリフレクタの利点は <b>iBGP のピア数を減らせる</b></li>
+    </ul>
+  </article>
+
+  <!-- ================= OSPF・VRRP ================= -->
+  <article class="ng-card" id="g-ospf">
+    <div class="ng-head"><h3>OSPF・VRRP</h3><span class="ng-rate"><span><i style="width:69%"></i></span>69%</span><span class="ng-tag">気になる分野</span><label class="ys-read"><input type="checkbox" data-id="ospf">読んだ</label></div>
+    <p class="ng-one">OSPF は「地図（LSDB）を全員で共有して、各自が最短経路を計算する」。VRRP は「2台で1つの仮想ゲートウェイを演じる」。</p>
+    <ul class="ng-points">
+      <li><b>流れ</b>：LSA を交換 → <b>LSDB</b>（リンクステートデータベース）を作る → SPF（ダイクストラ法）で<b>自分を根にした最短経路のツリー</b> → 経路表。</li>
+      <li><b>エリア0</b>＝バックボーンエリア。他のエリアは必ずここにつなぐ。<b>ルータ ID</b>＝OSPF が動く<b>各機器を1台ずつ識別</b>する32ビットの値（落ちないループバックを使う）。</li>
+      <li><b>コスト</b>は宛先へ向かう途中の<b>出力インタフェースの値だけ</b>を足す。<b>ECMP</b> は複数の経路の<b>合計コストを同じ</b>にする。迂回させたい機器は<b>コストを最大値（65535）</b>に。</li>
+      <li>ECMP は<b>フロー単位</b>（アドレスのハッシュ）で振り分けると、同じ通信が同じ経路を通る → <b>到着順序が逆転しにくい</b>。</li>
+      <li>BGP などからの<b>再配布</b>経路は <b>Type5（AS 外部 LSA）</b>で流れ、作るのは再配布したルータ（<b>ASBR</b>）。両方向に再配布すると<b>ルーティングループ</b>の恐れ。</li>
+      <li><b>ネイバー認証</b>：<b>不正なルータと隣接して経路を交換してしまう</b>のを防ぐ。</li>
+    </ul>
+    <figure class="yd">
+      <svg viewBox="0 0 440 184" role="img" aria-label="R1からR4へ上と下の二つの経路があり、出力インタフェースのコストを足すとどちらも20なのでECMPになる図">
+        <line x1="80" y1="74" x2="185" y2="36" class="lm"/><line x1="255" y1="36" x2="360" y2="74" class="lm"/>
+        <line x1="80" y1="94" x2="185" y2="132" class="lm"/><line x1="255" y1="132" x2="360" y2="94" class="lm"/>
+        <rect x="10" y="64" width="70" height="40" rx="8" class="ba"/><text x="45" y="89" class="c">R1</text>
+        <rect x="185" y="16" width="70" height="40" rx="8" class="bx"/><text x="220" y="41" class="c">R2</text>
+        <rect x="185" y="112" width="70" height="40" rx="8" class="bx"/><text x="220" y="137" class="c">R3</text>
+        <rect x="360" y="64" width="70" height="40" rx="8" class="bx"/><text x="395" y="89" class="c">R4</text>
+        <text x="100" y="52" class="ta b">10</text><text x="270" y="38" class="ta b">10</text>
+        <text x="100" y="128" class="ta b">10</text><text x="270" y="146" class="ta b">10</text>
+        <text x="220" y="94" class="c s">（数字は行きの出力 IF のコスト）</text>
+        <text x="220" y="174" class="c s">上 10＋10＝20 ／ 下 10＋10＝20 → 合計が同じなので ECMP</text>
+      </svg>
+    </figure>
+    <ul class="ng-points">
+      <li><b>VRRP</b>：2台のルータが<b>仮想 IP・仮想 MAC</b>（00-00-5E-00-01-<i>VRID</i>）を共有し、PC はそれをデフォルトゲートウェイにする。<b>VRID</b> は 8ビットで <b>1〜255</b>。</li>
+      <li><b>マスタだけ</b>が定期的に<b>アドバタイズメント</b>を送る。バックアップは、それを<b>一定時間受信しなくなったら</b>マスタの障害と判断する（問い合わせはしない）。</li>
+      <li><b>トラッキング</b>：上位リンクの障害を検知したら、<b>自分の優先度を下げる</b> → 相手が相対的に上回ってマスタになる（相手の値は変わらない）。</li>
+      <li><b>プリエンプト</b>：優先度の高いルータが復帰したらマスタを取り返す。<b>プリエンプトディレイ</b>は <b>OSPF の経路が収束した状態</b>になるまで待つため（待たないと経路のないまま受けて捨てる）。</li>
+      <li><b>GARP</b>：切り替わったとき、新しいマスタが<b>GARP</b>（自分の IP を問い合わせる ARP）を送り、<b>L2SW の MAC アドレステーブル</b>を更新させる → 仮想 MAC 宛てのフレームが新しいマスタのポートへ流れる。PC の ARP テーブルは仮想 MAC のままなので変えなくてよい。</li>
+    </ul>
+    <figure class="yd">
+      <svg viewBox="0 0 440 198" role="img" aria-label="VRRPのマスタとバックアップが仮想IPを共有し、マスタが定期的に広告し、切替時にGARPでスイッチの表を更新する図">
+        <text x="10" y="14" class="s">↑ 上位リンクをトラッキング → 落ちたら自分の優先度を下げる</text>
+        <line x1="205" y1="150" x2="105" y2="78" class="lm"/><line x1="235" y1="150" x2="335" y2="78" class="lm"/>
+        <rect x="40" y="26" width="130" height="52" rx="8" class="ba"/><text x="105" y="48" class="c">ルータA（マスタ）</text><text x="105" y="66" class="c s">優先度 110</text>
+        <rect x="270" y="26" width="130" height="52" rx="8" class="bx"/><text x="335" y="48" class="c">ルータB（予備）</text><text x="335" y="66" class="c s">優先度 100</text>
+        <line x1="172" y1="54" x2="268" y2="54" class="la" marker-end="url(#ma)"/><text x="220" y="47" class="c s">定期的に広告</text>
+        <rect x="100" y="90" width="240" height="22" rx="4" class="bm"/><text x="220" y="105" class="c s">仮想 IP・仮想 MAC 00-00-5E-00-01-(VRID)</text>
+        <rect x="160" y="150" width="120" height="30" rx="6" class="bx"/><text x="220" y="170" class="c s">PC（GW＝仮想 IP）</text>
+        <text x="220" y="194" class="c s ta">切替時：新マスタが GARP → L2SW の MAC 表を更新</text>
+      </svg>
+    </figure>
+    <h4>落とした論点 → こう書く</h4>
+    <ul class="ng-fix">
+      <li><s>管理 ID／ルーティングの優先順位</s><span class="to">→</span>ルータ ID が識別するのは <b>OSPF が動く各機器</b></li>
+      <li><s>余分に通信が発生しない</s><span class="to">→</span>認証は<b>不正なルータと隣接・経路交換しない</b>ため</li>
+      <li><s>リンクステート／ルーティング</s><span class="to">→</span>データベースは <b>LSDB</b>、ツリーは<b>最短経路</b>のツリー</li>
+      <li>コストを2倍で計算<span class="to">→</span>足すのは<b>行きの出力インタフェースだけ</b></li>
+      <li><s>同一コストで負荷分散</s><span class="to">→</span>目的は<b>2つの回線を通常時から両方使う</b>こと（同一コストは手段）</li>
+      <li>Type5 の生成元に経路の発信元を書いた<span class="to">→</span>作るのは<b>OSPF に再配布したルータ（ASBR）</b></li>
+      <li><s>4096</s><span class="to">→</span>VRID は <b>1〜255</b>（4096 は VLAN ID）</li>
+      <li><s>マスタに広告を出して応答がない</s><span class="to">→</span>マスタの<b>アドバタイズメントを受信しなくなったとき</b></li>
+      <li><s>相手の優先度が高くなる</s><span class="to">→</span>トラッキングは<b>自分の優先度を下げる</b></li>
+      <li><s>リンクステートの更新を防ぐ</s><span class="to">→</span>プリエンプトディレイは <b>OSPF の経路が収束した状態</b>を待つ</li>
+    </ul>
+    <p class="ng-oboe">覚え方：VRRP は「マスタが『生きてるよ』と言い続け、止まったら予備が代わる」。代わったら GARP で「この MAC は今こっち」とスイッチに知らせる。</p>
+  </article>
+
+  <!-- ================= SNMP・運用 ================= -->
+  <article class="ng-card" id="g-snmp">
+    <div class="ng-head"><h3>SNMP・運用（ログ）</h3><span class="ng-rate"><span><i style="width:75%"></i></span>75%</span><span class="ng-tag">気になる分野</span><label class="ys-read"><input type="checkbox" data-id="snmp">読んだ</label></div>
+    <p class="ng-one">SNMP は「取りに行く（ポーリング）」と「知らせてもらう（トラップ）」の2通り。ポート番号と、カウンタの読み方が狙われる。</p>
+    <ul class="ng-points">
+      <li><b>マネージャ</b>（監視サーバ）が<b>エージェント</b>（ルータ・スイッチ）の <b>MIB</b>（OID で識別する管理情報の木）を読み書きする。</li>
+      <li><b>ポート</b>：GetRequest・SetRequest はエージェントの <b>UDP/161</b>、Trap はマネージャの <b>UDP/162</b>。</li>
+      <li><b>ポーリング</b>：定期的に取りに行く → 間隔の分だけ検知が遅れるが、取りこぼしは分かる。<b>トラップ</b>：異常時にすぐ届くが、UDP なので<b>失われても気付けない</b> → 確認応答のある <b>Inform</b>（v2c 以降）を使う。</li>
+      <li><b>回線の利用率</b>：ifInOctets などは<b>累積のカウンタ</b>。2回取得して<b>差分 × 8 ÷ 取得間隔 ÷ 回線速度</b>。32ビットのカウンタは 1G ビット/秒だと約34秒で一周する → 64ビットの <b>ifHCInOctets</b> を使う。</li>
+      <li><b>セキュリティ</b>：v1・v2c の<b>コミュニティ名は平文</b>で流れる → <b>v3（USM）で認証と暗号化</b>。マネージャの IP アドレス以外からのアクセスを ACL で拒否する。</li>
+    </ul>
+    <figure class="yd">
+      <svg viewBox="0 0 440 150" role="img" aria-label="SNMPマネージャがUDP161でエージェントに問い合わせ、エージェントがUDP162でトラップを送る図">
+        <rect x="10" y="30" width="130" height="72" rx="8" class="ba"/><text x="75" y="60" class="c">マネージャ</text><text x="75" y="80" class="c s">監視サーバ</text>
+        <rect x="300" y="30" width="130" height="72" rx="8" class="bx"/><text x="365" y="60" class="c">エージェント</text><text x="365" y="80" class="c s">ルータ・SW（MIB）</text>
+        <line x1="140" y1="48" x2="298" y2="48" class="la" marker-end="url(#ma)"/><text x="220" y="43" class="c s">Get・Set → UDP/161</text>
+        <line x1="298" y1="68" x2="142" y2="68" class="lm" marker-end="url(#mm)"/><text x="220" y="63" class="c s">応答</text>
+        <line x1="298" y1="90" x2="142" y2="90" class="ln" marker-end="url(#mn)"/><text x="220" y="85" class="c s tn">Trap → UDP/162</text>
+        <text x="10" y="124" class="s">ポーリング＝取りに行く／トラップ＝異常時に知らせてくる（UDP なので届かないことも）</text>
+        <text x="10" y="142" class="s">v1・v2c はコミュニティ名が平文。v3 は USM で認証・暗号化</text>
+      </svg>
+    </figure>
+    <table class="ng-table">
+      <tr><th>知りたいこと</th><th>使うもの</th></tr>
+      <tr><td>複数機器のログを並べる</td><td><b>NTP</b>（UDP/123）で時刻を合わせ、<b>時系列で突き合わせる</b></td></tr>
+      <tr><td>ログを1か所に集める</td><td><b>syslog</b>（UDP/514、RFC 5424）</td></tr>
+      <tr><td>IP アドレス → どの PC か</td><td><b>DHCP のリースログ</b>（いつ・どの IP を・どの MAC に）</td></tr>
+      <tr><td>誰が使ったか</td><td><b>認証ログ</b>（RADIUS：UDP/1812）</td></tr>
+      <tr><td>到達確認</td><td>ping＝ICMP の<b>エコー要求</b>と<b>エコー応答</b></td></tr>
+    </table>
+    <h4>落とした論点 → こう書く</h4>
+    <ul class="ng-fix">
+      <li><s>正確な日時にするため</s><span class="to">→</span>NTP の目的は<b>複数機器のログを時系列で突き合わせる</b>こと</li>
+      <li><s>認証ログ／スイッチのシステムログ</s><span class="to">→</span>IP から PC を特定するのは <b>DHCP のリースログ</b></li>
+      <li>514 と 1812 を入れ替えた<span class="to">→</span><b>514＝syslog</b>、<b>1812＝RADIUS</b></li>
+      <li><s>HTTP</s><span class="to">→</span>ログ転送のプロトコルは <b>syslog</b></li>
+      <li><s>応答</s><span class="to">→</span>ping の応答は<b>エコー応答</b>と種類まで書く</li>
+    </ul>
+    <p class="ng-oboe">覚え方：SNMP は「161 で聞く、162 で叫ぶ」。syslog は 514、NTP は 123、RADIUS は 1812。</p>
+  </article>
+
+  <script>
+    // 「読んだ」のチェック（この端末だけ）
+    (function () {
+      var KEY = 'nespe-nigate-read-v1';
+      var read = {};
+      try { read = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { read = {}; }
+      var boxes = document.querySelectorAll('.ys-read input');
+      function render() {
+        var n = 0;
+        boxes.forEach(function (b) { b.checked = !!read[b.dataset.id]; if (b.checked) n++; });
+        document.getElementById('ng-count').textContent = n;
+      }
+      boxes.forEach(function (b) {
+        b.addEventListener('change', function () {
+          if (b.checked) read[b.dataset.id] = true; else delete read[b.dataset.id];
+          try { localStorage.setItem(KEY, JSON.stringify(read)); } catch (e) {}
+          render();
+        });
+      });
+      render();
+    })();
+  </script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>
